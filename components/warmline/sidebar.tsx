@@ -1,0 +1,108 @@
+"use client";
+
+import {
+  Bell,
+  BriefcaseBusiness,
+  CalendarDays,
+  FileSearch,
+  Handshake,
+  House,
+  LineChart,
+  Rocket,
+  Search,
+  UserRound,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import type { Role } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { Logo } from "./logo";
+import { RoleSwitch } from "./role-switch";
+
+type Item = { href: string; match: string; label: string; icon: typeof House; badge?: number; slush?: boolean };
+
+function navFor(role: Role, unread: number): Item[] {
+  const top: Item[] = [
+    { href: "/home", match: "/home", label: "Home", icon: House },
+    { href: "/search", match: "/search", label: "Search", icon: Search },
+    { href: "/market", match: "/market", label: "Market", icon: LineChart },
+  ];
+  const roleItems: Item[] =
+    role === "founder"
+      ? [{ href: "/startup/overview", match: "/startup", label: "My startup", icon: Rocket }]
+      : [
+          { href: "/portfolio", match: "/portfolio", label: "Portfolio", icon: BriefcaseBusiness },
+          { href: "/deck-check", match: "/deck-check", label: "Deck check", icon: FileSearch },
+        ];
+  const rest: Item[] = [
+    { href: "/met", match: "/met", label: "Met", icon: Handshake },
+    { href: "/alerts", match: "/alerts", label: "Alerts", icon: Bell, badge: unread || undefined },
+    { href: "/events/slush-2026/overview", match: "/events", label: "Events", icon: CalendarDays, slush: true },
+    { href: "/me", match: "/me", label: "Me", icon: UserRound },
+  ];
+  return [...top, ...roleItems, ...rest];
+}
+
+export function Sidebar({
+  role,
+  unread,
+  user,
+}: {
+  role: Role;
+  unread: number;
+  user: { name: string; org: string };
+}) {
+  const pathname = usePathname();
+  const items = navFor(role, unread);
+
+  return (
+    <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r bg-card/60 px-3 py-4">
+      <Logo className="px-2" />
+      <nav className="mt-6 flex flex-col gap-0.5">
+        {items.map((it) => {
+          const active = pathname.startsWith(it.match);
+          return (
+            <Link
+              key={it.href}
+              href={it.href}
+              className={cn(
+                "group flex h-8 items-center gap-2.5 rounded-lg px-2 text-[13px] font-medium transition-colors",
+                active ? "bg-teal-soft text-accent-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              <it.icon className="size-4" />
+              <span className="flex-1">{it.label}</span>
+              {it.slush && <span className="size-1.5 rounded-full bg-slush" title="Slush 2026" />}
+              {it.badge && (
+                <span className="rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground tabular">{it.badge}</span>
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="mt-auto space-y-3">
+        <div className="rounded-lg border border-slush/40 bg-slush-soft/50 p-3">
+          <div className="text-xs font-semibold text-slush-foreground">Slush 2026</div>
+          <div className="mt-0.5 text-[11px] text-slush-foreground/80">Helsinki · 18–19 Nov</div>
+        </div>
+        <div className="px-1">
+          <div className="mb-1.5 text-[11px] font-medium text-subtle">View as (demo)</div>
+          <RoleSwitch role={role} />
+        </div>
+        <Link href="/me" className="flex items-center gap-2 rounded-lg px-1 py-1 hover:bg-muted">
+          <span className="flex size-7 items-center justify-center rounded-full bg-teal-soft text-[11px] font-semibold text-accent-foreground">
+            {user.name
+              .split(" ")
+              .map((p) => p[0])
+              .join("")}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-[13px] font-medium">{user.name}</span>
+            <span className="block truncate text-[11px] text-muted-foreground">{user.org}</span>
+          </span>
+        </Link>
+      </div>
+    </aside>
+  );
+}
