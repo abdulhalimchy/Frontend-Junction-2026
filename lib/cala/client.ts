@@ -180,7 +180,24 @@ export type GetEntityResponse = {
   description?: string | null;
   properties: Record<string, CalaProp<unknown> | undefined>;
   relationships: { outgoing: Record<string, RelationshipEdge[]>; incoming: Record<string, RelationshipEdge[]> };
+  numerical_observations?: NumericalObservation[];
 };
+
+/** A metric time series (e.g. annual revenue from SEC filings); each point names the filing it came from. */
+export type NumericalObservation = {
+  type: string;
+  id: string;
+  name: string;
+  properties: { unit?: string; cadence?: string };
+  data: {
+    time: string;
+    value: number;
+    origin?: { name?: string; url?: string; source?: string; published_time?: string; method?: string };
+  }[];
+};
+
+/** Metrics available for an entity, from introspection: pass their ids back to retrieveEntity to get values. */
+export type ObservationInfo = { id: string; name: string; cadence: string; unit?: string; taxonomy?: string };
 
 export type EntityQuery = {
   properties?: string[];
@@ -188,6 +205,8 @@ export type EntityQuery = {
     outgoing?: Record<string, { limit?: number; offset?: number }>;
     incoming?: Record<string, { limit?: number; offset?: number }>;
   };
+  /** Keyed by observation type (e.g. CuratedFinancialMetric), values are metric ids from introspection. */
+  numerical_observations?: Record<string, string[]>;
 };
 
 // ---- Endpoints ----
@@ -312,7 +331,11 @@ export function retrieveEntity(id: string, query?: EntityQuery, ttl = TTL.entity
 
 /** GET /v1/entities/{id}/introspection: which properties and relationships exist for an entity. */
 export function introspectEntity(id: string) {
-  return memoCala(`introspection:${id}`, () => calaFetch<{ properties: string[]; relationships: { outgoing: string[]; incoming: string[] } }>(
+  return memoCala(`introspection:${id}`, () => calaFetch<{
+    properties: string[];
+    relationships: { outgoing: string[]; incoming: string[] };
+    numerical_observations?: Record<string, ObservationInfo[]>;
+  }>(
     `/v1/entities/${encodeURIComponent(id)}/introspection`,
     { method: "GET" },
   ), TTL.entity);

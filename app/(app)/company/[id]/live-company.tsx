@@ -3,32 +3,40 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CompanyKeyFacts, CompanyKeyFactsSkeleton } from "@/components/warmline/company-facts";
 import { Pill, SlushTag } from "@/components/warmline/badges";
 import { EmptyState, EntityAvatar, Panel } from "@/components/warmline/blocks";
+import { CompanyAsk } from "@/components/warmline/company-ask";
 import { MarketError } from "@/components/warmline/market-view";
 import { SourceChip } from "@/components/warmline/source-chip";
 import { WatchButton } from "@/components/warmline/watch-button";
 import { InvestorList } from "@/app/(app)/market/company-analysis";
 import { SLUSH_EVENT_ID } from "@/lib/mocks/misc";
 import { fetchCompanyPeople, fetchCompanyProfile, type CompanyPeople, type PersonLink } from "@/lib/cala/company";
+import { EMPTY_EXTRAS, fetchCompanyExtras, type CompanyExtras } from "@/lib/cala/company-extras";
 import { fetchRoundDetail, type RoundDetail } from "@/lib/cala/rounds";
-import { formatFuzzyDate, formatMoney, formatTotals, totalsByCurrency } from "@/lib/format";
+import { formatFuzzyDate, formatMoney, shortPlace } from "@/lib/format";
 import { groupInvestors } from "@/lib/names";
-import type { CompanyProfile, FundingRound, Source } from "@/lib/types";
+import type { CompanyProfile, FundingRound } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { CountriesPanel, FinancialsPanel, GroupPanel, InvestmentsPanel, ListingBadges, ProductsPanel, RegistryPanel } from "./company-extras";
 
 // Company brief from Cala. Layout: header, key facts, funding timeline with leads, people; a right column with
 // events, investors, board and deals. Costs: profile (shared with every company view), people and events,
-// and one call per round shown in the timeline (at most TIMELINE_ROUNDS), all cached for 7 days.
+// one call per round shown in the timeline (at most TIMELINE_ROUNDS), and two for the extras (introspection,
+// then only the fields that exist: financials, listing, group, products, investments, countries, registry),
+// all cached for 7 days.
 
 const TIMELINE_ROUNDS = 6;
 const EMPTY_PEOPLE: CompanyPeople = { founders: [], leadership: [], board: [], team: [], events: [] };
 
 export async function LiveCompany({ id }: { id: string }) {
-  const [profile, peopleRes] = await Promise.allSettled([fetchCompanyProfile(id), fetchCompanyPeople(id)]);
+  const [profile, peopleRes, extrasRes] = await Promise.allSettled([fetchCompanyProfile(id), fetchCompanyPeople(id), fetchCompanyExtras(id)]);
   if (profile.status === "rejected") return <MarketError error={profile.reason} />;
   const p = profile.value;
   const people = peopleRes.status === "fulfilled" ? peopleRes.value : EMPTY_PEOPLE;
+  const extras = extrasRes.status === "fulfilled" ? extrasRes.value : EMPTY_EXTRAS;
+  const listing = extras.listings[0];
   const slush = people.events.find((e) => e.id === SLUSH_EVENT_ID);
 
   // Rounds that move money and have a date, newest first.
@@ -36,7 +44,11 @@ export async function LiveCompany({ id }: { id: string }) {
     .filter((r) => r.kind !== "other" && r.date)
     .sort((a, b) => (b.date?.date ?? "").localeCompare(a.date?.date ?? ""))
     .slice(0, TIMELINE_ROUNDS);
-  const lastEquity = timeline.find((r) => r.kind === "equity");
+  const counts = {
+    equity: p.rounds.filter((r) => r.kind === "equity").length,
+    grant: p.rounds.filter((r) => r.kind === "grant").length,
+    other: p.rounds.filter((r) => r.kind === "other").length,
+  };
 
   return (
     <>
@@ -54,38 +66,30 @@ export async function LiveCompany({ id }: { id: string }) {
         </div>
       </div>
 
-      <Header p={p} slush={slush} />
+      <Header p={p} slush={slush} extras={extras} />
 
       <div className="grid grid-cols-3 gap-6">
         <div className="col-span-2 space-y-6">
-          <div className="grid grid-cols-3 gap-4">
-            <Tile label="Stage" sources={p.fundingStage?.sources}>
-              {p.fundingStage?.value ?? <Muted>Not on record</Muted>}
-            </Tile>
-            <Tile label="Total raised" sources={p.totalFunding?.sources} hint={p.totalFunding ? "As reported, all instruments" : undefined}>
-              {p.totalFunding ? formatMoney(p.totalFunding.value) : <Equity rounds={p.rounds} />}
-            </Tile>
-            <Tile label="Last equity round" sources={lastEquity?.sources} hint={lastEquity ? `${lastEquity.stage} · ${formatFuzzyDate(lastEquity.date)}` : undefined}>
-              {lastEquity ? formatMoney(lastEquity.amount) : <Muted>None on record</Muted>}
-            </Tile>
-            <Suspense fallback={<TileSkeleton label="Lead investor" />}>
-              <LeadTile round={lastEquity} />
-            </Suspense>
-            <Tile label="Team" sources={p.employees?.sources} hint={p.employees ? "Employees" : undefined}>
-              {p.employees?.value ?? <Muted>Not on record</Muted>}
-            </Tile>
-            <Tile label="Grants" hint="Kept separate from equity" sources={grantSources(p.rounds)}>
-              {totalsByCurrency(p.rounds, "grant").length ? formatTotals(totalsByCurrency(p.rounds, "grant")) : <Muted>None on record</Muted>}
-            </Tile>
-          </div>
+          <Suspense fallback={<CompanyKeyFactsSkeleton />}>
+            <CompanyKeyFacts p={p} listing={listing} />
+          </Suspense>
+
+          <FinancialsPanel metrics={extras.financials} />
 
           <Panel
             title={
               <span className="flex items-center gap-2">
-                Funding timeline <Pill>{p.rounds.length} rounds on record</Pill>
+                Funding timeline
+                {counts.equity > 0 && <Pill>{plural(counts.equity, "equity round")}</Pill>}
+                {counts.grant > 0 && <Pill tone="success">{plural(counts.grant, "grant")}</Pill>}
               </span>
             }
-            description="Newest first, with who led each round. Only equity and grants are summed anywhere on this page."
+            description={
+              <>
+                Newest first, with who led each round. Only equity and grants are summed anywhere on this page.
+                {counts.other > 0 && ` ${plural(counts.other, "filing")} without a round type ${counts.other === 1 ? "is" : "are"} left out.`}
+              </>
+            }
           >
             {timeline.length ? (
               <Suspense fallback={<Skeleton className="h-40 rounded-xl" />}>
@@ -102,6 +106,7 @@ export async function LiveCompany({ id }: { id: string }) {
         </div>
 
         <div className="space-y-6">
+          <CompanyAsk companyId={id} companyName={p.name} />
           {people.events.length > 0 && (
             <Panel title="Events">
               <ul className="space-y-2">
@@ -127,9 +132,13 @@ export async function LiveCompany({ id }: { id: string }) {
           <Panel title="Investors" description="Click one for its portfolio and activity.">
             <InvestorList investors={groupInvestors(p.investors)} />
           </Panel>
+          <ProductsPanel products={extras.products} />
           <Panel title="Board" description="Directors, often from filings.">
-            <PeopleList people={people.board} empty="No board members on record." icon={Users} />
+            <PeopleList people={mergeRoles(people.board)} empty="No board members on record." icon={Users} />
           </Panel>
+          <GroupPanel parents={extras.parents} subsidiaries={extras.subsidiaries} more={extras.subsidiaryCountMayBeMore} />
+          <InvestmentsPanel investments={extras.investments} name={p.name} />
+          <CountriesPanel countries={extras.countries} />
           <Panel title="Acquisitions and deals">
             {p.deals.length ? (
               <ul className="space-y-2.5">
@@ -151,15 +160,17 @@ export async function LiveCompany({ id }: { id: string }) {
               <p className="text-sm text-muted-foreground">No acquisitions or deals on record.</p>
             )}
           </Panel>
+          <RegistryPanel extras={extras} />
         </div>
       </div>
     </>
   );
 }
 
-function Header({ p, slush }: { p: CompanyProfile; slush?: CompanyPeople["events"][number] }) {
+function Header({ p, slush, extras }: { p: CompanyProfile; slush?: CompanyPeople["events"][number]; extras: CompanyExtras }) {
   const place = p.hq ? shortPlace(p.hq.value) : p.countries[0];
-  const industry = p.industries[0];
+  // Cala lists industries in no particular order, so show a few rather than pretend the first is the main one.
+  const industry = p.industries.length ? p.industries.slice(0, 3).map((i) => i.label ?? i.name).join(", ") + (p.industries.length > 3 ? ` +${p.industries.length - 3}` : "") : null;
   return (
     <div className="mb-6 rounded-2xl border bg-card p-6 shadow-[0_1px_2px_rgba(22,24,26,0.04)]">
       <div className="flex items-start gap-5">
@@ -175,9 +186,10 @@ function Header({ p, slush }: { p: CompanyProfile; slush?: CompanyPeople["events
               </Link>
             )}
             {p.status && <Pill tone={/active/i.test(p.status.value) ? "success" : "neutral"}>{p.status.value}</Pill>}
+            <ListingBadges extras={extras} />
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-            {industry && <span>{industry.label ?? industry.name}</span>}
+            {industry && <span>{industry}</span>}
             {industry && place && <Dot />}
             {place && (
               <span className="inline-flex items-center gap-1">
@@ -213,45 +225,6 @@ function Header({ p, slush }: { p: CompanyProfile; slush?: CompanyPeople["events
         </div>
       </div>
     </div>
-  );
-}
-
-function Tile({ label, children, hint, sources }: { label: string; children: React.ReactNode; hint?: string; sources?: Source[] }) {
-  return (
-    <div className="rounded-xl border bg-card p-4">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{label}</span>
-        {sources && sources.length > 0 && <SourceChip sources={sources} />}
-      </div>
-      <div className="mt-3 truncate text-xl font-semibold tracking-tight tabular">{children}</div>
-      {hint && <div className="mt-1 truncate text-xs text-muted-foreground">{hint}</div>}
-    </div>
-  );
-}
-
-function TileSkeleton({ label }: { label: string }) {
-  return (
-    <div className="rounded-xl border bg-card p-4">
-      <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{label}</span>
-      <Skeleton className="mt-3 h-6 w-2/3" />
-    </div>
-  );
-}
-
-async function LeadTile({ round }: { round?: FundingRound }) {
-  if (!round) return <Tile label="Lead investor"><Muted>Not on record</Muted></Tile>;
-  const d = await fetchRoundDetail(round.id, round.stage).catch(() => null);
-  const lead = d?.leads[0];
-  return (
-    <Tile label="Lead investor" sources={lead?.sources} hint={lead ? `${round.stage}${d && d.leads.length > 1 ? ` · +${d.leads.length - 1} co-lead` : ""}` : undefined}>
-      {lead ? (
-        <Link href={`/investor/${lead.id}`} className="hover:text-primary hover:underline">
-          {lead.name}
-        </Link>
-      ) : (
-        <Muted>Not on record</Muted>
-      )}
-    </Tile>
   );
 }
 
@@ -302,7 +275,6 @@ function RoundCard({ r, d, latest }: { r: FundingRound; d: RoundDetail | null; l
             {d.participants.length > 3 ? ` +${d.participants.length - 3}` : ""}
           </div>
         )}
-        {(!d || (!d.leads.length && !d.participants.length)) && <div className="text-muted-foreground">Investors not on record</div>}
       </div>
       <div className="mt-3">
         <SourceChip sources={r.sources} />
@@ -313,14 +285,17 @@ function RoundCard({ r, d, latest }: { r: FundingRound; d: RoundDetail | null; l
 
 function People({ people }: { people: CompanyPeople }) {
   const leaders = mergeRoles([...people.founders, ...people.leadership]);
-  if (!leaders.length && !people.team.length) return <EmptyState compact icon={Users} title="No people on record" />;
+  // Leaders often appear again under WORKS_AT (sometimes as a separate entity); show them once.
+  const leaderNames = new Set(leaders.map((l) => l.name.toLowerCase()));
+  const team = mergeRoles(people.team.filter((t) => !leaderNames.has(t.name.toLowerCase())));
+  if (!leaders.length && !team.length) return <EmptyState compact icon={Users} title="No people on record" />;
   return (
     <div className="space-y-4">
       {leaders.length > 0 && <PeopleList people={leaders} empty="" icon={Crown} large />}
-      {people.team.length > 0 && (
+      {team.length > 0 && (
         <div>
           <div className="mb-2 text-xs font-medium text-muted-foreground">Team</div>
-          <PeopleList people={people.team} empty="" icon={Users} />
+          <PeopleList people={team} empty="" icon={Users} />
         </div>
       )}
     </div>
@@ -329,17 +304,21 @@ function People({ people }: { people: CompanyPeople }) {
 
 /** One row per person: "Founder, CEO since 25 Oct 2022" instead of two rows. */
 function mergeRoles(list: PersonLink[]): PersonLink[] {
+  // Keyed by name: Cala sometimes holds one person as several entities.
   const byId = new Map<string, PersonLink>();
   for (const p of list) {
-    const e = byId.get(p.id);
-    if (!e) byId.set(p.id, { ...p });
+    const key = p.name.toLowerCase();
+    const e = byId.get(key);
+    if (!e) byId.set(key, { ...p });
     else {
-      e.role = `${e.role}, ${p.role}`;
+      if (!e.role.split(", ").includes(p.role)) e.role = `${e.role}, ${p.role}`;
+      e.until = e.until && p.until ? (e.until > p.until ? e.until : p.until) : null;
       e.since = e.since && p.since ? (e.since < p.since ? e.since : p.since) : (e.since ?? p.since);
       e.sources = [...e.sources, ...p.sources.filter((s) => !e.sources.some((x) => x.document === s.document))];
     }
   }
-  return [...byId.values()];
+  // People still in the role first; former ones (with an end date) after.
+  return [...byId.values()].sort((a, b) => Number(!!a.until) - Number(!!b.until));
 }
 
 /**
@@ -372,29 +351,12 @@ function PeopleList({ people, empty, icon: Icon, large }: { people: PersonLink[]
   );
 }
 
-function Equity({ rounds }: { rounds: FundingRound[] }) {
-  const eq = totalsByCurrency(rounds, "equity");
-  return eq.length ? <>{formatTotals(eq)}</> : <Muted>None on record</Muted>;
-}
-
-function grantSources(rounds: FundingRound[]) {
-  const g = rounds.filter((r) => r.kind === "grant").flatMap((r) => r.sources);
-  return g.length ? g.filter((s, i, a) => a.findIndex((x) => x.document === s.document) === i) : undefined;
-}
-
-function Muted({ children }: { children: React.ReactNode }) {
-  return <span className="text-base font-normal text-muted-foreground italic">{children}</span>;
+function plural(n: number, word: string) {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
 }
 
 function Dot() {
   return <span className="text-subtle">·</span>;
-}
-
-/** "Vitikka 6, 02630 Espoo, Finland" → "Espoo, Finland". */
-function shortPlace(address: string) {
-  // Drop the street before a postcode: "Pursimiehenkatu 26 C 00150 Helsinki" → "Helsinki".
-  const parts = address.split(",").map((s) => s.trim().replace(/^.*?\b\d{4,6}\s+/, "")).filter(Boolean);
-  return parts.slice(-2).join(", ");
 }
 
 function initials(name: string) {

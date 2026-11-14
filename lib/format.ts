@@ -54,3 +54,39 @@ export function initials(name: string) {
     .join("")
     .toUpperCase();
 }
+
+const COUNTRY_CODES: Record<string, string> = {
+  FI: "Finland", SE: "Sweden", NO: "Norway", DK: "Denmark", EE: "Estonia", DE: "Germany", NL: "Netherlands", FR: "France",
+  GB: "United Kingdom", UK: "United Kingdom", IE: "Ireland", ES: "Spain", IT: "Italy", CH: "Switzerland", AT: "Austria",
+  BE: "Belgium", PL: "Poland", PT: "Portugal", US: "United States", USA: "United States", CA: "Canada", SG: "Singapore",
+};
+
+/**
+ * City and region or country from a full address, for one-line headers:
+ * "1515 3RD STREET, SAN FRANCISCO, US-CA, 94158, US" → "San Francisco, CA";
+ * "Vitikka 6, 02630 Espoo, Finland" → "Espoo, Finland".
+ */
+export function shortPlace(address: string): string {
+  let state: string | null = null;
+  const parts = address
+    .split(",")
+    // Drop the street before a postcode: "Pursimiehenkatu 26 C 00150 Helsinki" → "Helsinki".
+    .map((s) => s.trim().replace(/^.*?\b\d{4,6}\s+/, ""))
+    .map((s) => {
+      const sub = /^[A-Z]{2}-([A-Z0-9]{1,3})$/.exec(s);
+      if (sub) state = sub[1];
+      return sub ? sub[1] : s;
+    })
+    // Streets and bare postcodes carry digits.
+    .filter((s) => s && !/\d/.test(s));
+  const last = parts[parts.length - 1];
+  if (last && /^[A-Z]{2,3}$/.test(last) && last !== state) {
+    // "…, CA, US": the state is enough for US addresses; other codes become country names.
+    if (state && (last === "US" || last === "USA")) parts.pop();
+    else parts[parts.length - 1] = COUNTRY_CODES[last] ?? last;
+  }
+  return parts
+    .slice(-2)
+    .map((s) => (s === s.toUpperCase() && s.length > 3 ? s.toLowerCase().replace(/\b\p{L}/gu, (c) => c.toUpperCase()) : s))
+    .join(", ");
+}

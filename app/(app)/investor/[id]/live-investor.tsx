@@ -11,7 +11,7 @@ import { SourceChip } from "@/components/warmline/source-chip";
 import { WatchButton } from "@/components/warmline/watch-button";
 import { DEALS_LIMIT, fetchInvestorDeals, fetchInvestorProfile, type InvestorProfile } from "@/lib/cala/investor";
 import { SLUSH_EVENT_ID } from "@/lib/mocks/misc";
-import { formatFuzzyDate, formatMoney } from "@/lib/format";
+import { formatFuzzyDate, formatMoney, shortPlace } from "@/lib/format";
 import type { Source } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -340,9 +340,3 @@ function Muted({ children }: { children: React.ReactNode }) {
   return <span className="text-base font-normal text-muted-foreground italic">{children}</span>;
 }
 
-/** "Vitikka 6, 02630 Espoo, Finland" → "Espoo, Finland". */
-function shortPlace(address: string) {
-  // Drop the street before a postcode: "Pursimiehenkatu 26 C 00150 Helsinki" → "Helsinki".
-  const parts = address.split(",").map((s) => s.trim().replace(/^.*?\b\d{4,6}\s+/, "")).filter(Boolean);
-  return parts.slice(-2).join(", ");
-}
