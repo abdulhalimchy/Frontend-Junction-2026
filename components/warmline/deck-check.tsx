@@ -20,11 +20,14 @@ export function DeckCheck({
   initial,
   companyName = "",
   loadError = null,
+  startupId = null,
 }: {
   initial: DeckCheckResult | null;
   /** Hint for finding the company in Cala. Empty for investors: the name is then read from the deck. */
   companyName?: string;
   loadError?: string | null;
+  /** The founder's startup the deck is for; null for the demo company and investors. */
+  startupId?: string | null;
 }) {
   const [result, setResult] = useState<DeckCheckResult | null>(initial);
   const [uploading, setUploading] = useState<string | null>(null); // file name while the upload is in flight
@@ -64,6 +67,7 @@ export function DeckCheck({
       const form = new FormData();
       form.append("file", file);
       if (companyName) form.append("company_name", companyName);
+      if (startupId) form.append("startup", startupId);
       const res = await fetch("/api/deck-checks", { method: "POST", body: form });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? "Upload failed.");

@@ -7,7 +7,11 @@ export async function POST(request: Request) {
     const form = await request.formData();
     const file = form.get("file");
     if (!(file instanceof File)) return Response.json({ error: "Choose a PDF file." }, { status: 400 });
-    return Response.json(await uploadDeck(file, String(form.get("company_name") ?? "")), { status: 201 });
+    const startup = form.get("startup");
+    return Response.json(
+      await uploadDeck(file, String(form.get("company_name") ?? ""), typeof startup === "string" && startup ? startup : undefined),
+      { status: 201 },
+    );
   } catch (e) {
     return fail(e);
   }
