@@ -11,11 +11,31 @@ type ApiAlert = {
   body: string;
   reason: string;
   href: string;
+  entity_type: string;
+  cala_id: string;
   event: string | null;
   occurred_on: string;
   is_read: boolean;
   sources: Source[];
 };
+
+type ApiScanRun = {
+  trigger: "nightly" | "manual" | "watch" | "command";
+  status: "ok" | "failed";
+  started_at: string;
+  finished_at: string | null;
+  entities: number;
+  alerts_created: number;
+  skipped: number;
+};
+
+export type ScanRun = { status: ApiScanRun["status"]; at: string; entities: number; alertsCreated: number };
+
+/** When the watch list is checked: nightly at `time` in `timezone`. */
+export type AlertSchedule = { time: string; timezone: string; nextRunAt: string; lastNightly: ScanRun | null; lastManual: ScanRun | null };
+
+const toRun = (r: ApiScanRun | null): ScanRun | null =>
+  r && { status: r.status, at: r.finished_at ?? r.started_at, entities: r.entities, alertsCreated: r.alerts_created };
 
 export type ScanResult = { entities: number; alerts_created: number; skipped: number; errors: Record<string, string> };
 
@@ -28,6 +48,7 @@ const toAlert = (a: ApiAlert): Alert => ({
   date: a.occurred_on,
   read: a.is_read,
   href: a.href || "/alerts",
+  calaId: a.cala_id || undefined,
   slush: a.event === "slush-2026",
   sources: a.sources,
 });
@@ -40,6 +61,13 @@ async function json<T>(res: Response): Promise<T> {
 export async function listAlerts(): Promise<Alert[]> {
   const body = await json<{ results: ApiAlert[] }>(await backendFetch("/alerts/?page_size=100"));
   return body.results.map(toAlert);
+}
+
+export async function getAlertSchedule(): Promise<AlertSchedule> {
+  const s = await json<{ time: string; timezone: string; next_run_at: string; last_nightly: ApiScanRun | null; last_manual: ApiScanRun | null }>(
+    await backendFetch("/alerts/schedule/"),
+  );
+  return { time: s.time, timezone: s.timezone, nextRunAt: s.next_run_at, lastNightly: toRun(s.last_nightly), lastManual: toRun(s.last_manual) };
 }
 
 export async function getUnreadCount(): Promise<number> {

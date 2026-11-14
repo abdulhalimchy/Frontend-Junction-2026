@@ -36,19 +36,7 @@ export async function LiveCompany({ id }: { id: string }) {
   const p = profile.value;
   const people = peopleRes.status === "fulfilled" ? peopleRes.value : EMPTY_PEOPLE;
   const extras = extrasRes.status === "fulfilled" ? extrasRes.value : EMPTY_EXTRAS;
-  const listing = extras.listings[0];
   const slush = people.events.find((e) => e.id === SLUSH_EVENT_ID);
-
-  // Rounds that move money and have a date, newest first.
-  const timeline = p.rounds
-    .filter((r) => r.kind !== "other" && r.date)
-    .sort((a, b) => (b.date?.date ?? "").localeCompare(a.date?.date ?? ""))
-    .slice(0, TIMELINE_ROUNDS);
-  const counts = {
-    equity: p.rounds.filter((r) => r.kind === "equity").length,
-    grant: p.rounds.filter((r) => r.kind === "grant").length,
-    other: p.rounds.filter((r) => r.kind === "other").length,
-  };
 
   return (
     <>
@@ -73,102 +61,130 @@ export async function LiveCompany({ id }: { id: string }) {
 
       <Header p={p} slush={slush} extras={extras} />
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2 space-y-6">
-          <Suspense fallback={<CompanyKeyFactsSkeleton />}>
-            <CompanyKeyFacts p={p} listing={listing} />
-          </Suspense>
-
-          <FinancialsPanel metrics={extras.financials} />
-
-          <Panel
-            title={
-              <span className="flex items-center gap-2">
-                Funding timeline
-                {counts.equity > 0 && <Pill>{plural(counts.equity, "equity round")}</Pill>}
-                {counts.grant > 0 && <Pill tone="success">{plural(counts.grant, "grant")}</Pill>}
-              </span>
-            }
-            description={
-              <>
-                Newest first, with who led each round. Only equity and grants are summed anywhere on this page.
-                {counts.other > 0 && ` ${plural(counts.other, "filing")} without a round type ${counts.other === 1 ? "is" : "are"} left out.`}
-              </>
-            }
-          >
-            {timeline.length ? (
-              <Suspense fallback={<Skeleton className="h-40 rounded-xl" />}>
-                <Timeline rounds={timeline} />
-              </Suspense>
-            ) : (
-              <EmptyState compact title="No funding on record" description="Normal for bootstrapped and young companies." />
-            )}
-          </Panel>
-
-          <Panel title="People" description="Founders and leadership first, with the role and start date on record.">
-            <People people={people} />
-          </Panel>
-        </div>
-
-        <div className="space-y-6">
-          <CompanyAsk companyId={id} companyName={p.name} />
-          {people.events.length > 0 && (
-            <Panel title="Events">
-              <ul className="space-y-2">
-                {people.events.map((e) => (
-                  <li key={e.id} className="flex items-center gap-2">
-                    <CalendarDays className="size-4 text-muted-foreground" />
-                    {e.id === SLUSH_EVENT_ID ? (
-                      <Link href="/events/slush-2026/overview">
-                        <SlushTag label={`Slush 2026${e.role ? ` · ${e.role}` : ""}`} />
-                      </Link>
-                    ) : (
-                      <span className="text-sm">
-                        {e.name}
-                        {e.role ? ` · ${e.role}` : ""}
-                      </span>
-                    )}
-                    <SourceChip sources={e.sources} className="ml-auto" />
-                  </li>
-                ))}
-              </ul>
-            </Panel>
-          )}
-          <Panel title="Investors" description="Click one for its portfolio and activity.">
-            <InvestorList investors={groupInvestors(p.investors)} />
-          </Panel>
-          <ProductsPanel products={extras.products} />
-          <Panel title="Board" description="Directors, often from filings.">
-            <PeopleList people={mergeRoles(people.board)} empty="No board members on record." icon={Users} />
-          </Panel>
-          <GroupPanel parents={extras.parents} subsidiaries={extras.subsidiaries} more={extras.subsidiaryCountMayBeMore} />
-          <InvestmentsPanel investments={extras.investments} name={p.name} />
-          <CountriesPanel countries={extras.countries} />
-          <Panel title="Acquisitions and deals">
-            {p.deals.length ? (
-              <ul className="space-y-2.5">
-                {p.deals.map((d) => (
-                  <li key={d.id} className="flex items-start gap-2.5">
-                    <Handshake className="mt-0.5 size-4 text-muted-foreground" />
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium">{d.kind}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {d.role ? `${d.role} · ` : ""}
-                        {d.date ? formatFuzzyDate({ date: d.date, precision: "day" }) : "Date not on record"}
-                      </div>
-                    </div>
-                    <SourceChip sources={d.sources} />
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">No acquisitions or deals on record.</p>
-            )}
-          </Panel>
-          <RegistryPanel extras={extras} />
-        </div>
-      </div>
+      <CompanyBody id={id} p={p} people={people} extras={extras} />
     </>
+  );
+}
+
+/** Cala's record for a company without the page header: key facts, funding, people, investors, events and
+ * deals. Used by My startup for a startup matched to a Cala company. */
+export async function CompanyRecord({ id }: { id: string }) {
+  const [profile, peopleRes, extrasRes] = await Promise.allSettled([fetchCompanyProfile(id), fetchCompanyPeople(id), fetchCompanyExtras(id)]);
+  if (profile.status === "rejected") return <MarketError error={profile.reason} />;
+  const people = peopleRes.status === "fulfilled" ? peopleRes.value : EMPTY_PEOPLE;
+  const extras = extrasRes.status === "fulfilled" ? extrasRes.value : EMPTY_EXTRAS;
+  return <CompanyBody id={id} p={profile.value} people={people} extras={extras} />;
+}
+
+function CompanyBody({ id, p, people, extras }: { id: string; p: CompanyProfile; people: CompanyPeople; extras: CompanyExtras }) {
+  const listing = extras.listings[0];
+  // Rounds that move money and have a date, newest first.
+  const timeline = p.rounds
+    .filter((r) => r.kind !== "other" && r.date)
+    .sort((a, b) => (b.date?.date ?? "").localeCompare(a.date?.date ?? ""))
+    .slice(0, TIMELINE_ROUNDS);
+  const counts = {
+    equity: p.rounds.filter((r) => r.kind === "equity").length,
+    grant: p.rounds.filter((r) => r.kind === "grant").length,
+    other: p.rounds.filter((r) => r.kind === "other").length,
+  };
+
+  return (
+    <div className="grid grid-cols-3 gap-6">
+      <div className="col-span-2 space-y-6">
+        <Suspense fallback={<CompanyKeyFactsSkeleton />}>
+          <CompanyKeyFacts p={p} listing={listing} />
+        </Suspense>
+
+        <FinancialsPanel metrics={extras.financials} />
+
+        <Panel
+          title={
+            <span className="flex items-center gap-2">
+              Funding timeline
+              {counts.equity > 0 && <Pill>{plural(counts.equity, "equity round")}</Pill>}
+              {counts.grant > 0 && <Pill tone="success">{plural(counts.grant, "grant")}</Pill>}
+            </span>
+          }
+          description={
+            <>
+              Newest first, with who led each round. Only equity and grants are summed anywhere on this page.
+              {counts.other > 0 && ` ${plural(counts.other, "filing")} without a round type ${counts.other === 1 ? "is" : "are"} left out.`}
+            </>
+          }
+        >
+          {timeline.length ? (
+            <Suspense fallback={<Skeleton className="h-40 rounded-xl" />}>
+              <Timeline rounds={timeline} />
+            </Suspense>
+          ) : (
+            <EmptyState compact title="No funding on record" description="Normal for bootstrapped and young companies." />
+          )}
+        </Panel>
+
+        <Panel title="People" description="Founders and leadership first, with the role and start date on record.">
+          <People people={people} />
+        </Panel>
+      </div>
+
+      <div className="space-y-6">
+        <CompanyAsk companyId={id} companyName={p.name} />
+        {people.events.length > 0 && (
+          <Panel title="Events">
+            <ul className="space-y-2">
+              {people.events.map((e) => (
+                <li key={e.id} className="flex items-center gap-2">
+                  <CalendarDays className="size-4 text-muted-foreground" />
+                  {e.id === SLUSH_EVENT_ID ? (
+                    <Link href="/events/slush-2026/overview">
+                      <SlushTag label={`Slush 2026${e.role ? ` · ${e.role}` : ""}`} />
+                    </Link>
+                  ) : (
+                    <span className="text-sm">
+                      {e.name}
+                      {e.role ? ` · ${e.role}` : ""}
+                    </span>
+                  )}
+                  <SourceChip sources={e.sources} className="ml-auto" />
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        )}
+        <Panel title="Investors" description="Click one for its portfolio and activity.">
+          <InvestorList investors={groupInvestors(p.investors)} />
+        </Panel>
+        <ProductsPanel products={extras.products} />
+        <Panel title="Board" description="Directors, often from filings.">
+          <PeopleList people={mergeRoles(people.board)} empty="No board members on record." icon={Users} />
+        </Panel>
+        <GroupPanel parents={extras.parents} subsidiaries={extras.subsidiaries} more={extras.subsidiaryCountMayBeMore} />
+        <InvestmentsPanel investments={extras.investments} name={p.name} />
+        <CountriesPanel countries={extras.countries} />
+        <Panel title="Acquisitions and deals">
+          {p.deals.length ? (
+            <ul className="space-y-2.5">
+              {p.deals.map((d) => (
+                <li key={d.id} className="flex items-start gap-2.5">
+                  <Handshake className="mt-0.5 size-4 text-muted-foreground" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium">{d.kind}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {d.role ? `${d.role} · ` : ""}
+                      {d.date ? formatFuzzyDate({ date: d.date, precision: "day" }) : "Date not on record"}
+                    </div>
+                  </div>
+                  <SourceChip sources={d.sources} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">No acquisitions or deals on record.</p>
+          )}
+        </Panel>
+        <RegistryPanel extras={extras} />
+      </div>
+    </div>
   );
 }
 

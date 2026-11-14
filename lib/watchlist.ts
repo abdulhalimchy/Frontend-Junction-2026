@@ -15,6 +15,12 @@ export type WatchItem = {
   note: string;
   origin: "manual" | "suggested";
   createdAt: string;
+  /** Unread alerts about this entity. */
+  unreadAlerts: number;
+  /** When the alert scan last checked it in Cala; null until the first check. */
+  lastCheckedAt: string | null;
+  /** False for demo entries, which the alert scan skips. */
+  inCala: boolean;
 };
 
 export type WatchSummary = {
@@ -34,6 +40,9 @@ export const WATCH_TAGS: { value: WatchTag; label: string; roles: Role[] }[] = [
 ];
 
 export const tagLabel = (tag: WatchTag | null) => WATCH_TAGS.find((t) => t.value === tag)?.label ?? "Saved";
+
+/** The alerts page, filtered to one watched entity. */
+export const alertsHref = (item: Pick<WatchItem, "calaId">) => `/alerts?entity=${encodeURIComponent(item.calaId)}`;
 
 export function watchHref(item: Pick<WatchItem, "entityType" | "calaId">) {
   if (item.entityType === "company") return `/company/${item.calaId}`;

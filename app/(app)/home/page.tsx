@@ -1,25 +1,43 @@
-import { ArrowRight, Bell, Building2, FileSearch, Landmark, Users } from "lucide-react";
+import { ArrowRight, Bell, Building2, FileSearch, Landmark, Rocket, Users } from "lucide-react";
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import Loading from "@/app/(app)/loading";
+import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
-import { DEMO_STARTUP_ID, startupHref } from "@/lib/startup-cookie";
 import { Button } from "@/components/ui/button";
 import { SlushTag } from "@/components/warmline/badges";
-import { EntityAvatar, PageHeader, Panel, StatCard } from "@/components/warmline/blocks";
-import { ProfileCard } from "@/components/warmline/profile-card";
+import { EmptyState, EntityAvatar, PageHeader, Panel, StatCard } from "@/components/warmline/blocks";
+import { AddStartupButton } from "@/components/warmline/add-startup-button";
 import { SourceChip } from "@/components/warmline/source-chip";
-import { getCompanies, getEventAttendees, getInvestorsForCompany, getSimilarCompanies, getInvestor } from "@/lib/cala";
-import { buildCard } from "@/lib/cards";
-import { formatDay, formatFuzzyDate, formatMoney } from "@/lib/format";
+import { getCompanies, getEventAttendees, getInvestor } from "@/lib/cala";
+import { normaliseName } from "@/lib/cala/market";
+import { slushAttendeeIndex } from "@/lib/cala/slush";
+import { getAnalysis, getStartup } from "@/lib/backend/startups";
+import { startupHref } from "@/lib/startup-cookie";
+import { formatDay, formatMoney } from "@/lib/format";
 import { SLUSH_EVENT_ID } from "@/lib/mocks/misc";
-import { getAlerts, getProfile } from "@/lib/session";
-import type { Alert } from "@/lib/types";
+import { getActiveStartupId, getAlerts, getProfile, getStartups } from "@/lib/session";
+import type { CompetitorsAnalysis, InvestorsAnalysis } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Home" };
 
-export default async function HomePage() {
+// Profile and alerts are per request (cookie, backend), so they are read inside Suspense: navigation shows the
+// shell at once, and the alerts panel streams in on its own so a slow backend does not hold up the page.
+export default function HomePage() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+async function HomeContent() {
   const profile = await getProfile();
-  const [{ alerts }, card, slush] = await Promise.all([getAlerts(), buildCard(profile), getEventAttendees(SLUSH_EVENT_ID)]);
   const firstName = profile.name.split(" ")[0];
+  const [founder, slush] = await Promise.all([
+    profile.role === "founder" ? loadFounder() : null,
+    getEventAttendees(SLUSH_EVENT_ID),
+  ]);
 
   return (
     <>
@@ -27,92 +45,167 @@ export default async function HomePage() {
         title={`Welcome back, ${firstName}`}
         description={
           profile.role === "founder"
-            ? "Slush is in 4 days. Here is who to meet and what changed around Northlight Robotics."
+            ? founder?.startup
+              ? `Slush is in 4 days. Here is who to meet and what changed around ${founder.startup.name}.`
+              : "Slush is in 4 days. Add your startup to see who to meet and how you compare."
             : "Slush is in 4 days. Here is what changed across your portfolio and who is new on the attendee list."
         }
         eyebrow={<SlushTag label="Slush 2026 · 18–19 Nov, Helsinki" />}
       />
-      {profile.role === "founder" ? (
-        <FounderHome companyId={profile.companyId!} alerts={alerts} card={card} slush={slush} />
+      {founder ? (
+        <FounderHome {...founder} slush={slush} />
       ) : (
-        <InvestorHome investorId={profile.investorId!} alerts={alerts} card={card} slush={slush} />
+        <InvestorHome investorId={profile.investorId!} slush={slush} />
       )}
     </>
   );
 }
 
 type Slush = Awaited<ReturnType<typeof getEventAttendees>>;
-type Card = Awaited<ReturnType<typeof buildCard>>;
 
-async function FounderHome({ companyId, alerts, card, slush }: { companyId: string; alerts: Alert[]; card: Card; slush: Slush }) {
-  const [investors, competitors] = await Promise.all([getInvestorsForCompany(companyId), getSimilarCompanies(companyId)]);
-  const atSlush = investors.filter((i) => i.investor.attendsSlush);
+type Founder = Awaited<ReturnType<typeof loadFounder>>;
+
+/**
+ * The founder's Home is about the startup open under My startup (the last one chosen), using the competitors and
+ * investors analyses already stored for it. Nothing is run from here; the tabs run them.
+ */
+async function loadFounder() {
+  const { items } = await getStartups();
+  const id = await getActiveStartupId(items);
+  if (!id) return { startup: null, competitors: null, investors: null, slushIndex: null };
+  const [startup, comp, inv, slushIndex] = await Promise.all([
+    getStartup(id).catch(() => null),
+    getAnalysis(id, "competitors").catch(() => null),
+    getAnalysis(id, "investors").catch(() => null),
+    slushAttendeeIndex().catch(() => null), // the Slush tags are a nice-to-have
+  ]);
+  const compData = comp?.data as Partial<CompetitorsAnalysis> | undefined;
+  const invData = inv?.data as Partial<InvestorsAnalysis> | undefined;
+  return {
+    startup,
+    competitors: compData?.companies ? (compData as CompetitorsAnalysis) : null,
+    investors: invData?.investors ? (invData as InvestorsAnalysis) : null,
+    slushIndex,
+  };
+}
+
+async function FounderHome({ startup, competitors, investors, slushIndex, slush }: NonNullable<Founder> & { slush: Slush }) {
+  const atSlush = (name: string, id: string) => !!slushIndex && (slushIndex.ids.has(id) || slushIndex.names.has(normaliseName(name)));
+  const side = (
+    <div className="space-y-6">
+      <SlushPanel slush={slush} />
+      <Suspense fallback={<Skeleton className="h-56 rounded-xl" />}>
+        <AlertsPanel />
+      </Suspense>
+    </div>
+  );
+
+  if (!startup)
+    return (
+      <div className="grid grid-cols-3 gap-6">
+        <div className="col-span-2">
+          <EmptyState
+            icon={Rocket}
+            title="Add your startup"
+            description="We look it up in verified records, then show who to meet at Slush and how you compare with your competitors."
+            action={<AddStartupButton />}
+          />
+        </div>
+        {side}
+      </div>
+    );
+
+  const toMeet = (investors?.investors ?? []).filter((i) => atSlush(i.name, i.id)).slice(0, 5);
+  const rivals = (competitors?.companies ?? []).slice(0, 3);
 
   return (
     <div className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-6">
-        <ProfileCard data={card} />
         <Panel
           title="Investors to meet at Slush"
-          description="Attending, active in your space, and checked against your competitors."
+          description="Attending, investing in companies like yours, and checked against your competitors."
           action={
             <Button variant="ghost" size="sm" asChild>
-              <Link href={startupHref(DEMO_STARTUP_ID, "investors")}>
+              <Link href={startupHref(startup.id, "investors")}>
                 All investors <ArrowRight />
               </Link>
             </Button>
           }
         >
-          <ul className="divide-y">
-            {atSlush.map(({ investor: i, check, backsCompetitors }) => (
-              <li key={i.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                <EntityAvatar name={i.name} kind="investor" />
-                <div className="min-w-0 flex-1">
-                  <Link href={`/investor/${i.id}`} className="text-sm font-medium hover:text-primary">
-                    {i.name}
-                  </Link>
-                  <div className="text-xs text-muted-foreground">{i.focus.value.join(", ")}</div>
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  {check.stillActive.value.active ? (
-                    <span className="text-success">Active</span>
-                  ) : (
-                    <span className="text-warning">Quiet since {formatFuzzyDate(check.stillActive.value.lastInvestment!)}</span>
-                  )}
-                  {backsCompetitors.length > 0 && <span className="rounded-full bg-warning-soft px-2 py-0.5 text-warning">Backs a competitor</span>}
-                  <SourceChip sources={[...check.stillActive.sources, ...check.backsCompetitor.sources]} />
-                </div>
-              </li>
-            ))}
-          </ul>
+          {!investors ? (
+            <EmptyState
+              compact
+              icon={Landmark}
+              title="Investors not checked yet"
+              description="Find who funds companies like yours; the ones attending Slush show here."
+              action={
+                <Button size="sm" asChild>
+                  <Link href={startupHref(startup.id, "investors")}>Find investors</Link>
+                </Button>
+              }
+            />
+          ) : toMeet.length ? (
+            <ul className="divide-y">
+              {toMeet.map((i) => (
+                <li key={i.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                  <EntityAvatar name={i.name} kind="investor" />
+                  <div className="min-w-0 flex-1">
+                    <Link href={`/investor/${i.id}`} className="text-sm font-medium hover:text-primary">
+                      {i.name}
+                    </Link>
+                    <div className="truncate text-xs text-muted-foreground">{i.why}</div>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="font-medium tabular">{i.match.score}% match</span>
+                    {i.conflict === "competitor" && <span className="rounded-full bg-warning-soft px-2 py-0.5 text-warning">Backs a competitor</span>}
+                    <SourceChip sources={i.sources} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">None of the {investors.investors.length} investors in companies like yours are on the Slush attendee list.</p>
+          )}
         </Panel>
-        <Panel title="Competitors" description="Matched on what they do, not on industry code.">
-          <div className="grid grid-cols-3 gap-3">
-            {competitors.map(({ company: c, reason }) => {
-              const last = c.rounds.filter((r) => r.kind === "equity").at(-1);
-              return (
+        <Panel title="Competitors" description="From verified records of companies like yours.">
+          {!competitors ? (
+            <EmptyState
+              compact
+              icon={Building2}
+              title="Competitors not checked yet"
+              description="See where you stand on money raised, stage and team."
+              action={
+                <Button size="sm" asChild>
+                  <Link href={startupHref(startup.id, "competitors")}>Find competitors</Link>
+                </Button>
+              }
+            />
+          ) : rivals.length ? (
+            <div className="grid grid-cols-3 gap-3">
+              {rivals.map((c) => (
                 <Link key={c.id} href={`/company/${c.id}`} className="rounded-lg border p-3 transition-colors hover:border-primary/40">
                   <div className="flex items-center gap-2">
                     <EntityAvatar name={c.name} size="sm" />
-                    <span className="text-sm font-medium">{c.name}</span>
+                    <span className="truncate text-sm font-medium">{c.name}</span>
                   </div>
-                  <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{reason}</p>
-                  <p className="mt-2 text-xs tabular">{last ? `${last.stage} · ${formatMoney(last.amount)}` : "No funding on record"}</p>
+                  <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{c.description?.value ?? "No description on record"}</p>
+                  <p className="mt-2 text-xs tabular">
+                    {c.last_round ? `${c.last_round.stage} · ${formatMoney(c.last_round.amount)}` : "No funding on record"}
+                  </p>
                 </Link>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No competitors on record.</p>
+          )}
         </Panel>
       </div>
-      <div className="space-y-6">
-        <SlushPanel slush={slush} />
-        <AlertsPanel alerts={alerts} />
-      </div>
+      {side}
     </div>
   );
 }
 
-async function InvestorHome({ investorId, alerts, card, slush }: { investorId: string; alerts: Alert[]; card: Card; slush: Slush }) {
+async function InvestorHome({ investorId, slush }: { investorId: string; slush: Slush }) {
   const data = (await getInvestor(investorId))!;
   const portfolio = await getCompanies(data.investor.portfolioIds);
   const newAtSlush = slush.companies.filter((c) => !data.investor.portfolioIds.includes(c.id)).slice(0, 4);
@@ -168,27 +261,12 @@ async function InvestorHome({ investorId, alerts, card, slush }: { investorId: s
         </Panel>
       </div>
       <div className="space-y-6">
-        <ProfileCardMini card={card} />
         <SlushPanel slush={slush} />
-        <AlertsPanel alerts={alerts} />
+        <Suspense fallback={<Skeleton className="h-56 rounded-xl" />}>
+          <AlertsPanel />
+        </Suspense>
       </div>
     </div>
-  );
-}
-
-function ProfileCardMini({ card }: { card: Card }) {
-  return (
-    <Panel title="Your card" action={<Link href="/me" className="text-xs text-primary hover:underline">Edit</Link>}>
-      <div className="flex items-center gap-3">
-        <EntityAvatar name={card.name} kind="person" />
-        <div>
-          <div className="text-sm font-medium">{card.name}</div>
-          <div className="text-xs text-muted-foreground">
-            {card.title}, {card.org}
-          </div>
-        </div>
-      </div>
-    </Panel>
   );
 }
 
@@ -220,7 +298,8 @@ function SlushPanel({ slush }: { slush: Slush }) {
   );
 }
 
-function AlertsPanel({ alerts }: { alerts: Alert[] }) {
+async function AlertsPanel() {
+  const { alerts } = await getAlerts();
   return (
     <Panel
       title="Latest alerts"

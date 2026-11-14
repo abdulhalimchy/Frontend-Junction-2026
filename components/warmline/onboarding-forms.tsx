@@ -115,7 +115,7 @@ export function GoalsForm({ role, initial }: { role: Role; initial: string[] }) 
           );
         })}
       </div>
-      <Button className="mt-8 h-10 w-full" disabled={!picked.length} onClick={() => router.push("/onboarding/card")}>
+      <Button className="mt-8 h-10 w-full" disabled={!picked.length} onClick={() => router.push("/home")}>
         Continue
       </Button>
     </div>

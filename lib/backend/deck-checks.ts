@@ -37,7 +37,7 @@ export async function getDeckCheckById(id: string): Promise<DeckCheckResult> {
 
 /**
  * The newest deck check, with its claims. null when nothing has been uploaded yet.
- * startupId scopes it to one startup (null: decks with no startup, i.e. the demo company); undefined: any deck.
+ * startupId scopes it to one startup (null: decks with no startup); undefined: any deck.
  */
 export async function getLatestDeckCheck(startupId?: string | null): Promise<DeckCheckResult | null> {
   const scope = startupId === undefined ? "" : `&startup=${encodeURIComponent(startupId ?? "none")}`;

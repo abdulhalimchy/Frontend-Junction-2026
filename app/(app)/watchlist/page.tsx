@@ -5,8 +5,9 @@ import { Suspense } from "react";
 import Loading from "@/app/(app)/loading";
 import { Button } from "@/components/ui/button";
 import { EmptyState, PageHeader, Panel } from "@/components/warmline/blocks";
+import { getAlertSchedule } from "@/lib/backend/alerts";
 import { listWatchItems } from "@/lib/backend/watchlist";
-import { demoDataEnabled } from "@/lib/demo";
+import { formatMoment, zoneCity } from "@/lib/format";
 import { getRole } from "@/lib/session";
 import { cn } from "@/lib/utils";
 import { WATCH_TAGS, type WatchItem } from "@/lib/watchlist";
@@ -28,26 +29,32 @@ const TAG_FILTERS: Filter[] = [
 
 async function WatchlistContent({ searchParams }: PageProps<"/watchlist">) {
   const { show } = await searchParams;
-  const [result, role] = await Promise.all([
+  const [result, role, schedule] = await Promise.all([
     listWatchItems().then(
       (items) => ({ items, error: null }),
       (e: unknown) => ({ items: [] as WatchItem[], error: e instanceof Error ? e.message : "Could not load the watch list." }),
     ),
     getRole(),
+    getAlertSchedule().catch(() => null),
   ]);
+  const tz = schedule?.timezone ?? "UTC";
   const { items, error } = result;
 
   // Chips: the type filters always, tag filters only when something carries that tag.
   const filters = [...BASE_FILTERS, ...TAG_FILTERS.filter((f) => items.some(f.match))];
   const active = filters.find((f) => f.key === show) ?? filters[0];
   const shown = items.filter(active.match);
-  const browse = demoDataEnabled() ? { href: "/search", label: "Search companies" } : { href: "/market", label: "Open Market" };
+  const browse = { href: "/market", label: "Open Market" };
 
   return (
     <>
       <PageHeader
         title="Watch list"
-        description="Companies and investors you follow. Alerts tell you when the records show a change on any of them. Only you can see this list."
+        description={
+          schedule
+            ? `Companies and investors you follow. We check every one of them each night at ${schedule.time} (${zoneCity(schedule.timezone)} time), and changes show up in Alerts. Only you can see this list.`
+            : "Companies and investors you follow. Alerts tell you when the records show a change on any of them. Only you can see this list."
+        }
       />
 
       {error ? (
@@ -94,7 +101,7 @@ async function WatchlistContent({ searchParams }: PageProps<"/watchlist">) {
             {shown.length ? (
               <ul className="divide-y">
                 {shown.map((item) => (
-                  <WatchRow key={item.id} item={item} role={role} />
+                  <WatchRow key={item.id} item={item} role={role} checked={item.lastCheckedAt && formatMoment(item.lastCheckedAt, tz)} />
                 ))}
               </ul>
             ) : (

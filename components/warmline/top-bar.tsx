@@ -111,11 +111,11 @@ export function TopBar({ items, unread, live }: { items: PaletteItem[]; unread: 
               <CommandItem
                 value={`search ${q}`}
                 onSelect={() =>
-                  go(live ? `/market?${new URLSearchParams({ mode: "company", sector: q })}` : `/search?q=${encodeURIComponent(q)}`)
+                  go(`/market?${new URLSearchParams({ mode: "company", sector: q })}`)
                 }
               >
                 <Search />
-                {live ? `Find company “${q}”` : `Search all companies for “${q}”`}
+                Find company “{q}”
                 <CommandShortcut>↵</CommandShortcut>
               </CommandItem>
             </CommandGroup>

@@ -12,8 +12,10 @@ import { formatDay } from "@/lib/format";
 import { SLUSH_EVENT_ID } from "@/lib/mocks/misc";
 import { getProfile } from "@/lib/session";
 import { LIVE_TABS, LiveSlush, type LiveTab } from "./live-slush";
+import { SideEventsTab } from "./side-events";
+import { SIDE_EVENTS, type SideEventFilters } from "@/lib/slush/side-events";
 
-const TABS = ["overview", "new", "investors"] as const;
+const TABS = ["overview", "new", "investors", "side-events"] as const;
 type Tab = (typeof TABS)[number];
 
 export function generateStaticParams() {
@@ -24,14 +26,16 @@ export const metadata = { title: "Slush 2026" };
 
 async function SlushPageContent({ params, searchParams }: PageProps<"/events/slush-2026/[tab]">) {
   const { tab } = (await params) as { tab: Tab };
+  const sp = await searchParams;
+  const str = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string).slice(0, 100) : undefined);
+  const filters: SideEventFilters = { day: str("day"), topic: str("topic"), q: str("q"), going: str("going") === "1" };
   // Live from Cala unless USE_MOCKS=true (same switch as Market). The mock page below is the demo persona view.
   if (!mocksEnabled()) {
     if (tab === "new") redirect("/events/slush-2026/attendees");
     if (!LIVE_TABS.includes(tab as LiveTab)) notFound();
-    const sp = await searchParams;
-    const q = typeof sp.q === "string" ? sp.q.slice(0, 100) : "";
-    const page = Number(typeof sp.page === "string" ? sp.page : 1) || 1;
-    return <LiveSlush tab={tab as LiveTab} q={q} page={page} />;
+    const q = str("q") ?? "";
+    const page = Number(str("page") ?? 1) || 1;
+    return <LiveSlush tab={tab as LiveTab} q={q} page={page} filters={filters} />;
   }
   if (!TABS.includes(tab)) notFound();
   const [{ event: e, companies, investors }, profile] = await Promise.all([getEventAttendees(SLUSH_EVENT_ID), getProfile()]);
@@ -66,6 +70,7 @@ async function SlushPageContent({ params, searchParams }: PageProps<"/events/slu
           { key: "overview", label: "Overview", href: "/events/slush-2026/overview" },
           { key: "new", label: "New attendees", href: "/events/slush-2026/new", count: e.newThisWeek },
           { key: "investors", label: "Investors", href: "/events/slush-2026/investors", count: investors.length },
+          { key: "side-events", label: "Side events", href: "/events/slush-2026/side-events", count: SIDE_EVENTS.length },
         ]}
       />
       {tab === "overview" && (
@@ -102,6 +107,7 @@ async function SlushPageContent({ params, searchParams }: PageProps<"/events/slu
           />
         </Panel>
       )}
+      {tab === "side-events" && <SideEventsTab filters={filters} live={false} />}
       {tab === "investors" && (
         <Panel title="Investors attending" description="With the investor check: still active, and whether they lead or follow.">
           <InvestorTable rows={investorRows} />

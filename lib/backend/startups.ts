@@ -1,5 +1,5 @@
 import "server-only";
-import type { Analysis, AnalysisKind, Startup, StartupField } from "@/lib/types";
+import type { Analysis, AnalysisKind, CalaCandidate, Startup, StartupField } from "@/lib/types";
 import { backendError, backendFetch } from "./client";
 
 // /api/v1/startups/ (snake_case) ↔ the frontend's Startup.
@@ -77,14 +77,21 @@ export async function createStartup(input: StartupInput): Promise<Startup> {
   return toStartup(await json<ApiStartup>(res));
 }
 
-/** Starts the background lookup. Returns a draft whose suggestions fill in as the lookup runs. */
-export async function lookupStartup(domain: string): Promise<Startup> {
+/** Starts the background lookup from a domain, a Cala company picked from search, or both. Returns a draft
+ * whose suggestions fill in as the lookup runs. */
+export async function lookupStartup({ domain, calaId }: { domain?: string; calaId?: string }): Promise<Startup> {
   const res = await backendFetch("/startups/lookup/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ domain }),
+    body: JSON.stringify({ domain: domain ?? "", cala_id: calaId || null }),
   });
   return toStartup(await json<ApiStartup>(res));
+}
+
+/** Companies in Cala named like `q`, for the user to pick from when adding a startup by name. */
+export async function searchCalaCompanies(q: string): Promise<CalaCandidate[]> {
+  const res = await backendFetch(`/startups/search/?${new URLSearchParams({ q })}`);
+  return (await json<{ results: CalaCandidate[] }>(res)).results;
 }
 
 export async function updateStartup(id: string, input: StartupInput): Promise<Startup> {

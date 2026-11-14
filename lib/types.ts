@@ -114,19 +114,12 @@ export type Alert = {
   date: string;
   read: boolean;
   href: string;
+  /** The watched company or investor this is about (Cala id); empty for older alerts. */
+  calaId?: string;
   /** Mock fixtures only: which demo persona sees it. */
   roles?: Role[];
   slush?: boolean;
   sources: Source[];
-};
-
-export type MetEntry = {
-  id: string;
-  personId: string;
-  metAt: string; // ISO date
-  where: string;
-  note: string;
-  slush: boolean;
 };
 
 export type ClaimStatus = "confirmed" | "differs" | "cant_verify";
@@ -220,8 +213,6 @@ export type Profile = {
   goals: string[];
   privacy: {
     showInEventDirectory: boolean;
-    showCardInSearch: boolean;
-    shareMetList: boolean;
     allowAlertsEmail: boolean;
   };
 };
@@ -229,6 +220,8 @@ export type Profile = {
 /** Profile fields of a startup the founder added. Each can carry sources from the background lookup. */
 export type StartupField = "name" | "description" | "founded" | "headquarters" | "employees" | "stage" | "industry";
 
+/** A company in Cala offered when adding a startup by name. `domain` is its website on record ("" if none). */
+export type CalaCandidate = { id: string; name: string; description: string; domain: string; headquarters: string; founded: string };
 export type StartupSuggestion = { value: string; origin: "cala" | "website" | "domain"; sources: Source[] };
 
 /** A startup the founder added (by domain, auto-filled, or by hand). Stored in the backend. */
@@ -250,8 +243,8 @@ export type Startup = {
   suggestions: Partial<Record<StartupField, StartupSuggestion>>;
 };
 
-/** One row in the sidebar's startup list. The demo persona's company is listed with demo: true. */
-export type StartupSummary = { id: string; name: string; domain: string; demo?: boolean };
+/** One row in the sidebar's startup list. */
+export type StartupSummary = { id: string; name: string; domain: string };
 
 // ---- On-demand analyses for an added startup (Competitors and Find investors tabs) ----
 

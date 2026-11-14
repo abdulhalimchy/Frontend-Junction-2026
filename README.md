@@ -31,7 +31,7 @@ lib/cala/market.ts     live market data: knowledge_query for candidates, sourced
 lib/market.ts          market aggregation (shared by live and mock data)
 lib/cala/index.ts      data functions; getMarket is live, the rest still return mocks
 lib/mocks/             fictional fixtures
-lib/session.ts         current role/profile, alerts, met list (cookie-based until Supabase)
+lib/session.ts         current role/profile, alerts (cookie-based until Supabase)
 lib/format.ts          money, fuzzy dates, per-currency totals
 ```
 

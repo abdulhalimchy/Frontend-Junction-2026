@@ -13,15 +13,17 @@ import { normaliseName } from "@/lib/names";
 import { fetchSlush, fetchSlushInvestors, resolveAttendee, type SlushAttendee } from "@/lib/cala/slush";
 import { formatDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { SIDE_EVENTS, type SideEventFilters } from "@/lib/slush/side-events";
+import { SideEventsTab } from "./side-events";
 
 // Live Slush 2026 event space (USE_MOCKS is not "true"). Everything shown comes from Cala with its sources.
 
-export const LIVE_TABS = ["overview", "attendees", "investors"] as const;
+export const LIVE_TABS = ["overview", "attendees", "investors", "side-events"] as const;
 export type LiveTab = (typeof LIVE_TABS)[number];
 
 const PER_PAGE = 25;
 
-export async function LiveSlush({ tab, q, page }: { tab: LiveTab; q: string; page: number }) {
+export async function LiveSlush({ tab, q, page, filters }: { tab: LiveTab; q: string; page: number; filters: SideEventFilters }) {
   let e: Awaited<ReturnType<typeof fetchSlush>>;
   try {
     e = await fetchSlush();
@@ -64,6 +66,7 @@ export async function LiveSlush({ tab, q, page }: { tab: LiveTab; q: string; pag
           { key: "overview", label: "Overview", href: "/events/slush-2026/overview" },
           { key: "attendees", label: "Attendees", href: "/events/slush-2026/attendees", count: attendees.length },
           { key: "investors", label: "Investors", href: "/events/slush-2026/investors" },
+          { key: "side-events", label: "Side events", href: "/events/slush-2026/side-events", count: SIDE_EVENTS.length },
         ]}
       />
 
@@ -110,6 +113,8 @@ export async function LiveSlush({ tab, q, page }: { tab: LiveTab; q: string; pag
       )}
 
       {tab === "attendees" && <AttendeesTab attendees={newest} q={q} page={page} />}
+
+      {tab === "side-events" && <SideEventsTab filters={filters} live />}
 
       {tab === "investors" && (
         <Panel

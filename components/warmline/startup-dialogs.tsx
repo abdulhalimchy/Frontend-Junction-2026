@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe, Loader2, PenLine, Sparkles } from "lucide-react";
+import { ArrowLeft, Building2, Loader2, PenLine, Search, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -9,11 +9,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { Startup, StartupField, StartupSummary } from "@/lib/types";
-import { DEMO_STARTUP_ID, STARTUP_COOKIE, startupHref } from "@/lib/startup-cookie";
+import type { CalaCandidate, Startup, StartupField, StartupSummary } from "@/lib/types";
+import { STARTUP_COOKIE, startupHref } from "@/lib/startup-cookie";
 import { cn } from "@/lib/utils";
 
-export { DEMO_STARTUP_ID };
 
 export function setActiveStartup(id: string) {
   document.cookie = `${STARTUP_COOKIE}=${encodeURIComponent(id)}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
@@ -122,13 +121,22 @@ function useOpenStartup() {
 
 // -- add ----------------------------------------------------------------------
 
-type Step = "domain" | "looking" | "form";
+type Step = "domain" | "pick" | "looking" | "form";
 
-/** Add a startup: enter its domain and review what the lookup found, or fill everything in by hand. */
+/** "discord.com" or "https://www.discord.com/app" is a website; "Discord" or "Oura Health" is a name. */
+function looksLikeDomain(text: string) {
+  return /^(https?:\/\/)?[^\s/]+\.[a-z]{2,}(\/\S*)?$/i.test(text.trim());
+}
+
+/** Add a startup: search Cala by name and pick the company, or enter its website; then review what the lookup
+ * found. Or fill everything in by hand. */
 export function AddStartupDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const openStartup = useOpenStartup();
   const [step, setStep] = useState<Step>("domain");
   const [domain, setDomain] = useState("");
+  const [candidates, setCandidates] = useState<CalaCandidate[]>([]);
+  const [searched, setSearched] = useState("");
+  const [picked, setPicked] = useState<CalaCandidate | null>(null);
   const [draft, setDraft] = useState<Startup | null>(null);
   const [values, setValues] = useState<Values>(EMPTY);
   const [busy, setBusy] = useState(false);
@@ -169,6 +177,9 @@ export function AddStartupDialog({ open, onOpenChange }: { open: boolean; onOpen
     if (draft && !keepDraft) void api(`/api/startups/${draft.id}`, { method: "DELETE" }).catch(() => {});
     setStep("domain");
     setDomain("");
+    setCandidates([]);
+    setSearched("");
+    setPicked(null);
     setDraft(null);
     setValues(EMPTY);
     setError(null);
@@ -180,12 +191,11 @@ export function AddStartupDialog({ open, onOpenChange }: { open: boolean; onOpen
     onOpenChange(next);
   }
 
-  async function lookup(e: React.FormEvent) {
-    e.preventDefault();
+  async function start(body: { domain?: string; calaId?: string }) {
     setError(null);
     setBusy(true);
     try {
-      const d = await api<Startup>("/api/startups/lookup", { method: "POST", body: JSON.stringify({ domain }) });
+      const d = await api<Startup>("/api/startups/lookup", { method: "POST", body: JSON.stringify(body) });
       setDraft(d);
       setStep("looking");
     } catch (err) {
@@ -195,9 +205,34 @@ export function AddStartupDialog({ open, onOpenChange }: { open: boolean; onOpen
     }
   }
 
+  // A website goes straight to the lookup; a name is searched in Cala first, so the user picks the company
+  // (Cala's name search also returns namesakes such as ETFs and shell companies).
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const text = domain.trim();
+    if (looksLikeDomain(text)) return start({ domain: text });
+    setError(null);
+    setBusy(true);
+    try {
+      const { results } = await api<{ results: CalaCandidate[] }>(`/api/startups/search?${new URLSearchParams({ q: text })}`);
+      setCandidates(results);
+      setSearched(text);
+      setStep("pick");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not search companies.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function pick(c: CalaCandidate) {
+    setPicked(c);
+    void start({ calaId: c.id });
+  }
+
   function manual() {
     setError(null);
-    setValues({ ...EMPTY, domain: domain.trim() });
+    setValues({ ...EMPTY, ...(looksLikeDomain(domain) ? { domain: domain.trim() } : { name: domain.trim() }) });
     setStep("form");
   }
 
@@ -229,24 +264,26 @@ export function AddStartupDialog({ open, onOpenChange }: { open: boolean; onOpen
               ? draft
                 ? "Here is what we found. Check each value, change anything that is wrong, then save."
                 : "Fill in what you know. Only the name is required."
-              : "Start with its website. We look it up in verified records and on the site, and fill in what we find."}
+              : step === "pick"
+                ? "Pick the company. We fill in what the verified records hold on it, and read its website on record."
+                : "Search by name or enter its website. We look it up in verified records and on the site, and fill in what we find."}
           </DialogDescription>
         </DialogHeader>
 
         {step === "domain" && (
-          <form onSubmit={lookup} className="space-y-4">
+          <form onSubmit={submit} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="startup-lookup-domain" className="text-xs font-medium text-muted-foreground">
-                Company domain
+                Company name or website
               </Label>
               <div className="relative">
-                <Globe className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-subtle" />
+                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-subtle" />
                 <Input
                   id="startup-lookup-domain"
                   autoFocus
                   value={domain}
                   onChange={(e) => setDomain(e.target.value)}
-                  placeholder="northlight.ai"
+                  placeholder="Northlight Robotics or northlight.ai"
                   className="pl-8"
                 />
               </div>
@@ -254,13 +291,68 @@ export function AddStartupDialog({ open, onOpenChange }: { open: boolean; onOpen
             {error && <p className="text-[13px] text-destructive">{error}</p>}
             <div className="flex items-center justify-between gap-3">
               <button type="button" onClick={manual} className="flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground">
-                <PenLine className="size-3.5" /> No website yet? Enter details yourself
+                <PenLine className="size-3.5" /> Enter details yourself
               </button>
-              <Button type="submit" disabled={busy || !domain.trim()}>
-                {busy ? <Loader2 className="animate-spin" /> : <Sparkles />} Look up
+              <Button type="submit" disabled={busy || domain.trim().length < 2}>
+                {busy ? <Loader2 className="animate-spin" /> : looksLikeDomain(domain) ? <Sparkles /> : <Search />}
+                {looksLikeDomain(domain) ? "Look up" : "Search"}
               </Button>
             </div>
           </form>
+        )}
+
+        {step === "pick" && (
+          <div className="space-y-4">
+            {candidates.length ? (
+              <ul className="max-h-80 space-y-1.5 overflow-y-auto">
+                {candidates.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => pick(c)}
+                      className={cn(
+                        "flex w-full items-start gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:border-primary/40 hover:bg-muted/40 disabled:opacity-60",
+                        picked?.id === c.id && "border-primary/60",
+                      )}
+                    >
+                      <Building2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-2">
+                          <span className="truncate text-sm font-medium">{c.name}</span>
+                          {busy && picked?.id === c.id && <Loader2 className="size-3.5 animate-spin text-primary" />}
+                        </span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {[c.domain || "No website on record", c.headquarters, c.founded && `Founded ${c.founded}`].filter(Boolean).join(" · ")}
+                        </span>
+                        {c.description && <span className="mt-1 line-clamp-2 block text-xs text-muted-foreground">{c.description}</span>}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
+                No company on record is named “{searched}”. Try its website instead, or enter the details yourself.
+              </p>
+            )}
+            {error && <p className="text-[13px] text-destructive">{error}</p>}
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setStep("domain");
+                }}
+                className="flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground"
+              >
+                <ArrowLeft className="size-3.5" /> Not listed? Search again or enter its website
+              </button>
+              <Button type="button" variant="outline" onClick={manual}>
+                <PenLine /> Enter details yourself
+              </Button>
+            </div>
+          </div>
         )}
 
         {step === "looking" && (
@@ -268,7 +360,7 @@ export function AddStartupDialog({ open, onOpenChange }: { open: boolean; onOpen
             <div className="flex items-center gap-3 rounded-lg border bg-muted/40 p-3">
               <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
               <div className="min-w-0">
-                <p className="text-sm font-medium">Looking up {draft?.domain}</p>
+                <p className="text-sm font-medium">Looking up {picked?.name ?? draft?.domain}</p>
                 <p className="text-xs text-muted-foreground">Checking verified records and reading the company&apos;s website. This usually takes 5–20 seconds.</p>
               </div>
             </div>
@@ -284,7 +376,7 @@ export function AddStartupDialog({ open, onOpenChange }: { open: boolean; onOpen
               <Button
                 variant="outline"
                 onClick={() => {
-                  setValues({ ...EMPTY, domain: draft?.domain ?? domain });
+                  setValues({ ...EMPTY, ...(picked ? { name: picked.name, domain: picked.domain } : { domain: draft?.domain ?? domain }) });
                   setStep("form");
                 }}
               >
@@ -459,8 +551,9 @@ export function DeleteStartupDialog({
       toast.success(`${startup.name} deleted`);
       onOpenChange(false);
       if (active) {
-        setActiveStartup(DEMO_STARTUP_ID);
-        router.push(startupHref(DEMO_STARTUP_ID));
+        // The page then opens another of the founder's startups, or offers to add one.
+        setActiveStartup("");
+        router.push(startupHref(null));
       }
       router.refresh();
     } catch (err) {
