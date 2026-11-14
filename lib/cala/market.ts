@@ -11,6 +11,7 @@ import {
   type CalaProp,
   type GetEntityResponse,
   type QueryResponse,
+  type RelationshipEdge,
 } from "./client";
 
 // Market data from Cala, in three steps:
@@ -56,6 +57,7 @@ const MAX_ROUNDS_PER_COMPANY = 12;
 // Corporate events mix funding with results updates, board changes, M&A… in no date order, so read
 // more of them and keep only the financings.
 const MAX_CORPORATE_EVENTS = 50;
+const MAX_FINANCING_EVENTS = 10;
 const CONCURRENCY = 4;
 const COMPANY_TYPES = new Set(["Company", "Organization"]);
 
@@ -144,7 +146,7 @@ export async function loadCandidates(res: QueryResponse, regionKey: string, excl
   return { companies, outsideRegion, unresolved };
 }
 
-const MAX_INVESTORS_ENRICHED = 40;
+const MAX_INVESTORS_ENRICHED = 25;
 
 /**
  * Adds each investor's Cala aliases and website (one cached lookup per investor), so the same firm recorded
@@ -188,16 +190,25 @@ export function companyCountries(e: GetEntityResponse): string[] {
 }
 
 /** Relationships every company view needs: rounds (both models), location, investors. */
+/**
+ * One request shape for every company view (market rows, players, competitors, company analysis), so each
+ * company costs one cached Cala call however many pages show it.
+ */
 export const COMPANY_RELATIONSHIPS = {
   outgoing: {
     PARTICIPATES_IN_FUNDING_ROUND: { limit: MAX_ROUNDS_PER_COMPANY },
     PARTICIPATES_IN_CORPORATE_EVENT: { limit: MAX_CORPORATE_EVENTS },
     HAS_HEADQUARTERS_IN: { limit: 3 },
     IS_REGISTERED_IN: { limit: 3 },
+    OPERATES_IN_INDUSTRY: { limit: 5 },
   },
   incoming: { INVESTED_IN: { limit: 25 } },
 };
-export const COMPANY_PROPS = ["name", "description", "founding_date", "founding_date__precision", "headquarters_address"];
+export const COMPANY_PROPS = [
+  "name", "description", "founding_date", "founding_date__precision", "headquarters_address",
+  "legal_name", "website", "employee_count_range", "operational_status", "company_ownership_status", "funding_stage",
+  "total_funding", "total_funding_units", "total_funding_excluding_debt", "total_funding_excluding_debt_units",
+];
 
 async function fetchMarketCompany(id: string): Promise<{ company: MarketCompany; countries: string[] }> {
   const e = await retrieveEntity(id, { properties: COMPANY_PROPS, relationships: COMPANY_RELATIONSHIPS });
@@ -211,12 +222,14 @@ export async function toMarketCompany(e: GetEntityResponse): Promise<MarketCompa
   // FINANCING_RAISED_OR_FACILITY_ENTERED from filings such as SEC Form D. Read all of them, keeping only
   // rounds where this company raised money (role ISSUER).
   const out = e.relationships.outgoing;
-  const roundEdges = [
-    ...(out.PARTICIPATES_IN_FUNDING_ROUND ?? []),
-    ...(out.PARTICIPATES_IN_CORPORATE_EVENT ?? []).filter(
-      (r) => ROUND_TYPES.has(r.entity_type) || r.name === FINANCING_EVENT,
-    ),
-  ].filter((r) => (r.properties.role ?? "ISSUER") === "ISSUER");
+  const issuer = (r: RelationshipEdge) => (r.properties.role ?? "ISSUER") === "ISSUER";
+  // Each round is one more Cala call, so financing events are capped to the most recent few; the edge
+  // already carries event_date, so this costs nothing to decide.
+  const events = (out.PARTICIPATES_IN_CORPORATE_EVENT ?? [])
+    .filter((r) => issuer(r) && (ROUND_TYPES.has(r.entity_type) || r.name === FINANCING_EVENT))
+    .sort((a, b) => String(b.properties.event_date ?? "").localeCompare(String(a.properties.event_date ?? "")))
+    .slice(0, MAX_FINANCING_EVENTS);
+  const roundEdges = [...(out.PARTICIPATES_IN_FUNDING_ROUND ?? []).filter(issuer), ...events];
 
   const rounds = dedupeRounds(
     (await mapLimit(roundEdges, CONCURRENCY, (r) => fetchRound(r.id, r.name))).filter((r): r is FundingRound => r !== null),

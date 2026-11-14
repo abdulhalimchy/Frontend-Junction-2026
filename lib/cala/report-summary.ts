@@ -3,7 +3,7 @@ import { LLM_MODEL, generateJson } from "@/lib/llm/gemini";
 import { lastEquityRound } from "@/lib/market";
 import { formatFuzzyDate, formatMoney } from "@/lib/format";
 import type { Money, Source } from "@/lib/types";
-import { memoKnowledge } from "./client";
+import { memoCala } from "./client";
 import { marketDeals, marketFunding, marketPlayers, marketSize, marketTrends, type EvidenceSection, type ReportQuery } from "./report";
 
 // Executive summary for a market report: Gemini writes only from numbered Cala facts, then code checks every
@@ -37,7 +37,7 @@ export type ReportSummary = {
 };
 
 export function reportSummary(q: ReportQuery): Promise<ReportSummary> {
-  return memoKnowledge(`summary:v3:${LLM_MODEL}:${q.sector}|${q.region}|${q.year}`, () => build(q));
+  return memoCala(`summary:v3:${LLM_MODEL}:${q.sector}|${q.region}|${q.year}`, () => build(q));
 }
 
 async function build(q: ReportQuery): Promise<ReportSummary> {

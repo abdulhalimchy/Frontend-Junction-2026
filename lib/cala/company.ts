@@ -32,21 +32,10 @@ export async function findCompanies(text: string): Promise<{ exact: CompanyMatch
   return { exact: all.filter((m) => normaliseName(m.name) === target), all };
 }
 
-const PROFILE_PROPS = [
-  ...COMPANY_PROPS,
-  "legal_name", "website", "employee_count_range", "operational_status", "company_ownership_status", "funding_stage",
-  "total_funding", "total_funding_units", "total_funding_excluding_debt", "total_funding_excluding_debt_units",
-];
-
 export async function fetchCompanyProfile(id: string): Promise<CompanyProfile> {
   assertCalaKey();
-  const e = await retrieveEntity(id, {
-    properties: PROFILE_PROPS,
-    relationships: {
-      ...COMPANY_RELATIONSHIPS,
-      outgoing: { ...COMPANY_RELATIONSHIPS.outgoing, OPERATES_IN_INDUSTRY: { limit: 5 } },
-    },
-  });
+  // Same request shape as every other company view, so it shares their cache entry.
+  const e = await retrieveEntity(id, { properties: COMPANY_PROPS, relationships: COMPANY_RELATIONSHIPS });
   const base = await toMarketCompany(e);
   await enrichInvestors([base]);
   const stage = sourced<string>(e, "funding_stage");

@@ -2,7 +2,6 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { cacheLife } from "next/cache";
 import type { Source } from "@/lib/types";
 
 // Typed client for Cala's REST API (https://docs.cala.ai, OpenAPI at https://api.cala.ai/openapi.json).
@@ -69,6 +68,22 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Real Cala network calls per endpoint since the server started (cache hits are not counted). Kept on
+ * globalThis because pages and route handlers load separate copies of this module.
+ */
+const g = globalThis as unknown as { __calaUsage?: Record<string, number> };
+export const calaUsage: Record<string, number> = (g.__calaUsage ??= {});
+
+function endpointName(path: string, method: string) {
+  if (path.startsWith("/v1/knowledge/search")) return "knowledge_search";
+  if (path.startsWith("/v1/knowledge/query")) return "knowledge_query";
+  if (path.endsWith("/introspection")) return "entity_introspection";
+  if (path === "/v1/entities") return "entity_search";
+  if (path.startsWith("/v1/entities/lookup")) return "entity_lookup";
+  return method === "POST" ? "entity_retrieval" : "other";
+}
+
 async function calaFetch<T>(
   path: string,
   init: { method: "GET" | "POST"; body?: unknown; query?: Record<string, string | string[] | number>; unlimited?: boolean /* true = knowledge lane */ },
@@ -85,6 +100,8 @@ async function calaFetch<T>(
   // growing waits, so a page that needs many lookups slows down instead of failing.
   let res: Response;
   for (let attempt = 0; ; attempt++) {
+    const name = endpointName(url.pathname, init.method);
+    calaUsage[name] = (calaUsage[name] ?? 0) + 1;
     const lane = init.unlimited ? knowledgeLimit : entityLimit;
     await lane.acquire();
     try {
@@ -92,10 +109,16 @@ async function calaFetch<T>(
         method: init.method,
         headers: { "X-API-KEY": key, "Content-Type": "application/json" },
         body: init.body === undefined ? undefined : JSON.stringify(init.body),
+        // A hung request must not hold a page (or a lane slot) forever.
+        signal: AbortSignal.timeout(init.unlimited ? 120_000 : 30_000),
       });
+    } catch (e) {
+      if (attempt < 1 && e instanceof Error && e.name === "TimeoutError") continue; // one retry
+      throw new CalaError(e instanceof Error && e.name === "TimeoutError" ? "Cala did not answer in time" : `Could not reach Cala: ${String(e)}`, 504, "upstream");
     } finally {
       lane.release();
     }
+    if (process.env.CALA_LOG === "1") console.log(`[cala] ${name} ${url.pathname}${url.search} -> ${res.status}`);
     // Retry rate limits (up to 3 times) and transient server errors such as 502 (up to 2 times).
     const retryable = res.status === 429 ? attempt < 3 : res.status >= 500 && attempt < 2;
     if (!retryable) break;
@@ -157,21 +180,24 @@ export type EntityQuery = {
 // ---- Endpoints ----
 
 /**
- * Cache for the slow knowledge endpoints and the report summary. A question Cala has not seen before takes
- * ~45–70s, beyond Next's 50s limit for "use cache" functions, so results are kept here instead:
- * - in memory, so concurrent identical requests share one call;
- * - on disk (CALA_CACHE_DIR, default .cache/cala), so a restart does not start cold.
- * Entries last 24h; failures are never cached. Phase 2 moves this to Supabase so it is shared between servers.
+ * One cache for every Cala call (and the report summary), so each distinct request is paid for once:
+ * - in memory, so identical requests in flight at the same time share one call (Next renders a page
+ *   several times in development, and "use cache" does not merge in-flight requests);
+ * - on disk (CALA_CACHE_DIR, default .cache/cala), so a restart does not spend credits again.
+ * Failures are never cached. Phase 2 moves the disk layer to Supabase so servers share it.
  */
-const KNOWLEDGE_TTL_MS = 24 * 60 * 60 * 1000;
+const HOUR = 60 * 60 * 1000;
+export const TTL = { knowledge: 24 * HOUR, search: 24 * HOUR, entity: 7 * 24 * HOUR };
 const CACHE_DIR = process.env.CALA_CACHE_DIR || path.join(process.cwd(), ".cache", "cala");
-const knowledgeCache = new Map<string, { at: number; promise: Promise<unknown> }>();
+// On globalThis: pages and route handlers load separate copies of this module, and they must share one cache.
+const gc = globalThis as unknown as { __calaCache?: Map<string, { at: number; promise: Promise<unknown> }> };
+const knowledgeCache = (gc.__calaCache ??= new Map());
 
-export function memoKnowledge<T>(key: string, load: () => Promise<T>): Promise<T> {
+export function memoCala<T>(key: string, load: () => Promise<T>, ttl = TTL.knowledge): Promise<T> {
   const now = performance.timeOrigin + performance.now();
   const hit = knowledgeCache.get(key);
-  if (hit && now - hit.at < KNOWLEDGE_TTL_MS) return hit.promise as Promise<T>;
-  const promise = fromDisk<T>(key, now).then(async (saved) => {
+  if (hit && now - hit.at < ttl) return hit.promise as Promise<T>;
+  const promise = fromDisk<T>(key, now, ttl).then(async (saved) => {
     if (saved) return saved.value;
     const value = await load();
     await toDisk(key, { at: now, value });
@@ -186,10 +212,10 @@ function cacheFile(key: string) {
   return path.join(CACHE_DIR, `${createHash("sha256").update(key).digest("hex").slice(0, 32)}.json`);
 }
 
-async function fromDisk<T>(key: string, now: number): Promise<{ at: number; value: T } | null> {
+async function fromDisk<T>(key: string, now: number, ttl: number): Promise<{ at: number; value: T } | null> {
   try {
     const saved = JSON.parse(await readFile(cacheFile(key), "utf8")) as { key: string; at: number; value: T };
-    return saved.key === key && now - saved.at < KNOWLEDGE_TTL_MS ? saved : null;
+    return saved.key === key && now - saved.at < ttl ? saved : null;
   } catch {
     return null; // missing or unreadable: ask Cala
   }
@@ -206,7 +232,7 @@ async function toDisk(key: string, entry: { at: number; value: unknown }) {
 
 /** POST /v1/knowledge/query: structured rows plus matched entities. Rows carry no sources. */
 export function knowledgeQuery(input: string): Promise<QueryResponse> {
-  return memoKnowledge(`query:${input}`, () =>
+  return memoCala(`query:${input}`, () =>
     calaFetch<QueryResponse>("/v1/knowledge/query", { method: "POST", body: { input, return_entities: true }, unlimited: true }),
   );
 }
@@ -220,7 +246,7 @@ export type SearchAnswer = { content: string; context: KnowBit[]; entities: Enti
 
 /** POST /v1/knowledge/search: a markdown answer plus the facts (KnowBits) it rests on, each with its origin URLs. */
 export function knowledgeSearch(input: string): Promise<SearchAnswer> {
-  return memoKnowledge(`search:${input}`, () =>
+  return memoCala(`search:${input}`, () =>
     calaFetch<SearchAnswer>("/v1/knowledge/search", {
       method: "POST",
       body: { input, explainability: false, return_entities: true },
@@ -230,30 +256,29 @@ export function knowledgeSearch(input: string): Promise<SearchAnswer> {
 }
 
 /** GET /v1/entities: fuzzy search by name. */
-export async function searchEntities(name: string, entityTypes: string[] = [], limit = 20) {
-  "use cache";
-  cacheLife("hours");
-  return calaFetch<{ entities: (EntityMention & { description?: string | null })[] }>("/v1/entities", {
+export function searchEntities(name: string, entityTypes: string[] = [], limit = 20) {
+  const key = `entities:${name.toLowerCase()}|${[...entityTypes].sort().join(",")}|${limit}`;
+  return memoCala(key, () => calaFetch<{ entities: (EntityMention & { description?: string | null })[] }>("/v1/entities", {
     method: "GET",
     query: { name, limit, ...(entityTypes.length ? { entity_types: entityTypes } : {}) },
-  });
+  }), TTL.search);
 }
 
 /** POST /v1/entities/{id}: properties and relationships, each with sources. */
-export async function retrieveEntity(id: string, query?: EntityQuery): Promise<GetEntityResponse> {
-  "use cache";
-  cacheLife("days");
-  return calaFetch<GetEntityResponse>(`/v1/entities/${encodeURIComponent(id)}`, { method: "POST", body: query ?? {} });
+export function retrieveEntity(id: string, query?: EntityQuery): Promise<GetEntityResponse> {
+  return memoCala(
+    `entity:${id}|${JSON.stringify(query ?? {})}`,
+    () => calaFetch<GetEntityResponse>(`/v1/entities/${encodeURIComponent(id)}`, { method: "POST", body: query ?? {} }),
+    TTL.entity,
+  );
 }
 
 /** GET /v1/entities/{id}/introspection: which properties and relationships exist for an entity. */
-export async function introspectEntity(id: string) {
-  "use cache";
-  cacheLife("days");
-  return calaFetch<{ properties: string[]; relationships: { outgoing: string[]; incoming: string[] } }>(
+export function introspectEntity(id: string) {
+  return memoCala(`introspection:${id}`, () => calaFetch<{ properties: string[]; relationships: { outgoing: string[]; incoming: string[] } }>(
     `/v1/entities/${encodeURIComponent(id)}/introspection`,
     { method: "GET" },
-  );
+  ), TTL.entity);
 }
 
 // ---- Helpers ----
