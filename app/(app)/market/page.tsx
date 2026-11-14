@@ -10,6 +10,8 @@ import { MarketError, MarketView, ResultsLoading } from "@/components/warmline/m
 import { getMarket } from "@/lib/cala";
 import { mocksEnabled } from "@/lib/cala/client";
 import { findCompanies } from "@/lib/cala/company";
+import { checkMarketText, type GuardVerdict } from "@/lib/llm/market-guard";
+import { MarketGuardNotice } from "@/components/warmline/market-guard";
 import { REGIONS, regionOf } from "@/lib/cala/market";
 import type { MarketData } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -52,6 +54,11 @@ async function MarketContent({ searchParams }: PageProps<"/market">) {
   await connection();
   const since = period === "recent" ? new Date().getFullYear() - 1 : null;
   const p: Params = { mode, text, region, companyId, period, since };
+  // Before spending Cala credit on a typed market, check it is one. Presets and "Run anyway" skip the check.
+  const verdict: GuardVerdict =
+    mode !== "market" || mocksEnabled() || str("force") === "1" || PRESETS.includes(text.toLowerCase())
+      ? { kind: "market", reason: "", suggestions: [] }
+      : await checkMarketText(text);
 
   return (
     <>
@@ -70,6 +77,13 @@ async function MarketContent({ searchParams }: PageProps<"/market">) {
         ) : (
           <EmptyState icon={Building2} title="Type a company name" description="We look it up in Cala by name, then show its profile, funding and competitors." />
         )
+      ) : verdict.kind !== "market" ? (
+        <MarketGuardNotice
+          text={text}
+          verdict={verdict}
+          searchHref={(t) => href({ sector: t, region, ...(period === "any" ? { period: "any" } : {}) })}
+          runAnywayHref={href({ sector: text, region, force: "1", ...(period === "any" ? { period: "any" } : {}) })}
+        />
       ) : (
         <>
           {!mocksEnabled() && (

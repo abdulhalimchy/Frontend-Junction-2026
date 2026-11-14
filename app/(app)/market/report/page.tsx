@@ -11,6 +11,8 @@ import { Markdown } from "@/components/warmline/markdown";
 import { CompaniesTable, MarketError } from "@/components/warmline/market-view";
 import { SourceChip } from "@/components/warmline/source-chip";
 import { mocksEnabled } from "@/lib/cala/client";
+import { checkMarketText, type GuardVerdict } from "@/lib/llm/market-guard";
+import { MarketGuardNotice } from "@/components/warmline/market-guard";
 import { reportSummary, type ReportSummary } from "@/lib/cala/report-summary";
 import { llmConfigured } from "@/lib/llm/gemini";
 import { formatMoney } from "@/lib/format";
@@ -53,6 +55,9 @@ async function Report({ searchParams }: PageProps<"/market/report">) {
   // share one cached report; the page title keeps what the user typed.
   const q: ReportQuery = { sector: normaliseSector(sector), region, year: new Date().getFullYear() };
   const place = regionOf(region).label;
+  // Check the text is a market before spending Cala credit; "Run anyway" (force=1) skips the check.
+  const verdict: GuardVerdict =
+    sp.force === "1" || mocksEnabled() ? { kind: "market", reason: "", suggestions: [] } : await checkMarketText(sector);
 
   return (
     <>
@@ -92,6 +97,7 @@ async function Report({ searchParams }: PageProps<"/market/report">) {
         </Button>
       </form>
 
+{verdict.kind === "market" && (
       <nav className="sticky top-14 z-10 -mx-1 mb-6 flex gap-1 bg-background/90 px-1 py-2 backdrop-blur">
         {SECTIONS.map((s) => (
           <a key={s.id} href={`#${s.id}`} className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground hover:text-foreground">
@@ -100,9 +106,17 @@ async function Report({ searchParams }: PageProps<"/market/report">) {
           </a>
         ))}
       </nav>
+      )}
 
       {mocksEnabled() ? (
         <EmptyState icon={FileText} title="Market reports need live Cala data" description="Set USE_MOCKS=false and add CALA_API_KEY to .env.local." />
+      ) : verdict.kind !== "market" ? (
+        <MarketGuardNotice
+          text={sector}
+          verdict={verdict}
+          searchHref={(s) => `/market/report?${new URLSearchParams({ sector: s, region })}`}
+          runAnywayHref={`/market/report?${new URLSearchParams({ sector, region, force: "1" })}`}
+        />
       ) : (
         <div className="space-y-10">
           <Section id="summary" title="Executive summary" description="Written from the Cala facts in the sections below. Every claim was checked against the facts it cites; anything that did not match was left out.">
