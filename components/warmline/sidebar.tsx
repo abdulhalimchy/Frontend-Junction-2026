@@ -43,17 +43,12 @@ function navFor(role: Role, unread: number): Item[] {
   return [...top, ...roleItems, ...rest];
 }
 
-export function Sidebar({
-  role,
-  unread,
-  user,
-}: {
-  role: Role;
-  unread: number;
-  user: { name: string; org: string };
-}) {
+export function Sidebar(
+  props: { live: true } | { live?: false; role: Role; unread: number; user: { name: string; org: string } },
+) {
   const pathname = usePathname();
-  const items = navFor(role, unread);
+  // Live mode (DEMO_DATA=off): only the pages backed by Cala.
+  const items: Item[] = props.live ? [{ href: "/market", match: "/market", label: "Market", icon: LineChart }] : navFor(props.role, props.unread);
 
   return (
     <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r bg-card/60 px-3 py-4">
@@ -81,28 +76,35 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="mt-auto space-y-3">
-        <div className="rounded-lg border border-slush/40 bg-slush-soft/50 p-3">
-          <div className="text-xs font-semibold text-slush-foreground">Slush 2026</div>
-          <div className="mt-0.5 text-[11px] text-slush-foreground/80">Helsinki · 18–19 Nov</div>
+      {props.live ? (
+        <div className="mt-auto rounded-lg border bg-card p-3 text-[11px] text-muted-foreground">
+          <div className="font-semibold text-foreground">Live Cala data</div>
+          Demo data is off (DEMO_DATA=off).
         </div>
-        <div className="px-1">
-          <div className="mb-1.5 text-[11px] font-medium text-subtle">View as (demo)</div>
-          <RoleSwitch role={role} />
+      ) : (
+        <div className="mt-auto space-y-3">
+          <div className="rounded-lg border border-slush/40 bg-slush-soft/50 p-3">
+            <div className="text-xs font-semibold text-slush-foreground">Slush 2026</div>
+            <div className="mt-0.5 text-[11px] text-slush-foreground/80">Helsinki · 18–19 Nov</div>
+          </div>
+          <div className="px-1">
+            <div className="mb-1.5 text-[11px] font-medium text-subtle">View as (demo)</div>
+            <RoleSwitch role={props.role} />
+          </div>
+          <Link href="/me" className="flex items-center gap-2 rounded-lg px-1 py-1 hover:bg-muted">
+            <span className="flex size-7 items-center justify-center rounded-full bg-teal-soft text-[11px] font-semibold text-accent-foreground">
+              {props.user.name
+                .split(" ")
+                .map((p) => p[0])
+                .join("")}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-[13px] font-medium">{props.user.name}</span>
+              <span className="block truncate text-[11px] text-muted-foreground">{props.user.org}</span>
+            </span>
+          </Link>
         </div>
-        <Link href="/me" className="flex items-center gap-2 rounded-lg px-1 py-1 hover:bg-muted">
-          <span className="flex size-7 items-center justify-center rounded-full bg-teal-soft text-[11px] font-semibold text-accent-foreground">
-            {user.name
-              .split(" ")
-              .map((p) => p[0])
-              .join("")}
-          </span>
-          <span className="min-w-0">
-            <span className="block truncate text-[13px] font-medium">{user.name}</span>
-            <span className="block truncate text-[11px] text-muted-foreground">{user.org}</span>
-          </span>
-        </Link>
-      </div>
+      )}
     </aside>
   );
 }

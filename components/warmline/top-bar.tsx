@@ -19,7 +19,7 @@ export type PaletteItem = { type: "company" | "investor" | "person" | "page"; la
 
 const ICONS = { company: Building2, investor: Landmark, person: UserRound, page: Search };
 
-export function TopBar({ items, unread }: { items: PaletteItem[]; unread: number }) {
+export function TopBar({ items, unread, live }: { items: PaletteItem[]; unread: number; live?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -59,10 +59,12 @@ export function TopBar({ items, unread }: { items: PaletteItem[]; unread: number
         <kbd className="rounded border bg-muted px-1.5 font-sans text-[11px] text-muted-foreground">⌘K</kbd>
       </button>
       <div className="ml-auto flex items-center gap-2">
+{!live && (
         <Link href="/alerts" className="relative flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground">
           <Bell className="size-4" />
           {unread > 0 && <span className="absolute right-2 top-2 size-2 rounded-full bg-primary ring-2 ring-background" />}
         </Link>
+        )}
       </div>
 
       <CommandDialog open={open} onOpenChange={setOpen} title="Search Warmline" description="Search companies, investors and people">
@@ -72,9 +74,14 @@ export function TopBar({ items, unread }: { items: PaletteItem[]; unread: number
           <CommandEmpty>No matches in your workspace. Press Enter to search Cala.</CommandEmpty>
           {q && (
             <CommandGroup heading="Search">
-              <CommandItem value={`search ${q}`} onSelect={() => go(`/search?q=${encodeURIComponent(q)}`)}>
+              <CommandItem
+                value={`search ${q}`}
+                onSelect={() =>
+                  go(live ? `/market?${new URLSearchParams({ mode: "company", sector: q })}` : `/search?q=${encodeURIComponent(q)}`)
+                }
+              >
                 <Search />
-                Search all of Cala for “{q}”
+                {live ? `Find company “${q}” in Cala` : `Search all of Cala for “${q}”`}
                 <CommandShortcut>↵</CommandShortcut>
               </CommandItem>
             </CommandGroup>

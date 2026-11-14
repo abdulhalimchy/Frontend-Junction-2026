@@ -2,10 +2,28 @@ import { companies } from "@/lib/mocks/companies";
 import { investors, people } from "@/lib/mocks/investors";
 import { getAlerts, getProfile } from "@/lib/session";
 import { getCompany, getInvestor } from "@/lib/cala";
+import { demoDataEnabled } from "@/lib/demo";
 import { Sidebar } from "./sidebar";
 import { TopBar, type PaletteItem } from "./top-bar";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
+  // DEMO_DATA=off: live Cala features only, no personas or mock entities.
+  if (!demoDataEnabled()) {
+    const palette: PaletteItem[] = [
+      { type: "page", label: "Analyse a market", hint: "Market analysis", href: "/market" },
+      { type: "page", label: "Analyse a company", hint: "Company analysis", href: "/market?mode=company" },
+    ];
+    return (
+      <div className="flex min-h-screen">
+        <Sidebar live />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <TopBar items={palette} unread={0} live />
+          <main className="mx-auto w-full max-w-[1160px] flex-1 px-8 py-8">{children}</main>
+        </div>
+      </div>
+    );
+  }
+
   const profile = await getProfile();
   const alerts = await getAlerts();
   const unread = alerts.filter((a) => !a.read).length;

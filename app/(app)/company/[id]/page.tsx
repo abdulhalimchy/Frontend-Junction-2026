@@ -3,6 +3,7 @@ import Loading from "@/app/(app)/loading";
 import { Bookmark, FileSearch } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { demoDataEnabled } from "@/lib/demo";
 import { Button } from "@/components/ui/button";
 import { SlushTag } from "@/components/warmline/badges";
 import { EntityAvatar, PageHeader, Panel } from "@/components/warmline/blocks";
@@ -21,6 +22,7 @@ export async function generateMetadata({ params }: PageProps<"/company/[id]">) {
     const p = await fetchCompanyProfile(id).catch(() => null);
     return { title: p?.name ?? "Company" };
   }
+  if (!demoDataEnabled()) return { title: "Not found" };
   const c = await getCompany(id);
   return { title: c?.name ?? "Company" };
 }
@@ -29,6 +31,8 @@ async function CompanyPageContent({ params }: PageProps<"/company/[id]">) {
   const { id } = await params;
   // Cala entity IDs show the live overview; the demo personas (e.g. northlight-robotics) keep their mock page.
   if (UUID.test(id)) return <LiveCompany id={id} />;
+  // DEMO_DATA=off: demo persona pages are hidden.
+  if (!demoDataEnabled()) notFound();
   const [c, similar, role] = await Promise.all([getCompany(id), getSimilarCompanies(id), getRole()]);
   if (!c) notFound();
 
