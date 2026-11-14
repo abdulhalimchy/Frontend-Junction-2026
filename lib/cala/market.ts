@@ -59,6 +59,11 @@ const MAX_CORPORATE_EVENTS = 50;
 const CONCURRENCY = 4;
 const COMPANY_TYPES = new Set(["Company", "Organization"]);
 
+/** "  Mobile   Applications " → "mobile applications": one cache entry per market however it is typed. */
+export function normaliseSector(text: string) {
+  return text.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
 export function regionOf(key: string) {
   return REGIONS[key] ?? REGIONS.nordics;
 }
@@ -86,8 +91,9 @@ function rowName(r: Record<string, unknown>) {
   return typeof first === "string" ? first.trim() : "";
 }
 
-export async function fetchMarket(q: MarketQuery): Promise<MarketData> {
+export async function fetchMarket(input: MarketQuery): Promise<MarketData> {
   assertCalaKey();
+  const q = { ...input, sector: normaliseSector(input.sector) };
   const definition = marketDefinition(q);
   const res = await knowledgeQuery(definition);
   const { companies, outsideRegion } = await loadCandidates(res, q.region);

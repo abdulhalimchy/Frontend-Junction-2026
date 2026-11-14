@@ -1,4 +1,7 @@
 import "server-only";
+import { createHash } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { cacheLife } from "next/cache";
 import type { Source } from "@/lib/types";
 
@@ -60,7 +63,7 @@ function limiter(max: number) {
 // Entity calls are fast and numerous; knowledge calls are slow (~45–60s) and few. Separate limits keep a
 // report's long questions from blocking its entity lookups while staying under Cala's rate limit.
 const entityLimit = limiter(4);
-const knowledgeLimit = limiter(3);
+const knowledgeLimit = limiter(6); // a report asks 6 questions; Cala accepted 6 in parallel in testing
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -78,7 +81,7 @@ async function calaFetch<T>(
     for (const item of Array.isArray(v) ? v : [v]) url.searchParams.append(k, String(item));
   }
 
-  // At most MAX_IN_FLIGHT requests at once across the whole app, and up to 3 retries on 429 with
+  // Requests go through a per-lane limit, and rate limits or transient server errors are retried with
   // growing waits, so a page that needs many lookups slows down instead of failing.
   let res: Response;
   for (let attempt = 0; ; attempt++) {
@@ -93,7 +96,9 @@ async function calaFetch<T>(
     } finally {
       lane.release();
     }
-    if (res.status !== 429 || attempt >= 3) break;
+    // Retry rate limits (up to 3 times) and transient server errors such as 502 (up to 2 times).
+    const retryable = res.status === 429 ? attempt < 3 : res.status >= 500 && attempt < 2;
+    if (!retryable) break;
     await res.body?.cancel();
     const retryAfter = Number(res.headers.get("retry-after"));
     await sleep(retryAfter > 0 ? Math.min(retryAfter, 10) * 1000 : 1000 * 2 ** attempt);
@@ -152,21 +157,51 @@ export type EntityQuery = {
 // ---- Endpoints ----
 
 /**
- * In-process cache for the slow knowledge endpoints. A question Cala has not seen before takes ~45–60s,
- * beyond Next's 50s limit for "use cache" functions, so these are memoised here instead (6h). Concurrent
- * identical requests share one call; failures are never cached. Phase 2 moves this to Supabase.
+ * Cache for the slow knowledge endpoints and the report summary. A question Cala has not seen before takes
+ * ~45–70s, beyond Next's 50s limit for "use cache" functions, so results are kept here instead:
+ * - in memory, so concurrent identical requests share one call;
+ * - on disk (CALA_CACHE_DIR, default .cache/cala), so a restart does not start cold.
+ * Entries last 24h; failures are never cached. Phase 2 moves this to Supabase so it is shared between servers.
  */
-const KNOWLEDGE_TTL_MS = 6 * 60 * 60 * 1000;
+const KNOWLEDGE_TTL_MS = 24 * 60 * 60 * 1000;
+const CACHE_DIR = process.env.CALA_CACHE_DIR || path.join(process.cwd(), ".cache", "cala");
 const knowledgeCache = new Map<string, { at: number; promise: Promise<unknown> }>();
 
 export function memoKnowledge<T>(key: string, load: () => Promise<T>): Promise<T> {
   const now = performance.timeOrigin + performance.now();
   const hit = knowledgeCache.get(key);
   if (hit && now - hit.at < KNOWLEDGE_TTL_MS) return hit.promise as Promise<T>;
-  const promise = load();
+  const promise = fromDisk<T>(key, now).then(async (saved) => {
+    if (saved) return saved.value;
+    const value = await load();
+    await toDisk(key, { at: now, value });
+    return value;
+  });
   knowledgeCache.set(key, { at: now, promise });
   promise.catch(() => knowledgeCache.delete(key));
   return promise;
+}
+
+function cacheFile(key: string) {
+  return path.join(CACHE_DIR, `${createHash("sha256").update(key).digest("hex").slice(0, 32)}.json`);
+}
+
+async function fromDisk<T>(key: string, now: number): Promise<{ at: number; value: T } | null> {
+  try {
+    const saved = JSON.parse(await readFile(cacheFile(key), "utf8")) as { key: string; at: number; value: T };
+    return saved.key === key && now - saved.at < KNOWLEDGE_TTL_MS ? saved : null;
+  } catch {
+    return null; // missing or unreadable: ask Cala
+  }
+}
+
+async function toDisk(key: string, entry: { at: number; value: unknown }) {
+  try {
+    await mkdir(CACHE_DIR, { recursive: true });
+    await writeFile(cacheFile(key), JSON.stringify({ key, ...entry }));
+  } catch {
+    // Read-only filesystems (e.g. serverless) just keep the in-memory cache.
+  }
 }
 
 /** POST /v1/knowledge/query: structured rows plus matched entities. Rows carry no sources. */

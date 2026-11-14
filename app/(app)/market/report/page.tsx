@@ -15,7 +15,7 @@ import { reportSummary, type ReportSummary } from "@/lib/cala/report-summary";
 import { llmConfigured } from "@/lib/llm/gemini";
 import { formatMoney } from "@/lib/format";
 import { Pill } from "@/components/warmline/badges";
-import { REGIONS, regionOf } from "@/lib/cala/market";
+import { REGIONS, normaliseSector, regionOf } from "@/lib/cala/market";
 import {
   marketCapital,
   marketDeals,
@@ -52,7 +52,9 @@ async function Report({ searchParams }: PageProps<"/market/report">) {
   const sector = (typeof sp.sector === "string" && sp.sector.trim().slice(0, 80)) || "mobile applications";
   const region = typeof sp.region === "string" && REGIONS[sp.region] ? sp.region : "europe";
   await connection();
-  const q: ReportQuery = { sector, region, year: new Date().getFullYear() };
+  // Cache keys and Cala questions use a normalised sector, so "Mobile Applications" and "mobile  applications"
+  // share one cached report; the page title keeps what the user typed.
+  const q: ReportQuery = { sector: normaliseSector(sector), region, year: new Date().getFullYear() };
   const place = regionOf(region).label;
 
   return (
