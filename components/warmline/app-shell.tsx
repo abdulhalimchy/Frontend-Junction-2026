@@ -1,6 +1,6 @@
 import { companies } from "@/lib/mocks/companies";
 import { investors, people } from "@/lib/mocks/investors";
-import { getAlerts, getProfile } from "@/lib/session";
+import { getProfile, getUnread } from "@/lib/session";
 import { getCompany, getInvestor } from "@/lib/cala";
 import { demoDataEnabled } from "@/lib/demo";
 import { Sidebar } from "./sidebar";
@@ -13,12 +13,14 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
       { type: "page", label: "Analyse a market", hint: "Market analysis", href: "/market" },
       { type: "page", label: "Analyse a company", hint: "Company analysis", href: "/market?mode=company" },
       { type: "page", label: "Slush 2026", hint: "Event space", href: "/events/slush-2026/overview" },
+      { type: "page", label: "Alerts", hint: "Page", href: "/alerts" },
     ];
+    const unread = await getUnread();
     return (
       <div className="flex min-h-screen">
-        <Sidebar live />
+        <Sidebar live unread={unread} />
         <div className="flex min-w-0 flex-1 flex-col">
-          <TopBar items={palette} unread={0} live />
+          <TopBar items={palette} unread={unread} live />
           <main className="mx-auto w-full max-w-[1160px] flex-1 px-8 py-8">{children}</main>
         </div>
       </div>
@@ -26,8 +28,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const profile = await getProfile();
-  const alerts = await getAlerts();
-  const unread = alerts.filter((a) => !a.read).length;
+  const unread = await getUnread();
   const org = profile.companyId
     ? (await getCompany(profile.companyId))?.name
     : (await getInvestor(profile.investorId!))?.investor.name;

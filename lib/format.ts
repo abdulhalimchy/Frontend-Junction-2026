@@ -90,3 +90,8 @@ export function shortPlace(address: string): string {
     .map((s) => (s === s.toUpperCase() && s.length > 3 ? s.toLowerCase().replace(/\b\p{L}/gu, (c) => c.toUpperCase()) : s))
     .join(", ");
 }
+
+/** ISO date (YYYY-MM-DD) `days` before now. For server components, which render once per request. */
+export function isoDaysAgo(days: number): string {
+  return new Date(Date.now() - days * 864e5).toISOString().slice(0, 10);
+}

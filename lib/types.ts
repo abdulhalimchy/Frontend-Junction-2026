@@ -95,17 +95,27 @@ export type InvestorCheck = {
   backsCompetitor: Sourced<{ competitorIds: string[] }>;
 };
 
-export type AlertKind = "competitor_round" | "portfolio_competitor" | "investor_activity" | "slush_attendee" | "profile";
+export type AlertKind =
+  | "competitor_round"
+  | "funding_round"
+  | "portfolio_competitor"
+  | "investor_activity"
+  | "slush_attendee"
+  | "team_change"
+  | "profile";
 
 export type Alert = {
   id: string;
   kind: AlertKind;
   title: string;
   body: string;
+  /** Why this user sees it, e.g. "One of your competitors". */
+  reason?: string;
   date: string;
   read: boolean;
   href: string;
-  roles: Role[];
+  /** Mock fixtures only: which demo persona sees it. */
+  roles?: Role[];
   slush?: boolean;
   sources: Source[];
 };

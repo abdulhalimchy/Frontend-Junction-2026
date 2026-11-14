@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Home" };
 
 export default async function HomePage() {
   const profile = await getProfile();
-  const [alerts, card, slush] = await Promise.all([getAlerts(), buildCard(profile), getEventAttendees(SLUSH_EVENT_ID)]);
+  const [{ alerts }, card, slush] = await Promise.all([getAlerts(), buildCard(profile), getEventAttendees(SLUSH_EVENT_ID)]);
   const firstName = profile.name.split(" ")[0];
 
   return (

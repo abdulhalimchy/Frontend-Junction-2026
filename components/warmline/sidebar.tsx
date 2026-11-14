@@ -45,20 +45,21 @@ function navFor(role: Role, unread: number): Item[] {
   return [...top, ...roleItems, ...rest];
 }
 
-const LIVE_ITEMS: Item[] = [
+const liveItems = (unread: number): Item[] => [
   { href: "/search", match: "/search", label: "Search", icon: Search },
   { href: "/market", match: "/market", label: "Market", icon: LineChart },
   { href: "/deck-check", match: "/deck-check", label: "Deck check", icon: FileSearch },
   { href: "/watchlist", match: "/watchlist", label: "Watch list", icon: Bookmark },
+  { href: "/alerts", match: "/alerts", label: "Alerts", icon: Bell, badge: unread || undefined },
   { href: "/events/slush-2026/overview", match: "/events", label: "Slush 2026", icon: CalendarDays, slush: true },
 ];
 
 export function Sidebar(
-  props: { live: true } | { live?: false; role: Role; unread: number; user: { name: string; org: string } },
+  props: { live: true; unread: number } | { live?: false; role: Role; unread: number; user: { name: string; org: string } },
 ) {
   const pathname = usePathname();
   // Live mode (DEMO_DATA=off): only the pages backed by real data (Cala, the backend).
-  const items: Item[] = props.live ? LIVE_ITEMS : navFor(props.role, props.unread);
+  const items: Item[] = props.live ? liveItems(props.unread) : navFor(props.role, props.unread);
 
   return (
     <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r bg-card/60 px-3 py-4">
