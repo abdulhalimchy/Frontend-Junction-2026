@@ -254,13 +254,17 @@ const ROUND_TYPES = new Set(["FundingRound", "PrivateCompanyFundingRound"]);
 const FINANCING_EVENT = "FINANCING_RAISED_OR_FACILITY_ENTERED";
 /** Label for financing filings with no round type: we cannot tell equity from debt, so they are never counted. */
 export const FILING_LABEL = "Financing (filing)";
-const ROUND_PROPS = [
+export const ROUND_PROPS = [
   "round_label", "round_type", "instrument", "transaction_value", "transaction_value_units",
   "announcement_date", "announcement_date__precision", "event_date", "event_date__precision",
 ];
 
 async function fetchRound(id: string, fallbackName: string): Promise<FundingRound | null> {
-  const r = await retrieveEntity(id, { properties: ROUND_PROPS });
+  return parseRound(await retrieveEntity(id, { properties: ROUND_PROPS }), fallbackName);
+}
+
+/** Builds a FundingRound from a retrieved round entity (FundingRound, PrivateCompanyFundingRound or a filing). */
+export function parseRound(r: GetEntityResponse, fallbackName: string): FundingRound {
   const instrument = String(prop(r, "instrument")?.value ?? "").toUpperCase();
   const value = prop(r, "transaction_value");
   const units = prop(r, "transaction_value_units");

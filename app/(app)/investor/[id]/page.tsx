@@ -30,10 +30,11 @@ export async function generateMetadata({ params }: PageProps<"/investor/[id]">) 
   return { title: d?.investor.name ?? "Investor" };
 }
 
-async function InvestorPageContent({ params }: PageProps<"/investor/[id]">) {
+async function InvestorPageContent({ params, searchParams }: PageProps<"/investor/[id]">) {
   const { id } = await params;
+  const { deals } = await searchParams;
   // Cala entity IDs show the live overview; the demo persona (fjord-ventures) keeps its mock page.
-  if (UUID.test(id)) return <LiveInvestor id={id} />;
+  if (UUID.test(id)) return <LiveInvestor id={id} showDeals={deals === "1"} />;
   // DEMO_DATA=off: demo persona pages are hidden.
   if (!demoDataEnabled()) notFound();
   const data = await getInvestor(id);
