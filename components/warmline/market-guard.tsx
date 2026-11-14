@@ -1,7 +1,7 @@
 import { ArrowRight, Building2, CircleAlert } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import type { GuardVerdict } from "@/lib/llm/market-guard";
+import type { GuardVerdict } from "@/lib/backend/markets";
 
 /**
  * Shown instead of results when the typed text does not look like a market, so no Cala credit is spent.

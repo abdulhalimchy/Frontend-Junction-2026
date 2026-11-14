@@ -1,5 +1,5 @@
 import { calaUsage } from "@/lib/cala/client";
-import { llmUsage } from "@/lib/llm/gemini";
+import { llmUsage } from "@/lib/backend/markets";
 
 // Development only: real Cala calls per endpoint and Gemini tokens since the server started. DELETE resets them.
 export async function GET() {
