@@ -13,6 +13,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
       { type: "page", label: "Analyse a market", hint: "Market analysis", href: "/market" },
       { type: "page", label: "Analyse a company", hint: "Company analysis", href: "/market?mode=company" },
       { type: "page", label: "Slush 2026", hint: "Event space", href: "/events/slush-2026/overview" },
+      { type: "page", label: "Warm intros", hint: "Who can introduce you", href: "/intros" },
       { type: "page", label: "Alerts", hint: "Page", href: "/alerts" },
     ];
     const unread = await getUnread();
@@ -37,6 +38,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   const palette: PaletteItem[] = [
     { type: "page", label: "Slush 2026", hint: "Event space", href: "/events/slush-2026/overview" },
     { type: "page", label: "Market or company analysis", hint: "Page", href: "/market" },
+    { type: "page", label: "Warm intros", hint: "Who can introduce you", href: "/intros" },
     { type: "page", label: "Alerts", hint: "Page", href: "/alerts" },
     ...(profile.role === "founder"
       ? [{ type: "page" as const, label: "My startup", hint: "Page", href: "/startup/overview" }]

@@ -1,0 +1,217 @@
+import { ArrowRight, Handshake, Route } from "lucide-react";
+import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SlushTag } from "@/components/warmline/badges";
+import { EmptyState, EntityAvatar, Panel } from "@/components/warmline/blocks";
+import { SourceChip } from "@/components/warmline/source-chip";
+import { calaErrorKind } from "@/lib/cala/client";
+import { findIntroPaths, type IntroPath, type Link as PathLink, type Node, type RoundRef, type Tie } from "@/lib/cala/intros";
+import { formatDay } from "@/lib/format";
+
+export async function IntroResults({ fromId, toId }: { fromId: string; toId: string }) {
+  let r: Awaited<ReturnType<typeof findIntroPaths>>;
+  try {
+    r = await findIntroPaths(fromId, toId);
+  } catch (e) {
+    const kind = calaErrorKind(e);
+    const msg =
+      kind === "no_credit"
+        ? "The Cala credit balance is empty."
+        : kind === "rate_limited"
+          ? "Cala is rate limiting requests. Try again in a minute."
+          : kind === "missing_key"
+            ? "Cala is not configured on this server."
+            : "Could not load one of these companies from Cala. Try again.";
+    return <EmptyState icon={Route} title="Intro paths are unavailable" description={msg} />;
+  }
+  const { from, to, direct, common, paths } = r;
+  const bothAtSlush = from.atSlush && to.atSlush;
+
+  return (
+    <div className="space-y-4">
+      {direct && (
+        <Panel>
+          <div className="flex items-start gap-3">
+            <Handshake className="mt-0.5 size-5 text-primary" />
+            <div className="text-sm">
+              <p className="font-medium">You are already connected: {tieSentence(direct, from, to)}.</p>
+              <p className="mt-0.5 text-muted-foreground">No intro needed; reach out directly.</p>
+            </div>
+            <SourceChip sources={direct.sources} className="ml-auto" />
+          </div>
+        </Panel>
+      )}
+
+      {common && (
+        <Panel>
+          <div className="flex items-start gap-3">
+            <Handshake className="mt-0.5 size-5 text-primary" />
+            <div className="min-w-0 text-sm">
+              <p className="font-medium">
+                Common ground: {from.name} and {to.name} {common.kind === "same_round" ? `were both in ${roundName(common.round)}` : `both backed ${companyList(common.companies)}`}.
+              </p>
+              <p className="mt-0.5 text-muted-foreground">
+                {common.kind === "same_round" ? "The company's founders know you both." : "Their founders know you both."} A shared deal is a natural opener, or a route to an intro.
+              </p>
+            </div>
+            <SourceChip sources={common.sources} className="ml-auto" />
+          </div>
+        </Panel>
+      )}
+
+      {bothAtSlush && (
+        <p className="flex items-center gap-2 text-[13px] text-muted-foreground">
+          <SlushTag label="Slush" /> {from.name} and {to.name} are both on the Slush 2026 attendee list.
+        </p>
+      )}
+
+      {paths.length ? (
+        <Panel
+          title={`${paths.length} ${direct ? "other " : ""}${paths.length === 1 ? "way" : "ways"} to reach ${to.name}`}
+          description={`Strongest first. Checked ${r.checked} of ${from.name}'s ${r.contacts} investors, portfolio companies and co-investors on record.`}
+        >
+          <ol className="space-y-3">
+            {paths.map((p, i) => (
+              <PathCard key={p.via.id} p={p} from={from} to={to} rank={i + 1} />
+            ))}
+          </ol>
+        </Panel>
+      ) : (
+        !direct && !common && (
+          <EmptyState
+            icon={Route}
+            title={`No intro path to ${to.name} on record`}
+            description={
+              r.contacts
+                ? `None of the ${r.checked} investors, portfolio companies or co-investors of ${from.name} that we checked has invested with ${to.name} on record. Cala's investment graph is incomplete, so this is not proof there is none.`
+                : `Cala has no investors, portfolio companies or co-investors on record for ${from.name}, so there is nothing to start a path from. Check that you picked the right legal entity.`
+            }
+          />
+        )
+      )}
+    </div>
+  );
+}
+
+function PathCard({ p, from, to, rank }: { p: IntroPath; from: Node; to: Node; rank: number }) {
+  return (
+    <li className="rounded-lg border bg-background/60 p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <span className="flex size-5 items-center justify-center rounded-full bg-muted text-[11px] font-semibold tabular">{rank}</span>
+        <p className="text-sm font-medium">
+          Ask <EntityLink n={p.via} /> {askReason(p.tie)}
+        </p>
+        {p.via.atSlush && <SlushTag label="At Slush" className="ml-auto" />}
+      </div>
+      <div className="grid grid-cols-[auto_1fr_auto_1fr_auto] items-center gap-2 text-[13px]">
+        <Endpoint n={from} />
+        <Edge text={tieLabel(p.tie)} title={tieSentence(p.tie, from, p.via)} sources={p.tie.sources} />
+        <Endpoint n={p.via} />
+        <Edge text={linkSentence(p.link, p.via, to)} title={linkSentence(p.link, p.via, to)} sources={p.link.sources} />
+        <Endpoint n={to} />
+      </div>
+      {p.link.kind === "shared_portfolio" && (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Both backed:{" "}
+          {p.link.companies.slice(0, 4).map((c, i) => (
+            <span key={c.id}>
+              {i > 0 && ", "}
+              <Link href={`/company/${c.id}`} className="hover:text-primary hover:underline">
+                {c.name}
+              </Link>
+            </span>
+          ))}
+          {p.link.companies.length > 4 && ` and ${p.link.companies.length - 4} more`}
+        </p>
+      )}
+    </li>
+  );
+}
+
+function Endpoint({ n }: { n: Node }) {
+  return (
+    <span className="flex min-w-0 max-w-40 items-center gap-1.5">
+      <EntityAvatar name={n.name} size="sm" />
+      <EntityLink n={n} className="truncate font-medium" />
+    </span>
+  );
+}
+
+function EntityLink({ n, className }: { n: Node; className?: string }) {
+  return (
+    <Link href={`/${n.investor ? "investor" : "company"}/${n.id}`} className={className ?? "hover:text-primary"} title={n.name}>
+      {n.name}
+    </Link>
+  );
+}
+
+function Edge({ text, title, sources }: { text: string; title: string; sources: IntroPath["tie"]["sources"] }) {
+  return (
+    <span className="flex min-w-0 flex-col items-center gap-1 text-center text-xs text-muted-foreground">
+      <span className="flex w-full items-center gap-1">
+        <span className="h-px flex-1 bg-border" />
+        <ArrowRight className="size-3" />
+      </span>
+      <span className="line-clamp-2" title={title}>
+        {text}
+      </span>
+      <SourceChip sources={sources} />
+    </span>
+  );
+}
+
+function askReason(t: Tie) {
+  if (t.kind === "backs_you") return t.lead ? "(your lead investor)" : "(your investor)";
+  if (t.kind === "you_backed") return "(you invested in them)";
+  return "(your co-investor)";
+}
+
+function companyList(companies: { name: string }[]) {
+  const names = companies.slice(0, 3).map((c) => c.name);
+  return companies.length > 3 ? `${names.join(", ")} and ${companies.length - 3} more` : names.join(" and ").replace(/ and (?=.* and )/g, ", ");
+}
+
+function roundName(r: RoundRef | null) {
+  if (!r) return "";
+  const when = r.date ? ` (${formatDay(r.date).replace(/^\d+ /, "")})` : "";
+  return r.company ? `${r.company}'s ${r.stage}${when}` : `a ${r.stage} round${when}`;
+}
+
+/** Short edge label between you and the contact; the full sentence is the tooltip. */
+function tieLabel(t: Tie) {
+  if (t.kind === "backs_you") return `${t.lead ? "led" : "invested in"} your ${t.round ? t.round.stage : "company"}`;
+  if (t.kind === "you_backed") return "you invested";
+  return `co-invested${t.round ? ` in a ${t.round.stage}` : ""}`;
+}
+
+function tieSentence(t: Tie, from: Node, other: Node) {
+  const round = t.round ? ` in ${t.kind === "backs_you" ? "your" : "the same"} ${t.round.stage}` : "";
+  if (t.kind === "backs_you") return `${other.name} ${t.lead ? "led" : "invested"}${round || ` in ${from.name}`}`;
+  if (t.kind === "you_backed") return `${from.name} invested in ${other.name}`;
+  return `co-invested${round ? ` ${round.trim()} round` : ""}`;
+}
+
+function linkSentence(l: PathLink, via: Node, to: Node) {
+  switch (l.kind) {
+    case "invested_in_target":
+      return l.round ? `invested in ${roundName(l.round)}` : `invested in ${to.name}`;
+    case "target_invested":
+      return l.round ? `${to.name} invested in ${roundName(l.round)}` : `${to.name} invested in ${via.name}`;
+    case "same_round":
+      return `both in ${roundName(l.round)}`;
+    case "shared_portfolio":
+      return `both backed ${l.companies.length === 1 ? l.companies[0].name : `${l.companies.length} companies`}`;
+  }
+}
+
+export function IntroResultsSkeleton() {
+  return (
+    <Panel title="Finding intro paths" description="Reading your investors and co-investors from Cala. The first search can take 10–20 seconds, then it is cached.">
+      <div className="space-y-3">
+        {[0, 1, 2].map((i) => (
+          <Skeleton key={i} className="h-24 rounded-lg" />
+        ))}
+      </div>
+    </Panel>
+  );
+}

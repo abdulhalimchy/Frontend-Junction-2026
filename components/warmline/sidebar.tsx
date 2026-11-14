@@ -10,6 +10,7 @@ import {
   House,
   LineChart,
   Rocket,
+  Route,
   Search,
   UserRound,
 } from "lucide-react";
@@ -27,6 +28,7 @@ function navFor(role: Role, unread: number): Item[] {
     { href: "/home", match: "/home", label: "Home", icon: House },
     { href: "/search", match: "/search", label: "Search", icon: Search },
     { href: "/market", match: "/market", label: "Market", icon: LineChart },
+    { href: "/intros", match: "/intros", label: "Warm intros", icon: Route },
   ];
   const roleItems: Item[] =
     role === "founder"
@@ -48,6 +50,7 @@ function navFor(role: Role, unread: number): Item[] {
 const liveItems = (unread: number): Item[] => [
   { href: "/search", match: "/search", label: "Search", icon: Search },
   { href: "/market", match: "/market", label: "Market", icon: LineChart },
+  { href: "/intros", match: "/intros", label: "Warm intros", icon: Route },
   { href: "/deck-check", match: "/deck-check", label: "Deck check", icon: FileSearch },
   { href: "/watchlist", match: "/watchlist", label: "Watch list", icon: Bookmark },
   { href: "/alerts", match: "/alerts", label: "Alerts", icon: Bell, badge: unread || undefined },

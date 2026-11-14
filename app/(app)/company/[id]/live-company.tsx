@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, CalendarDays, Crown, Handshake, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, Crown, Handshake, Route, Users } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
@@ -58,6 +58,11 @@ export async function LiveCompany({ id }: { id: string }) {
         </Link>
         <div className="flex items-center gap-2">
           <WatchButton entityType="company" calaId={id} name={p.name} size="sm" />
+          <Button variant="outline" size="sm" className="bg-card" asChild>
+            <Link href={`/intros?${new URLSearchParams({ to: id, toName: p.name })}`}>
+              <Route /> Warm intro
+            </Link>
+          </Button>
           <Button variant="outline" size="sm" className="bg-card" asChild>
             <Link href={`/market?${new URLSearchParams({ company: id, region: "anywhere" })}`}>
               Competitors&apos; market <ArrowRight />

@@ -1,4 +1,4 @@
-import { ArrowLeft, Briefcase, CheckCircle2, CircleDashed, Globe, Layers, MapPin, Users } from "lucide-react";
+import { ArrowLeft, Briefcase, CheckCircle2, CircleDashed, Globe, Layers, MapPin, Route, Users } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,14 @@ export async function LiveInvestor({ id, showDeals }: { id: string; showDeals: b
         <Link href="/market" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-3" /> Market analysis
         </Link>
-        <WatchButton entityType="investor" calaId={p.id} name={p.name} size="sm" />
+        <div className="flex items-center gap-2">
+          <WatchButton entityType="investor" calaId={p.id} name={p.name} size="sm" />
+          <Button variant="outline" size="sm" className="bg-card" asChild>
+            <Link href={`/intros?${new URLSearchParams({ to: p.id, toName: p.name })}`}>
+              <Route /> Warm intro
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="mb-6 rounded-2xl border bg-card p-6 shadow-[0_1px_2px_rgba(22,24,26,0.04)]">
