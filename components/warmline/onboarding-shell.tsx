@@ -9,7 +9,6 @@ const STEPS = [
   { label: "Company", match: ["/onboarding/company", "/onboarding/find-company"] },
   { label: "You", match: ["/onboarding/you"] },
   { label: "Goals", match: ["/onboarding/goals"] },
-  { label: "Your card", match: ["/onboarding/card"] },
 ];
 
 export function OnboardingShell({ children }: { children: React.ReactNode }) {

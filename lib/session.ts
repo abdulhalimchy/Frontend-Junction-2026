@@ -5,7 +5,7 @@ import { getUnreadCount, listAlerts } from "@/lib/backend/alerts";
 import { listStartups } from "@/lib/backend/startups";
 import { STARTUP_COOKIE } from "@/lib/startup-cookie";
 import { getLatestDeckCheck } from "@/lib/backend/deck-checks";
-import { metByRole, profiles } from "@/lib/mocks/misc";
+import { profiles } from "@/lib/mocks/misc";
 
 // Phase 1: the role lives in a cookie so it can be switched from the UI.
 // Phase 2 reads the signed-in user and their profile from Supabase instead.
@@ -33,10 +33,6 @@ export async function getAlerts() {
 /** For the sidebar badge. 0 when the backend is unavailable, so the shell never fails over a badge. */
 export async function getUnread() {
   return getUnreadCount().catch(() => 0);
-}
-
-export async function getMet() {
-  return metByRole[await getRole()];
 }
 
 /**

@@ -8,18 +8,16 @@ import { Button } from "@/components/ui/button";
 import { SlushTag } from "@/components/warmline/badges";
 import { EmptyState, EntityAvatar, PageHeader, Panel, StatCard } from "@/components/warmline/blocks";
 import { AddStartupButton } from "@/components/warmline/add-startup-button";
-import { ProfileCard, type CardData } from "@/components/warmline/profile-card";
 import { SourceChip } from "@/components/warmline/source-chip";
-import { getCompanies, getEventAttendees, getInvestor, getPerson } from "@/lib/cala";
+import { getCompanies, getEventAttendees, getInvestor } from "@/lib/cala";
 import { normaliseName } from "@/lib/cala/market";
 import { slushAttendeeIndex } from "@/lib/cala/slush";
 import { getAnalysis, getStartup } from "@/lib/backend/startups";
 import { startupHref } from "@/lib/startup-cookie";
-import { buildCard } from "@/lib/cards";
-import { formatDay, formatFuzzyDate, formatMoney } from "@/lib/format";
+import { formatDay, formatMoney } from "@/lib/format";
 import { SLUSH_EVENT_ID } from "@/lib/mocks/misc";
 import { getActiveStartupId, getAlerts, getProfile, getStartups } from "@/lib/session";
-import type { CompetitorsAnalysis, InvestorsAnalysis, Person, Startup } from "@/lib/types";
+import type { CompetitorsAnalysis, InvestorsAnalysis } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -37,7 +35,7 @@ async function HomeContent() {
   const profile = await getProfile();
   const firstName = profile.name.split(" ")[0];
   const [founder, slush] = await Promise.all([
-    profile.role === "founder" ? loadFounder(profile.personId) : null,
+    profile.role === "founder" ? loadFounder() : null,
     getEventAttendees(SLUSH_EVENT_ID),
   ]);
 
@@ -57,14 +55,13 @@ async function HomeContent() {
       {founder ? (
         <FounderHome {...founder} slush={slush} />
       ) : (
-        <InvestorHome investorId={profile.investorId!} card={await buildCard(profile)} slush={slush} />
+        <InvestorHome investorId={profile.investorId!} slush={slush} />
       )}
     </>
   );
 }
 
 type Slush = Awaited<ReturnType<typeof getEventAttendees>>;
-type Card = Awaited<ReturnType<typeof buildCard>>;
 
 type Founder = Awaited<ReturnType<typeof loadFounder>>;
 
@@ -72,10 +69,10 @@ type Founder = Awaited<ReturnType<typeof loadFounder>>;
  * The founder's Home is about the startup open under My startup (the last one chosen), using the competitors and
  * investors analyses already stored for it. Nothing is run from here; the tabs run them.
  */
-async function loadFounder(personId: string) {
-  const [{ items }, person] = await Promise.all([getStartups(), getPerson(personId)]);
+async function loadFounder() {
+  const { items } = await getStartups();
   const id = await getActiveStartupId(items);
-  if (!id) return { person, startup: null, competitors: null, investors: null, slushIndex: null };
+  if (!id) return { startup: null, competitors: null, investors: null, slushIndex: null };
   const [startup, comp, inv, slushIndex] = await Promise.all([
     getStartup(id).catch(() => null),
     getAnalysis(id, "competitors").catch(() => null),
@@ -85,7 +82,6 @@ async function loadFounder(personId: string) {
   const compData = comp?.data as Partial<CompetitorsAnalysis> | undefined;
   const invData = inv?.data as Partial<InvestorsAnalysis> | undefined;
   return {
-    person,
     startup,
     competitors: compData?.companies ? (compData as CompetitorsAnalysis) : null,
     investors: invData?.investors ? (invData as InvestorsAnalysis) : null,
@@ -93,31 +89,7 @@ async function loadFounder(personId: string) {
   };
 }
 
-/** The founder's card for their startup. Values they typed have no sources; the card shows them as unsourced. */
-function startupCard(person: Person | null, s: Startup, competitors: CompetitorsAnalysis | null, atSlush: boolean): CardData {
-  const you = competitors && !competitors.you.self_reported ? competitors.you : null;
-  return {
-    personId: person?.id ?? s.id,
-    name: person?.name ?? "",
-    title: person?.title ?? "Founder",
-    org: s.name,
-    trust: "self_described",
-    oneLiner: s.description || "No description yet.",
-    oneLinerSources: s.sources.description ?? [],
-    facts: [
-      { label: "Founded", value: s.founded ? fuzzy(s.founded) : "Not added", sources: s.sources.founded ?? [] },
-      { label: "Equity raised", value: you?.raised ? formatMoney(you.raised.value) : "Not on record", sources: you?.raised?.sources ?? [] },
-      { label: "Team", value: s.employees || "Not added", sources: s.sources.employees ?? [] },
-    ],
-    slush: atSlush,
-  };
-}
-
-function fuzzy(value: string) {
-  return formatFuzzyDate({ date: value, precision: value.length === 4 ? "year" : value.length === 7 ? "month" : "day" });
-}
-
-async function FounderHome({ person, startup, competitors, investors, slushIndex, slush }: NonNullable<Founder> & { slush: Slush }) {
+async function FounderHome({ startup, competitors, investors, slushIndex, slush }: NonNullable<Founder> & { slush: Slush }) {
   const atSlush = (name: string, id: string) => !!slushIndex && (slushIndex.ids.has(id) || slushIndex.names.has(normaliseName(name)));
   const side = (
     <div className="space-y-6">
@@ -149,7 +121,6 @@ async function FounderHome({ person, startup, competitors, investors, slushIndex
   return (
     <div className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-6">
-        <ProfileCard data={startupCard(person, startup, competitors, atSlush(startup.name, startup.calaCompanyId))} />
         <Panel
           title="Investors to meet at Slush"
           description="Attending, investing in companies like yours, and checked against your competitors."
@@ -234,7 +205,7 @@ async function FounderHome({ person, startup, competitors, investors, slushIndex
   );
 }
 
-async function InvestorHome({ investorId, card, slush }: { investorId: string; card: Card; slush: Slush }) {
+async function InvestorHome({ investorId, slush }: { investorId: string; slush: Slush }) {
   const data = (await getInvestor(investorId))!;
   const portfolio = await getCompanies(data.investor.portfolioIds);
   const newAtSlush = slush.companies.filter((c) => !data.investor.portfolioIds.includes(c.id)).slice(0, 4);
@@ -290,29 +261,12 @@ async function InvestorHome({ investorId, card, slush }: { investorId: string; c
         </Panel>
       </div>
       <div className="space-y-6">
-        <ProfileCardMini card={card} />
         <SlushPanel slush={slush} />
         <Suspense fallback={<Skeleton className="h-56 rounded-xl" />}>
           <AlertsPanel />
         </Suspense>
       </div>
     </div>
-  );
-}
-
-function ProfileCardMini({ card }: { card: Card }) {
-  return (
-    <Panel title="Your card" action={<Link href="/me" className="text-xs text-primary hover:underline">Edit</Link>}>
-      <div className="flex items-center gap-3">
-        <EntityAvatar name={card.name} kind="person" />
-        <div>
-          <div className="text-sm font-medium">{card.name}</div>
-          <div className="text-xs text-muted-foreground">
-            {card.title}, {card.org}
-          </div>
-        </div>
-      </div>
-    </Panel>
   );
 }
 

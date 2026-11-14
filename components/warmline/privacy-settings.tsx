@@ -6,9 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import type { Profile } from "@/lib/types";
 
 const ITEMS: { key: keyof Profile["privacy"]; label: string; hint: string }[] = [
-  { key: "showInEventDirectory", label: "Show me in event attendee lists", hint: "Other attendees can find your card in the Slush 2026 space." },
-  { key: "showCardInSearch", label: "Show my card in search", hint: "Your card appears when someone searches your name or company." },
-  { key: "shareMetList", label: "Share my Met list with my team", hint: "Teammates on the same company or fund can see who you met. Notes stay private." },
+  { key: "showInEventDirectory", label: "Show me in event attendee lists", hint: "Other attendees can find you in the Slush 2026 space." },
   { key: "allowAlertsEmail", label: "Email me alerts", hint: "A daily digest of new alerts." },
 ];
 

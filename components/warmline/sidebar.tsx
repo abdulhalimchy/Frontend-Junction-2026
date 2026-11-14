@@ -6,7 +6,6 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   FileSearch,
-  Handshake,
   House,
   LineChart,
   Route,
@@ -38,7 +37,6 @@ function navFor(role: Role, unread: number): Item[] {
         ];
   const rest: Item[] = [
     { href: "/watchlist", match: "/watchlist", label: "Watch list", icon: Bookmark },
-    { href: "/met", match: "/met", label: "Met", icon: Handshake },
     { href: "/alerts", match: "/alerts", label: "Alerts", icon: Bell, badge: unread || undefined },
     { href: "/events/slush-2026/overview", match: "/events", label: "Events", icon: CalendarDays, slush: true },
     { href: "/me", match: "/me", label: "Me", icon: UserRound },

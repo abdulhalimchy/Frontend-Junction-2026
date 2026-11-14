@@ -3,23 +3,19 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PageHeader, Panel } from "@/components/warmline/blocks";
 import { PrivacySettings } from "@/components/warmline/privacy-settings";
-import { ProfileCard } from "@/components/warmline/profile-card";
 import { RoleSwitch } from "@/components/warmline/role-switch";
-import { buildCard } from "@/lib/cards";
 import { getProfile } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Me" };
 
 export default async function MePage() {
   const profile = await getProfile();
-  const card = await buildCard(profile);
 
   return (
     <>
-      <PageHeader title="Me" description="Your card, your role and what others can see." />
+      <PageHeader title="Me" description="Your account, your role and what others can see." />
       <div className="grid grid-cols-3 gap-6">
         <div className="col-span-2 space-y-6">
-          <ProfileCard data={card} size="lg" />
           <Panel title="Privacy" description="You control what other Warmline users see. Cala data about your company is public either way.">
             <PrivacySettings initial={profile.privacy} />
           </Panel>
