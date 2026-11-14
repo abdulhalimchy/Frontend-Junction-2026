@@ -8,6 +8,7 @@ import { EmptyState, EntityAvatar, Panel } from "@/components/warmline/blocks";
 import { DataTable, type Row } from "@/components/warmline/data-table";
 import { MarketError } from "@/components/warmline/market-view";
 import { SourceChip } from "@/components/warmline/source-chip";
+import { WatchButton } from "@/components/warmline/watch-button";
 import { DEALS_LIMIT, fetchInvestorDeals, fetchInvestorProfile, type InvestorProfile } from "@/lib/cala/investor";
 import { SLUSH_EVENT_ID } from "@/lib/mocks/misc";
 import { formatFuzzyDate, formatMoney } from "@/lib/format";
@@ -32,9 +33,12 @@ export async function LiveInvestor({ id, showDeals }: { id: string; showDeals: b
 
   return (
     <>
-      <Link href="/market" className="mb-4 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="size-3" /> Market analysis
-      </Link>
+      <div className="mb-4 flex items-center justify-between">
+        <Link href="/market" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="size-3" /> Market analysis
+        </Link>
+        <WatchButton entityType="investor" calaId={p.id} name={p.name} size="sm" />
+      </div>
 
       <div className="mb-6 rounded-2xl border bg-card p-6 shadow-[0_1px_2px_rgba(22,24,26,0.04)]">
         <div className="flex items-start gap-5">

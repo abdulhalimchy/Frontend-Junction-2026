@@ -2,6 +2,7 @@
 
 import {
   Bell,
+  Bookmark,
   BriefcaseBusiness,
   CalendarDays,
   FileSearch,
@@ -35,6 +36,7 @@ function navFor(role: Role, unread: number): Item[] {
           { href: "/deck-check", match: "/deck-check", label: "Deck check", icon: FileSearch },
         ];
   const rest: Item[] = [
+    { href: "/watchlist", match: "/watchlist", label: "Watch list", icon: Bookmark },
     { href: "/met", match: "/met", label: "Met", icon: Handshake },
     { href: "/alerts", match: "/alerts", label: "Alerts", icon: Bell, badge: unread || undefined },
     { href: "/events/slush-2026/overview", match: "/events", label: "Events", icon: CalendarDays, slush: true },
@@ -46,6 +48,7 @@ function navFor(role: Role, unread: number): Item[] {
 const LIVE_ITEMS: Item[] = [
   { href: "/market", match: "/market", label: "Market", icon: LineChart },
   { href: "/deck-check", match: "/deck-check", label: "Deck check", icon: FileSearch },
+  { href: "/watchlist", match: "/watchlist", label: "Watch list", icon: Bookmark },
 ];
 
 export function Sidebar(

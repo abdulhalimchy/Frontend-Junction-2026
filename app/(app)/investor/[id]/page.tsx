@@ -9,6 +9,7 @@ import { SlushTag, TrustBadge } from "@/components/warmline/badges";
 import { EntityAvatar, FactGrid, PageHeader, Panel } from "@/components/warmline/blocks";
 import { SourceChip } from "@/components/warmline/source-chip";
 import { CompanyTable } from "@/components/warmline/tables";
+import { WatchButton } from "@/components/warmline/watch-button";
 import { getCompanies, getInvestor, getPeople, getSimilarCompanies } from "@/lib/cala";
 import { formatFuzzyDate, formatMoney } from "@/lib/format";
 import { getProfile } from "@/lib/session";
@@ -74,11 +75,14 @@ async function InvestorPageContent({ params, searchParams }: PageProps<"/investo
           </span>
         }
         actions={
-          <Button variant="outline" className="bg-card" asChild>
-            <Link href="/met">
-              <Handshake /> Add to Met
-            </Link>
-          </Button>
+          <>
+            <WatchButton entityType="investor" calaId={i.id} name={i.name} />
+            <Button variant="outline" className="bg-card" asChild>
+              <Link href="/met">
+                <Handshake /> Add to Met
+              </Link>
+            </Button>
+          </>
         }
       />
 

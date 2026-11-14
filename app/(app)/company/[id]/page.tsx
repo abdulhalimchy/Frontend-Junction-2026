@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Loading from "@/app/(app)/loading";
-import { Bookmark, FileSearch } from "lucide-react";
+import { FileSearch } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { demoDataEnabled } from "@/lib/demo";
@@ -9,6 +9,7 @@ import { SlushTag } from "@/components/warmline/badges";
 import { EntityAvatar, PageHeader, Panel } from "@/components/warmline/blocks";
 import { CompanyOverview } from "@/components/warmline/company-overview";
 import { CompanyTable } from "@/components/warmline/tables";
+import { WatchButton } from "@/components/warmline/watch-button";
 import { getCompany, getSimilarCompanies } from "@/lib/cala";
 import { getRole } from "@/lib/session";
 import { fetchCompanyProfile } from "@/lib/cala/company";
@@ -60,9 +61,7 @@ async function CompanyPageContent({ params }: PageProps<"/company/[id]">) {
         }
         actions={
           <>
-            <Button variant="outline" className="bg-card">
-              <Bookmark /> Watch
-            </Button>
+            <WatchButton entityType="company" calaId={c.id} name={c.name} />
             {role === "investor" && (
               <Button asChild>
                 <Link href="/deck-check">

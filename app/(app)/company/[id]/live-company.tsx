@@ -7,6 +7,7 @@ import { Pill, SlushTag } from "@/components/warmline/badges";
 import { EmptyState, EntityAvatar, Panel } from "@/components/warmline/blocks";
 import { MarketError } from "@/components/warmline/market-view";
 import { SourceChip } from "@/components/warmline/source-chip";
+import { WatchButton } from "@/components/warmline/watch-button";
 import { InvestorList } from "@/app/(app)/market/company-analysis";
 import { SLUSH_EVENT_ID } from "@/lib/mocks/misc";
 import { fetchCompanyPeople, fetchCompanyProfile, type CompanyPeople, type PersonLink } from "@/lib/cala/company";
@@ -43,11 +44,14 @@ export async function LiveCompany({ id }: { id: string }) {
         <Link href="/market?mode=company" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-3" /> Company analysis
         </Link>
-        <Button variant="outline" size="sm" className="bg-card" asChild>
-          <Link href={`/market?${new URLSearchParams({ company: id, region: "anywhere" })}`}>
-            Competitors&apos; market <ArrowRight />
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <WatchButton entityType="company" calaId={id} name={p.name} size="sm" />
+          <Button variant="outline" size="sm" className="bg-card" asChild>
+            <Link href={`/market?${new URLSearchParams({ company: id, region: "anywhere" })}`}>
+              Competitors&apos; market <ArrowRight />
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Header p={p} slush={slush} />
