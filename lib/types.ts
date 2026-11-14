@@ -122,15 +122,6 @@ export type Alert = {
   sources: Source[];
 };
 
-export type MetEntry = {
-  id: string;
-  personId: string;
-  metAt: string; // ISO date
-  where: string;
-  note: string;
-  slush: boolean;
-};
-
 export type ClaimStatus = "confirmed" | "differs" | "cant_verify";
 
 export type DeckClaim = {
@@ -220,8 +211,6 @@ export type Profile = {
   goals: string[];
   privacy: {
     showInEventDirectory: boolean;
-    showCardInSearch: boolean;
-    shareMetList: boolean;
     allowAlertsEmail: boolean;
   };
 };

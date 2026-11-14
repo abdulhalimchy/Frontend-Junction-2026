@@ -1,4 +1,4 @@
-import type { Alert, EventInfo, MetEntry, Profile, Role } from "@/lib/types";
+import type { Alert, EventInfo, Profile, Role } from "@/lib/types";
 import { S } from "./sources";
 
 export const SLUSH_EVENT_ID = "bc844d56-6ab4-452b-96bf-2661e86e592b";
@@ -11,7 +11,7 @@ export const profiles: Record<Role, Profile> = {
     personId: "anna-virtanen",
     companyId: "northlight-robotics",
     goals: ["Raise a seed round", "Meet maritime investors at Slush", "Track competitors"],
-    privacy: { showInEventDirectory: true, showCardInSearch: true, shareMetList: false, allowAlertsEmail: true },
+    privacy: { showInEventDirectory: true, allowAlertsEmail: true },
   },
   investor: {
     name: "Jonas Berg",
@@ -20,7 +20,7 @@ export const profiles: Record<Role, Profile> = {
     personId: "jonas-berg",
     investorId: "fjord-ventures",
     goals: ["Source seed deals", "Monitor portfolio competitors", "Meet founders at Slush"],
-    privacy: { showInEventDirectory: true, showCardInSearch: true, shareMetList: false, allowAlertsEmail: false },
+    privacy: { showInEventDirectory: true, allowAlertsEmail: false },
   },
 };
 
@@ -105,14 +105,3 @@ export const alerts: Alert[] = [
   },
 ];
 
-export const metByRole: Record<Role, MetEntry[]> = {
-  founder: [
-    { id: "m1", personId: "jonas-berg", metAt: "2026-11-12", where: "Slush pre-event, Helsinki", note: "Interested in hull data; asked for deck after Slush.", slush: true },
-    { id: "m2", personId: "pekka-harju", metAt: "2026-10-03", where: "Coffee, Helsinki", note: "Existing investor. Can intro to port operators.", slush: false },
-    { id: "m3", personId: "elin-strand", metAt: "2026-09-18", where: "Nordic Ocean Week", note: "Mostly follows; ask who they co-invest with.", slush: false },
-  ],
-  investor: [
-    { id: "m4", personId: "anna-virtanen", metAt: "2026-11-12", where: "Slush pre-event, Helsinki", note: "Hull inspection robots, raising seed. Check overlap with PortBotics.", slush: true },
-    { id: "m5", personId: "maren-aas", metAt: "2026-10-21", where: "Portfolio day", note: "Trial readout in Q1.", slush: false },
-  ],
-};

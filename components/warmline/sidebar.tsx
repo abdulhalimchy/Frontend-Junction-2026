@@ -6,11 +6,9 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   FileSearch,
-  Handshake,
   House,
   LineChart,
   Route,
-  UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -38,10 +36,8 @@ function navFor(role: Role, unread: number): Item[] {
         ];
   const rest: Item[] = [
     { href: "/watchlist", match: "/watchlist", label: "Watch list", icon: Bookmark },
-    { href: "/met", match: "/met", label: "Met", icon: Handshake },
     { href: "/alerts", match: "/alerts", label: "Alerts", icon: Bell, badge: unread || undefined },
     { href: "/events/slush-2026/overview", match: "/events", label: "Events", icon: CalendarDays, slush: true },
-    { href: "/me", match: "/me", label: "Me", icon: UserRound },
   ];
   return [...top, ...roleItems, ...rest];
 }
@@ -129,7 +125,7 @@ export function Sidebar(
             <div className="mb-1.5 text-[11px] font-medium text-subtle">View as (demo)</div>
             <RoleSwitch role={props.role} />
           </div>
-          <Link href="/me" className="flex items-center gap-2 rounded-lg px-1 py-1 hover:bg-muted">
+          <div className="flex items-center gap-2 px-1 py-1">
             <span className="flex size-7 items-center justify-center rounded-full bg-teal-soft text-[11px] font-semibold text-accent-foreground">
               {props.user.name
                 .split(" ")
@@ -140,7 +136,7 @@ export function Sidebar(
               <span className="block truncate text-[13px] font-medium">{props.user.name}</span>
               <span className="block truncate text-[11px] text-muted-foreground">{org}</span>
             </span>
-          </Link>
+          </div>
         </div>
       )}
     </aside>

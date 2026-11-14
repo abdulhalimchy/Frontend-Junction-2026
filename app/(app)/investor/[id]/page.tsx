@@ -1,10 +1,9 @@
 import { Suspense } from "react";
 import Loading from "@/app/(app)/loading";
-import { AlertTriangle, CheckCircle2, CircleDashed, Handshake } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CircleDashed } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { demoDataEnabled } from "@/lib/demo";
-import { Button } from "@/components/ui/button";
 import { SlushTag, TrustBadge } from "@/components/warmline/badges";
 import { EntityAvatar, FactGrid, PageHeader, Panel } from "@/components/warmline/blocks";
 import { SourceChip } from "@/components/warmline/source-chip";
@@ -75,14 +74,7 @@ async function InvestorPageContent({ params, searchParams }: PageProps<"/investo
           </span>
         }
         actions={
-          <>
-            <WatchButton entityType="investor" calaId={i.id} name={i.name} />
-            <Button variant="outline" className="bg-card" asChild>
-              <Link href="/met">
-                <Handshake /> Add to Met
-              </Link>
-            </Button>
-          </>
+          <WatchButton entityType="investor" calaId={i.id} name={i.name} />
         }
       />
 
