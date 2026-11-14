@@ -1,4 +1,4 @@
-import type { Alert, DeckCheckResult, EventInfo, MetEntry, Profile, Role } from "@/lib/types";
+import type { Alert, EventInfo, MetEntry, Profile, Role } from "@/lib/types";
 import { S } from "./sources";
 
 export const SLUSH_EVENT_ID = "bc844d56-6ab4-452b-96bf-2661e86e592b";
@@ -115,35 +115,4 @@ export const metByRole: Record<Role, MetEntry[]> = {
     { id: "m4", personId: "anna-virtanen", metAt: "2026-11-12", where: "Slush pre-event, Helsinki", note: "Hull inspection robots, raising seed. Check overlap with PortBotics.", slush: true },
     { id: "m5", personId: "maren-aas", metAt: "2026-10-21", where: "Portfolio day", note: "Trial readout in Q1.", slush: false },
   ],
-};
-
-export const deckChecks: Record<string, DeckCheckResult> = {
-  "northlight-robotics": {
-    fileName: "Northlight_Seed_Deck_Nov2026.pdf",
-    companyId: "northlight-robotics",
-    pages: 14,
-    checkedAt: "2026-11-13",
-    claims: [
-      { id: "c1", slide: 1, claim: "Founded in Helsinki in 2023", category: "company", status: "confirmed", onRecord: "Founded May 2023, Helsinki", sources: [S.registryFI("northlight-robotics")] },
-      { id: "c2", slide: 9, claim: "€850k raised to date", category: "funding", status: "differs", onRecord: "€500k equity (Pre-seed, Nov 2023) and €350k grant (Business Finland, Mar 2024). The deck counts the grant as raised capital.", sources: [S.press("Northlight Robotics raises pre-seed", "2023-11-21"), S.grant("Business Finland funding decisions", "bf-2024-0312", "2024-03-12")] },
-      { id: "c3", slide: 9, claim: "Backed by Harbour Seed", category: "funding", status: "confirmed", onRecord: "Harbour Seed led the pre-seed round", sources: [S.press("Northlight Robotics raises pre-seed", "2023-11-21")] },
-      { id: "c4", slide: 11, claim: "Team of 14", category: "team", status: "confirmed", onRecord: "11–50 employees", sources: [S.linkedin("Northlight Robotics")] },
-      { id: "c5", slide: 6, claim: "3 paying shipping customers", category: "traction", status: "cant_verify", sources: [] },
-      { id: "c6", slide: 4, claim: "Hull inspection market worth €4.2B by 2030", category: "market", status: "cant_verify", sources: [] },
-      { id: "c7", slide: 7, claim: "The only autonomous hull inspection company in the Nordics", category: "market", status: "differs", onRecord: "Tidewise (Trondheim) and Saltline Systems (Turku) work on underwater or hull inspection.", sources: [S.site("Tidewise"), S.site("Saltline Systems")] },
-    ],
-  },
-  tidewise: {
-    fileName: "Tidewise_SeriesB_teaser.pdf",
-    companyId: "tidewise",
-    pages: 18,
-    checkedAt: "2026-11-12",
-    claims: [
-      { id: "t1", slide: 2, claim: "Founded in 2021", category: "company", status: "confirmed", onRecord: "Founded 2021 (year only on record)", sources: [S.registryNO("tidewise")] },
-      { id: "t2", slide: 12, claim: "Raised €8M Series A led by Fjord Ventures", category: "funding", status: "confirmed", onRecord: "€8.0M Series A, 18 Apr 2024, lead Fjord Ventures", sources: [S.news("Nordic Tech Weekly", "tidewise-series-a", "2024-04-18")] },
-      { id: "t3", slide: 12, claim: "€10M total equity raised", category: "funding", status: "differs", onRecord: "NOK 12M Seed (2022) and €8.0M Series A (2024). The NOK round cannot be summed in EUR without a stated rate.", sources: [S.registryNO("tidewise/shares", "2022-12-01"), S.news("Nordic Tech Weekly", "tidewise-series-a", "2024-04-18")] },
-      { id: "t4", slide: 5, claim: "Deployed at 120 fish farms", category: "traction", status: "cant_verify", sources: [] },
-      { id: "t5", slide: 14, claim: "Team of 80", category: "team", status: "confirmed", onRecord: "51–200 employees", sources: [S.linkedin("Tidewise")] },
-    ],
-  },
 };

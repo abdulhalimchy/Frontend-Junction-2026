@@ -82,20 +82,19 @@ async function StartupPageContent({ params }: PageProps<"/startup/[tab]">) {
           />
         </Panel>
       )}
-      {tab === "deck" && <DeckTab companyId={companyId} />}
+      {tab === "deck" && <DeckTab companyName={company.name} />}
     </>
   );
 }
 
-async function DeckTab({ companyId }: { companyId: string }) {
-  const result = await getDeckCheck(companyId);
-  if (!result) return null;
+async function DeckTab({ companyName }: { companyName: string }) {
+  const { result, error } = await getDeckCheck();
   return (
     <>
       <p className="mb-4 max-w-2xl text-sm text-muted-foreground">
         Check your own deck before investors do. Each claim is matched against Cala; anything without a source is marked “Can&apos;t verify”.
       </p>
-      <DeckCheck result={result} initiallyDone />
+      <DeckCheck initial={result} companyName={companyName} loadError={error} />
     </>
   );
 }
