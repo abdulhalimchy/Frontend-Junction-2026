@@ -1,34 +1,33 @@
-import { AlertCircle, Building2, CircleOff, Coins, KeyRound, Landmark, Loader2, Search, TrendingUp } from "lucide-react";
+import { ArrowRight, Building2, LineChart, Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Pill } from "@/components/warmline/badges";
-import { EmptyState, EntityAvatar, PageHeader, Panel, StatCard } from "@/components/warmline/blocks";
-import { DataTable, type Row } from "@/components/warmline/data-table";
-import { FundingChart } from "@/components/warmline/funding-chart";
-import { SourceChip } from "@/components/warmline/source-chip";
+import { EmptyState, EntityAvatar, PageHeader } from "@/components/warmline/blocks";
+import { MarketError, MarketView, ResultsLoading } from "@/components/warmline/market-view";
 import { getMarket } from "@/lib/cala";
-import { calaErrorKind, mocksEnabled } from "@/lib/cala/client";
-import { REGIONS } from "@/lib/cala/market";
-import { formatFuzzyDate, formatMoney, formatTotals, totalsByCurrency } from "@/lib/format";
-import { lastEquityRound, summariseMarket, type MarketSummary } from "@/lib/market";
-import type { MarketData, MarketQuery } from "@/lib/types";
+import { mocksEnabled } from "@/lib/cala/client";
+import { findCompanies } from "@/lib/cala/company";
+import { REGIONS, regionOf } from "@/lib/cala/market";
+import type { MarketData } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { CompanyAnalysis } from "./company-analysis";
 
 export const metadata: Metadata = { title: "Market" };
 
-const PRESETS = ["maritime robotics", "climate tech", "health tech", "industrial robotics", "fintech", "quantum computing"];
-const DEFAULT: MarketQuery = { sector: "maritime robotics", region: "nordics" };
+const PRESETS = ["maritime robotics", "industrial robotics", "climate tech", "health tech", "fintech", "quantum computing"];
+const COMPANY_PRESETS = ["GE HealthCare", "Wheel.me", "Hyperion Robotics", "Aiven"];
+
+type Mode = "market" | "company";
+type Params = { mode: Mode; text: string; region: string; companyId: string | null };
 
 export default function MarketPage(props: PageProps<"/market">) {
   return (
     <>
       <PageHeader
         title="Market analysis"
-        description="Companies whose descriptions match a market, with every round Cala has a source for. Equity and grants are kept apart and currencies are never converted."
+        description="Analyse a market by describing what companies do, or analyse one company and the market of its competitors. Every number comes with its sources; equity and grants are kept apart and currencies are never converted."
       />
       <Suspense fallback={<ResultsLoading />}>
         <MarketContent {...props} />
@@ -39,31 +38,94 @@ export default function MarketPage(props: PageProps<"/market">) {
 
 async function MarketContent({ searchParams }: PageProps<"/market">) {
   const sp = await searchParams;
-  const sector = (typeof sp.sector === "string" && sp.sector.trim().slice(0, 80)) || DEFAULT.sector;
-  const region = typeof sp.region === "string" && REGIONS[sp.region] ? sp.region : DEFAULT.region;
-  const q = { sector, region };
+  const str = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string).trim().slice(0, 100) : "");
+  // A typed name while a company is selected starts a new company search.
+  const companyId = /^[0-9a-f-]{36}$/i.test(str("company")) && !str("sector") ? str("company") : null;
+  const mode: Mode = companyId || str("mode") === "company" || str("company") ? "company" : "market";
+  const text = str("sector") || (mode === "market" ? PRESETS[0] : "");
+  // Markets default to the Nordics; competitors of a company default to anywhere.
+  const region = REGIONS[str("region")] ? str("region") : mode === "company" ? "anywhere" : "nordics";
+  const p: Params = { mode, text, region, companyId };
 
   return (
     <>
-      <MarketFilters q={q} />
-      <Suspense key={`${sector}|${region}`} fallback={<ResultsLoading />}>
-        <MarketResults q={q} />
-      </Suspense>
+      <Filters p={p} />
+      {mode === "company" && mocksEnabled() ? (
+        <EmptyState icon={Building2} title="Company analysis needs live Cala data" description="Set USE_MOCKS=false and add CALA_API_KEY to .env.local." />
+      ) : companyId ? (
+        <Suspense key={`${companyId}|${region}`} fallback={<ResultsLoading />}>
+          <CompanyAnalysis id={companyId} region={region} />
+        </Suspense>
+      ) : mode === "company" ? (
+        text ? (
+          <Suspense key={`pick|${text}`} fallback={<ResultsLoading />}>
+            <CompanyPicker text={text} region={region} />
+          </Suspense>
+        ) : (
+          <EmptyState icon={Building2} title="Type a company name" description="We look it up in Cala by name, then show its profile, funding and competitors." />
+        )
+      ) : (
+        <>
+          {!mocksEnabled() && (
+            <Suspense key={`hint|${text}`} fallback={null}>
+              <CompanyHint text={text} region={region} />
+            </Suspense>
+          )}
+          <Suspense key={`${text}|${region}`} fallback={<ResultsLoading />}>
+            <MarketResults sector={text} region={region} />
+          </Suspense>
+        </>
+      )}
     </>
   );
 }
 
-function MarketFilters({ q }: { q: MarketQuery }) {
+function href(params: Record<string, string>) {
+  return `/market?${new URLSearchParams(params)}`;
+}
+
+function Filters({ p }: { p: Params }) {
+  const presets = p.mode === "market" ? PRESETS : COMPANY_PRESETS;
   return (
     <div className="mb-6 rounded-xl border bg-card p-4">
+      <div className="mb-3 inline-flex rounded-lg bg-muted p-0.5 text-xs font-medium">
+        {(
+          [
+            { key: "market", label: "Market", icon: LineChart },
+            { key: "company", label: "Company", icon: Building2 },
+          ] as const
+        ).map((m) => (
+          <Link
+            key={m.key}
+            href={m.key === "market" ? href({ region: p.mode === "market" ? p.region : "nordics" }) : href({ mode: "company" })}
+            className={cn(
+              "flex items-center gap-1.5 rounded-md px-3 py-1.5",
+              p.mode === m.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <m.icon className="size-3.5" />
+            {m.label}
+          </Link>
+        ))}
+      </div>
       <form action="/market" className="flex items-center gap-2">
+        {p.mode === "company" && <input type="hidden" name="mode" value="company" />}
+        {p.companyId && <input type="hidden" name="company" value={p.companyId} />}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input name="sector" defaultValue={q.sector} placeholder="Describe the market, e.g. underwater drones" className="h-9 pl-9" />
+          <Input
+            name="sector"
+            defaultValue={p.companyId ? "" : p.text}
+            placeholder={
+              p.mode === "market" ? "Describe the market, e.g. underwater drones" : p.companyId ? "Search another company" : "Company name, e.g. GE HealthCare"
+            }
+            className="h-9 pl-9"
+          />
         </div>
         <select
           name="region"
-          defaultValue={q.region}
+          defaultValue={p.region}
+          aria-label={p.mode === "market" ? "Region" : "Region for competitors"}
           className="h-9 rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           {Object.entries(REGIONS).map(([key, r]) => (
@@ -73,21 +135,21 @@ function MarketFilters({ q }: { q: MarketQuery }) {
           ))}
         </select>
         <Button type="submit" className="h-9">
-          Analyse
+          {p.mode === "market" ? "Analyse market" : p.companyId ? "Search or update" : "Find company"}
         </Button>
       </form>
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         <span className="mr-1 text-xs text-muted-foreground">Try:</span>
-        {PRESETS.map((p) => (
+        {presets.map((t) => (
           <Link
-            key={p}
-            href={`/market?${new URLSearchParams({ sector: p, region: q.region })}`}
+            key={t}
+            href={p.mode === "market" ? href({ sector: t, region: p.region }) : href({ mode: "company", sector: t })}
             className={cn(
               "rounded-full border px-2.5 py-0.5 text-xs",
-              p === q.sector ? "border-primary/30 bg-teal-soft text-accent-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              t === p.text && !p.companyId ? "border-primary/30 bg-teal-soft text-accent-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
-            {p}
+            {t}
           </Link>
         ))}
       </div>
@@ -95,275 +157,95 @@ function MarketFilters({ q }: { q: MarketQuery }) {
   );
 }
 
-async function MarketResults({ q }: { q: MarketQuery }) {
-  let data: MarketData;
+/** In market mode: if the text is exactly a company name in Cala, offer company analysis. */
+async function CompanyHint({ text, region }: { text: string; region: string }) {
+  let exact;
   try {
-    data = await getMarket(q);
+    exact = (await findCompanies(text)).exact;
+  } catch {
+    return null; // The market below shows any API error.
+  }
+  if (!exact.length) return null;
+  const top = exact[0];
+  return (
+    <div className="mb-6 flex items-center gap-3 rounded-xl border border-primary/25 bg-teal-soft/50 px-4 py-3">
+      <EntityAvatar name={top.name} />
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium">“{text}” is also a company in Cala: {top.name}</div>
+        <div className="truncate text-xs text-muted-foreground">
+          {top.description ?? top.entityType}
+          {exact.length > 1 && ` · ${exact.length - 1} more entit${exact.length === 2 ? "y" : "ies"} with this name`}
+        </div>
+      </div>
+      <Button size="sm" asChild>
+        <Link href={exact.length > 1 ? href({ mode: "company", sector: text }) : href({ company: top.id, region: "anywhere" })}>
+          Analyse company <ArrowRight />
+        </Link>
+      </Button>
+      <span className="sr-only">Market results for “{text}” in {regionOf(region).label} are below.</span>
+    </div>
+  );
+}
+
+/** In company mode with a name: list Cala's matches, exact names first. Several legal entities can share a name. */
+async function CompanyPicker({ text, region }: { text: string; region: string }) {
+  let res;
+  try {
+    res = await findCompanies(text);
   } catch (e) {
     return <MarketError error={e} />;
   }
+  const exactIds = new Set(res.exact.map((m) => m.id));
+  const list = [...res.exact, ...res.all.filter((m) => !exactIds.has(m.id))];
+  if (!list.length) {
+    return <EmptyState icon={Search} title={`No company named “${text}” in Cala`} description="Try the brand or the legal name, e.g. “Baron App” for Cameo." />;
+  }
+  return (
+    <div className="rounded-xl border bg-card">
+      <div className="border-b px-5 py-3">
+        <h2 className="text-[15px] font-semibold">Companies matching “{text}”</h2>
+        <p className="text-[13px] text-muted-foreground">
+          Cala records brands, legal entities and national subsidiaries separately. Pick the one you mean.
+        </p>
+      </div>
+      <ul className="divide-y">
+        {list.map((m) => (
+          <li key={m.id}>
+            <Link href={href({ company: m.id, region })} className="flex items-center gap-3 px-5 py-3 hover:bg-muted/40">
+              <EntityAvatar name={m.name} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  {m.name}
+                  {exactIds.has(m.id) && (
+                    <span className="rounded-full bg-teal-soft px-2 py-0.5 text-[11px] text-accent-foreground">Exact name</span>
+                  )}
+                </div>
+                <div className="truncate text-xs text-muted-foreground">{m.description ?? m.entityType}</div>
+              </div>
+              <ArrowRight className="size-4 text-muted-foreground" />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
+async function MarketResults({ sector, region }: { sector: string; region: string }) {
+  let data: MarketData;
+  try {
+    data = await getMarket({ sector, region });
+  } catch (e) {
+    return <MarketError error={e} />;
+  }
   if (!data.companies.length) {
     return (
       <EmptyState
         icon={Search}
-        title={`No companies on record for “${q.sector}” in ${REGIONS[q.region].label}`}
-        description="Try describing what the companies do in different words, or pick a wider region."
+        title={`No companies on record for “${sector}” in ${regionOf(region).label}`}
+        description="Describe what the companies do in other words, pick a wider region, or switch to Company to look up a company by name."
       />
     );
   }
-
-  const s = summariseMarket(data);
-  const region = REGIONS[q.region].label;
-  const cur = s.currency ?? "";
-
-  return (
-    <>
-      <div className="mb-6 grid grid-cols-4 gap-4">
-        <StatCard
-          label="Companies analysed"
-          value={s.companyCount}
-          icon={Building2}
-          hint={s.withoutFunding ? `${s.withoutFunding} with no funding on record` : "All have funding on record"}
-        />
-        <StatCard
-          label="Equity raised"
-          value={s.equityTotal ? formatMoney(s.equityTotal.value) : "None on record"}
-          icon={Coins}
-          sources={s.equityTotal?.sources}
-          hint={s.currency ? `${cur} rounds only` : undefined}
-        />
-        <StatCard
-          label="Grants"
-          value={s.grantTotal ? formatMoney(s.grantTotal.value) : "None on record"}
-          icon={Landmark}
-          sources={s.grantTotal?.sources}
-          hint="Kept separate from equity"
-        />
-        <StatCard
-          label="Median seed round"
-          value={s.medianSeed ? formatMoney(s.medianSeed.value) : "Not enough data"}
-          icon={TrendingUp}
-          sources={s.medianSeed?.sources}
-          hint={s.seedCount ? `From ${s.seedCount} seed round${s.seedCount === 1 ? "" : "s"}` : "No seed rounds with an amount"}
-        />
-      </div>
-
-      <div className="mb-6 grid grid-cols-3 gap-6">
-        <Panel
-          className="col-span-2"
-          title="Funding by year"
-          description={s.currency ? `Equity and grants as separate series, in ${cur} millions.` : "No rounds with an amount on record."}
-          action={<SourceChip sources={s.yearSources} />}
-        >
-          {s.byYear.length ? <FundingChart data={s.byYear} currency={cur} /> : <EmptyState compact title="No dated rounds with an amount" />}
-          <Exclusions s={s} />
-        </Panel>
-        <Panel title="Rounds per year" description={s.currency ? `${cur} rounds with an amount` : undefined}>
-          <RoundsPerYear s={s} />
-        </Panel>
-      </div>
-
-      <Panel className="mb-6" title={`Companies in ${q.sector}, ${region}`} description="Sorted by equity raised. Each value opens its sources.">
-        <CompaniesTable data={data} currency={s.currency} />
-      </Panel>
-
-      <Panel className="mb-6" title="Investors in this market" description="Investors with a sourced investment in at least one of these companies.">
-        <InvestorsTable s={s} />
-      </Panel>
-
-      <p className="text-xs text-muted-foreground">
-        How this market was defined: companies come from Cala&apos;s <code className="rounded bg-muted px-1">knowledge_query</code> for{" "}
-        <code className="rounded bg-muted px-1">{data.definition}</code>. Every number above comes from sourced company and funding-round
-        entities{mocksEnabled() ? " (mock data: USE_MOCKS=true)" : ""}.
-        {data.outsideRegion.length > 0 && (
-          <>
-            {" "}Left out because their headquarters on record are outside {region}:{" "}
-            {data.outsideRegion.map((c) => `${c.name} (${c.country})`).join(", ")}.
-          </>
-        )}
-      </p>
-    </>
-  );
-}
-
-function Exclusions({ s }: { s: MarketSummary }) {
-  const parts = [
-    s.excluded.otherCurrency && `${s.excluded.otherCurrency} in ${s.excluded.otherCurrencies.join(", ")} (not converted)`,
-    s.excluded.undisclosed && `${s.excluded.undisclosed} with no amount on record`,
-    s.excluded.undated && `${s.excluded.undated} with no date`,
-    s.excluded.otherInstrument && `${s.excluded.otherInstrument} debt or other instruments`,
-  ].filter(Boolean);
-  if (!parts.length) return null;
-  return (
-    <p className="mt-3 flex items-start gap-1.5 text-xs text-muted-foreground">
-      <CircleOff className="mt-px size-3.5 shrink-0" />
-      <span>Not in totals or chart: {parts.join(" · ")}.</span>
-    </p>
-  );
-}
-
-function RoundsPerYear({ s }: { s: MarketSummary }) {
-  if (!s.byYear.length) return <p className="text-sm text-muted-foreground">No dated rounds on record.</p>;
-  const max = Math.max(...s.byYear.map((y) => y.rounds), 1);
-  return (
-    <ul className="space-y-2.5">
-      {s.byYear.map((y) => (
-        <li key={y.year} className="flex items-center gap-3 text-sm">
-          <span className="w-10 text-muted-foreground tabular">{y.year}</span>
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-            <div className="h-full rounded-full bg-primary/70" style={{ width: `${(y.rounds / max) * 100}%` }} />
-          </div>
-          <span className="w-6 text-right tabular">{y.rounds}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function CompaniesTable({ data, currency }: { data: MarketData; currency: string | null }) {
-  const rows: Row[] = data.companies.map((c) => {
-    const last = lastEquityRound(c);
-    const equity = totalsByCurrency(c.rounds, "equity");
-    const grants = totalsByCurrency(c.rounds, "grant");
-    return {
-      id: c.id,
-      cells: {
-        name: {
-          display: (
-            <div className="flex items-center gap-2.5">
-              <EntityAvatar name={c.name} size="sm" />
-              <div className="min-w-0">
-                <div className="font-medium">{c.name}</div>
-                <div className="flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
-                  {c.founded ? `Founded ${formatFuzzyDate(c.founded.value)}` : "Founded: not on record"}
-                  {c.founded && <SourceChip sources={c.founded.sources} />}
-                </div>
-              </div>
-            </div>
-          ),
-          sort: c.name,
-        },
-        description: {
-          display: c.description ? (
-            <div className="flex items-start gap-2">
-              <span className="line-clamp-2 text-[13px] text-muted-foreground">{c.description.value}</span>
-              <SourceChip sources={c.description.sources} />
-            </div>
-          ) : (
-            <span className="text-[13px] text-subtle">No description on record</span>
-          ),
-        },
-        last: {
-          display: last ? (
-            <div className="flex items-center gap-2 whitespace-nowrap">
-              <span className="text-[13px] tabular">
-                {last.stage} · {formatMoney(last.amount)}
-              </span>
-              <span className="text-xs text-muted-foreground">{last.date ? formatFuzzyDate(last.date) : "undated"}</span>
-              <SourceChip sources={last.sources} />
-            </div>
-          ) : (
-            <span className="text-[13px] text-muted-foreground">No funding on record</span>
-          ),
-          sort: last?.date?.date ?? null,
-        },
-        equity: {
-          display: <span className="whitespace-nowrap text-[13px] tabular">{equity.length ? formatTotals(equity) : "—"}</span>,
-          sort: equity.find((m) => m.currency === currency)?.amount ?? null,
-        },
-        grants: {
-          display: <span className="whitespace-nowrap text-[13px] tabular">{grants.length ? formatTotals(grants) : "—"}</span>,
-          sort: grants.find((m) => m.currency === currency)?.amount ?? null,
-        },
-      },
-    };
-  });
-
-  return (
-    <DataTable
-      columns={[
-        { key: "name", label: "Company", width: "24%" },
-        { key: "description", label: "What they do", sortable: false, width: "34%" },
-        { key: "last", label: "Last equity round" },
-        { key: "equity", label: "Equity", align: "right" },
-        { key: "grants", label: "Grants", align: "right" },
-      ]}
-      rows={rows}
-      initialSort={{ key: "equity", dir: "desc" }}
-    />
-  );
-}
-
-function InvestorsTable({ s }: { s: MarketSummary }) {
-  if (!s.investors.length) return <EmptyState compact title="No investors on record for these companies" />;
-  const rows: Row[] = s.investors.slice(0, 15).map((i) => ({
-    id: i.id,
-    cells: {
-      name: {
-        display: (
-          <div className="flex items-center gap-2.5">
-            <EntityAvatar name={i.name} kind="investor" size="sm" />
-            <span className="font-medium">{i.name}</span>
-          </div>
-        ),
-        sort: i.name,
-      },
-      companies: { display: <span className="text-[13px] text-muted-foreground">{i.companies.join(", ")}</span> },
-      count: {
-        display: (
-          <span className="inline-flex items-center gap-2">
-            {i.companies.length > 1 && <Pill tone="teal">Repeat</Pill>}
-            <span className="tabular">{i.companies.length}</span>
-          </span>
-        ),
-        sort: i.companies.length,
-      },
-      sources: { display: <SourceChip sources={i.sources} /> },
-    },
-  }));
-  return (
-    <DataTable
-      columns={[
-        { key: "name", label: "Investor", width: "30%" },
-        { key: "companies", label: "Backed in this market", sortable: false },
-        { key: "count", label: "Companies", align: "right" },
-        { key: "sources", label: "Sources", sortable: false },
-      ]}
-      rows={rows}
-      initialSort={{ key: "count", dir: "desc" }}
-    />
-  );
-}
-
-function MarketError({ error }: { error: unknown }) {
-  const kind = calaErrorKind(error);
-  const copy = {
-    missing_key: {
-      icon: KeyRound,
-      title: "Cala API key missing or rejected",
-      description: "Add CALA_API_KEY to .env.local and restart the dev server, or set USE_MOCKS=true to use fixture data.",
-    },
-    rate_limited: { icon: AlertCircle, title: "Cala rate limit reached", description: "Wait a minute and reload. Results are cached once they load." },
-    invalid_request: { icon: AlertCircle, title: "Cala could not run this query", description: "Try describing the market in different words." },
-    upstream: { icon: AlertCircle, title: "Could not reach Cala", description: error instanceof Error ? error.message : "Unknown error." },
-  }[kind];
-  return <EmptyState icon={copy.icon} title={copy.title} description={copy.description} />;
-}
-
-function ResultsLoading() {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin text-primary" />
-        Loading companies and funding rounds from Cala. The first load of a market can take up to a minute; repeat views are cached.
-      </div>
-      <div className="grid grid-cols-4 gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-24 rounded-xl" />
-        ))}
-      </div>
-      <Skeleton className="h-80 rounded-xl" />
-    </div>
-  );
+  return <MarketView data={data} title={`Companies in ${sector}, ${regionOf(region).label}`} />;
 }

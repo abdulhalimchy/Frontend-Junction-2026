@@ -152,6 +152,23 @@ export type MarketCompany = {
 
 export type MarketQuery = { sector: string; region: string };
 
+/** A company entity found by name in Cala. */
+export type CompanyMatch = { id: string; name: string; entityType: string; description: string | null };
+
+/** Everything the company analysis shows about one company, each value with its sources. */
+export type CompanyProfile = MarketCompany & {
+  legalName: Sourced<string> | null;
+  website: Sourced<string> | null;
+  employees: Sourced<string> | null;
+  status: Sourced<string> | null;
+  fundingStage: Sourced<string> | null;
+  /** As Cala reports it (all instruments), not summed from rounds. */
+  totalFunding: Sourced<Money> | null;
+  totalFundingExDebt: Sourced<Money> | null;
+  industries: { name: string; label: string | null; sources: Source[] }[];
+  countries: string[];
+};
+
 /** Raw market data. Totals and charts are derived in lib/market.ts so mocks and Cala share one code path. */
 export type MarketData = {
   query: MarketQuery;

@@ -50,14 +50,16 @@ export function summariseMarket(data: MarketData): MarketSummary {
 
   const otherCurrencyRounds = money.filter((r) => r.amount!.currency !== currency);
 
-  // Investors that appear across the market, most companies first.
+  // Investors that appear across the market, most companies first. Cala can hold several entities with the
+  // same name, so investors are grouped by name and their sources merged.
   const inv = new Map<string, { id: string; name: string; companies: string[]; sources: Source[] }>();
   for (const c of data.companies) {
     for (const i of c.investors) {
-      const e = inv.get(i.id) ?? { id: i.id, name: i.name, companies: [], sources: [] };
+      const key = i.name.trim().toLowerCase();
+      const e = inv.get(key) ?? { id: i.id, name: i.name, companies: [], sources: [] };
       if (!e.companies.includes(c.name)) e.companies.push(c.name);
       e.sources = dedupe([...e.sources, ...i.sources]);
-      inv.set(i.id, e);
+      inv.set(key, e);
     }
   }
 
