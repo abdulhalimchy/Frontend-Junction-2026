@@ -11,6 +11,10 @@ import { Markdown } from "@/components/warmline/markdown";
 import { CompaniesTable, MarketError, MarketView } from "@/components/warmline/market-view";
 import { SourceChip } from "@/components/warmline/source-chip";
 import { mocksEnabled } from "@/lib/cala/client";
+import { reportSummary, type ReportSummary } from "@/lib/cala/report-summary";
+import { llmConfigured } from "@/lib/llm/gemini";
+import { formatMoney } from "@/lib/format";
+import { Pill } from "@/components/warmline/badges";
 import { REGIONS, regionOf } from "@/lib/cala/market";
 import {
   marketCapital,
@@ -35,6 +39,7 @@ export default function ReportPage(props: PageProps<"/market/report">) {
 }
 
 const SECTIONS = [
+  { id: "summary", label: "Summary", icon: Sparkles },
   { id: "size", label: "Market size", icon: Scale },
   { id: "players", label: "Leading players", icon: Building2 },
   { id: "capital", label: "Capital flows", icon: Coins },
@@ -101,7 +106,15 @@ async function Report({ searchParams }: PageProps<"/market/report">) {
         <EmptyState icon={FileText} title="Market reports need live Cala data" description="Set USE_MOCKS=false and add CALA_API_KEY to .env.local." />
       ) : (
         <div className="space-y-10">
-          <SummaryPlaceholder />
+          <Section id="summary" title="Executive summary" description="Written from the Cala facts in the sections below. Every claim was checked against the facts it cites; anything that did not match was left out.">
+            {llmConfigured() ? (
+              <Suspense fallback={<SectionLoading label="Waiting for Cala's answers, then writing the summary" />}>
+                <ExecutiveSummary q={q} />
+              </Suspense>
+            ) : (
+              <SummaryPlaceholder />
+            )}
+          </Section>
           <Section id="size" title="Market size and growth" description="Figures as published. Publishers define the market differently, so their numbers differ; we show them side by side and never average or convert them.">
             <Suspense fallback={<SectionLoading label="Asking Cala about market size" />}>
               <EvidenceView load={marketSize(q)} />
@@ -149,15 +162,149 @@ function Section({ id, title, description, children }: { id: string; title: stri
 }
 
 function SummaryPlaceholder() {
-  const hasLlm = Boolean(process.env.LLM_API_KEY);
   return (
     <div className="flex items-start gap-3 rounded-xl border border-dashed bg-card/60 p-4 text-sm text-muted-foreground">
       <Sparkles className="mt-0.5 size-4 text-primary" />
-      <div>
-        <div className="font-medium text-foreground">Executive summary</div>
-        {hasLlm
-          ? "Coming next: a written summary and extracted size figures, each checked against the Cala facts below."
-          : "Add LLM_API_KEY to .env.local to get a written summary and extracted size figures, each checked against the Cala facts below."}
+      Add LLM_API_KEY to .env.local to get a written summary and extracted size figures, each checked against the Cala facts below.
+    </div>
+  );
+}
+
+const INSIGHT = {
+  trend: { label: "Trend", tone: "teal" },
+  opportunity: { label: "Opportunity", tone: "success" },
+  risk: { label: "Risk", tone: "warning" },
+} as const;
+
+/** One row per report (same fact and scope): its figures by year, quotes joined; regional scopes before global ones. */
+function groupSizes(sizes: ReportSummary["sizes"]) {
+  type Row = { publisher: string; scope: string; quotes: string[]; cagr: ReportSummary["sizes"][number]["cagr"]; sources: Source[]; figures: ReportSummary["sizes"] };
+  const groups = new Map<string, Row>();
+  for (const f of sizes) {
+    const key = `${f.factId}|${f.scope.toLowerCase()}`;
+    const g = groups.get(key) ?? { publisher: f.publisher, scope: f.scope, quotes: [], cagr: null, sources: f.sources, figures: [] };
+    g.figures.push(f);
+    if (!g.quotes.includes(f.quote)) g.quotes.push(f.quote);
+    g.cagr ??= f.cagr;
+    groups.set(key, g);
+  }
+  const global = (scope: string) => Number(/global|world/i.test(scope));
+  return [...groups.values()]
+    .map((g) => ({ ...g, quote: g.quotes.join(" … "), figures: [...g.figures].sort((a, b) => a.year - b.year) }))
+    .sort((a, b) => global(a.scope) - global(b.scope) || a.figures[0].year - b.figures[0].year);
+}
+
+async function ExecutiveSummary({ q }: { q: ReportQuery }) {
+  let s: ReportSummary;
+  try {
+    s = await reportSummary(q);
+  } catch (e) {
+    return (
+      <EmptyState
+        compact
+        icon={Sparkles}
+        title="Could not write the summary"
+        description={e instanceof Error ? e.message : "Unknown error"}
+      />
+    );
+  }
+  return (
+    <div className="space-y-6">
+      <Panel className="border-primary/25">
+        {s.headline && (
+          <p className="flex items-start gap-2 text-base font-medium leading-relaxed">
+            <span>{s.headline.text}</span>
+            <SourceChip sources={s.headline.sources} className="mt-1" />
+          </p>
+        )}
+        {s.bullets.length > 0 && (
+          <ul className="mt-4 space-y-2.5">
+            {s.bullets.map((b, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm leading-relaxed">
+                <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
+                <span className="flex-1">{b.text}</span>
+                <SourceChip sources={b.sources} className="mt-0.5" />
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+
+      {s.sizes.length > 0 && (
+        <Panel title="Market size as published" description="Each figure is quoted from its source and matched to it. Publishers scope the market differently, so figures are not comparable with each other. Regional figures first.">
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2 font-medium">Publisher</th>
+                  <th className="px-3 py-2 font-medium">Scope</th>
+                  <th className="px-3 py-2 font-medium">Figures</th>
+                  <th className="px-3 py-2 font-medium">Growth</th>
+                  <th className="px-3 py-2 font-medium">Quote</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {groupSizes(s.sizes).map((g, i) => (
+                  <tr key={i} className="bg-card align-top">
+                    <td className="px-3 py-2.5 font-medium">{g.publisher}</td>
+                    <td className="px-3 py-2.5 text-[13px] text-muted-foreground">{g.scope}</td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex flex-col gap-0.5 whitespace-nowrap text-[13px] tabular">
+                        {g.figures.map((f, j) => (
+                          <span key={j}>
+                            <span className="text-muted-foreground">{f.year}</span> <span className="font-semibold">{formatMoney(f.value)}</span>
+                            {f.kind === "forecast" && <span className="text-xs text-subtle"> forecast</span>}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5 text-[13px] whitespace-nowrap">
+                      {g.cagr ? `${g.cagr.percent}% CAGR${g.cagr.period ? ` (${g.cagr.period})` : ""}` : <span className="text-subtle">—</span>}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-start gap-2">
+                        <span className="line-clamp-3 text-xs italic text-muted-foreground">“{g.quote}”</span>
+                        <SourceChip sources={g.sources} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+      )}
+
+      {s.insights.length > 0 && (
+        <div className="grid grid-cols-3 gap-4">
+          {s.insights.map((i, k) => (
+            <div key={k} className="rounded-xl border bg-card p-4">
+              <div className="flex items-center justify-between">
+                <Pill tone={INSIGHT[i.kind].tone}>{INSIGHT[i.kind].label}</Pill>
+                <SourceChip sources={i.sources} />
+              </div>
+              <div className="mt-2 text-sm font-semibold">{i.title}</div>
+              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{i.text}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="text-xs text-muted-foreground">
+        Written by {s.model} from {s.factCount} Cala facts. {s.checked} claims checked
+        {s.dropped.length ? `, ${s.dropped.length} left out because they did not match their sources.` : ", all matched their sources."}
+        {s.dropped.length > 0 && (
+          <details className="mt-2">
+            <summary className="cursor-pointer text-primary">Show what was left out</summary>
+            <ul className="mt-2 space-y-1">
+              {s.dropped.map((d, i) => (
+                <li key={i}>
+                  <span className="text-foreground">{d.what}</span> — {d.reason}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
       </div>
     </div>
   );
