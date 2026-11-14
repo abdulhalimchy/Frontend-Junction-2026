@@ -105,7 +105,7 @@ export function TopBar({ items, unread, live }: { items: PaletteItem[]; unread: 
         <Command>
         <CommandInput placeholder="Search companies, investors, people…" value={q} onValueChange={setQ} />
         <CommandList>
-          <CommandEmpty>No matches in your workspace. Press Enter to search Cala.</CommandEmpty>
+          <CommandEmpty>No matches in your workspace. Press Enter to search all companies.</CommandEmpty>
           {q && (
             <CommandGroup heading="Search">
               <CommandItem
@@ -115,7 +115,7 @@ export function TopBar({ items, unread, live }: { items: PaletteItem[]; unread: 
                 }
               >
                 <Search />
-                {live ? `Find company “${q}” in Cala` : `Search all of Cala for “${q}”`}
+                {live ? `Find company “${q}”` : `Search all companies for “${q}”`}
                 <CommandShortcut>↵</CommandShortcut>
               </CommandItem>
             </CommandGroup>

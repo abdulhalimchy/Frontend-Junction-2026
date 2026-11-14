@@ -6,7 +6,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, PageHeader } from "@/components/warmline/blocks";
 import { Pill } from "@/components/warmline/badges";
 import { listMarketAnalyses, type MarketAnalysisRow } from "@/lib/backend/markets";
-import { regionOf } from "@/lib/cala/market";
 import { ClearHistoryButton, DeleteAnalysisButton, PollWhileLoading } from "../history-controls";
 
 export const metadata: Metadata = { title: "Market analysis history" };
@@ -20,11 +19,11 @@ export default function HistoryPage() {
       <PageHeader
         eyebrow={
           <Link href="/market" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="size-3" /> Choose analysis
+            <ArrowLeft className="size-3" /> Back
           </Link>
         }
         title="Market analysis history"
-        description="Your past market reports, most recently opened first. Opening one shows the saved result and spends no Cala credit; refresh it from the report to update it."
+        description="Your past market reports, most recently opened first. Opening one shows the saved result instantly; refresh it from the report to fetch fresh data."
       />
       <Suspense fallback={<HistoryLoading />}>
         <HistoryList />
@@ -69,15 +68,15 @@ async function HistoryList() {
             <Link href={`/market/report?id=${r.id}`} className="group flex min-w-0 flex-1 items-center gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="truncate text-sm font-semibold capitalize">{r.sector}</span>
-                  <Pill tone="neutral">{regionOf(r.region).label}</Pill>
+                  <span className="truncate text-sm font-semibold first-letter:uppercase">{r.title || r.sector}</span>
+                  <Pill tone="neutral">{r.place}</Pill>
                   <StatusPill status={r.status} />
                 </div>
                 <p className="mt-0.5 line-clamp-1 text-[13px] text-muted-foreground">
-                  {r.status === "failed" ? r.error || "The last run failed." : r.headline || (r.status === "loading" ? "Asking Cala…" : "No summary on record.")}
+                  {r.status === "failed" ? r.error || "The last run failed." : r.headline || (r.status === "loading" ? "Building the report…" : "No summary on record.")}
                 </p>
                 <p className="mt-0.5 text-xs text-subtle">
-                  {r.typed && r.typed !== r.sector ? `Typed “${r.typed}” · ` : ""}
+                  {r.typed && r.typed.toLowerCase() !== (r.title || r.sector).toLowerCase() ? `You searched “${r.typed}” · ` : ""}
                   {r.playerCount ? `${r.playerCount} leading players · ` : ""}
                   {r.finishedAt ? `Updated ${when(r.finishedAt)}` : `Started ${when(r.createdAt)}`}
                   {r.runs > 1 ? ` · refreshed ${r.runs - 1}×` : ""}
@@ -85,7 +84,7 @@ async function HistoryList() {
               </div>
               <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
             </Link>
-            <DeleteAnalysisButton id={r.id} name={r.sector} />
+            <DeleteAnalysisButton id={r.id} name={r.title || r.sector} />
           </li>
         ))}
       </ul>

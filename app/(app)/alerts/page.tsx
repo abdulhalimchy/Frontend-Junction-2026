@@ -52,7 +52,7 @@ async function AlertsContent({ searchParams }: PageProps<"/alerts">) {
     <>
       <PageHeader
         title="Alerts"
-        description="Changes Cala has on record for the companies and investors you watch. Every alert links to its sources."
+        description="Changes on record for the companies and investors you watch. Every alert links to its sources."
         actions={
           <>
             <MarkAllReadButton disabled={!unread} />

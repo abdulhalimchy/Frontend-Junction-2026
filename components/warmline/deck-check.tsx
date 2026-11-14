@@ -125,7 +125,7 @@ export function DeckCheck({
             </div>
             <div>
               <p className="text-sm font-medium">Drop a pitch deck (PDF)</p>
-              <p className="mt-1 text-[13px] text-muted-foreground">We extract each factual claim and check it against Cala. The file stays private to you.</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">We extract each factual claim and check it against verified sources. The file stays private to you.</p>
             </div>
             <Button onClick={() => input.current?.click()}>Choose PDF</Button>
           </>
@@ -140,7 +140,7 @@ export function DeckCheck({
                 {uploading
                   ? "Uploading…"
                   : running
-                    ? "Reading the deck and checking claims against Cala. This can take a minute…"
+                    ? "Reading the deck and checking claims against verified sources. This can take a minute…"
                     : failed
                       ? "Check failed"
                       : `${result?.pages ? `${result.pages} pages · ` : ""}${result?.companyName ? `${result.companyName} · ` : ""}checked ${formatDay(result!.checkedAt)}`}
@@ -204,7 +204,7 @@ export function DeckCheck({
                         {c.onRecord}
                       </p>
                     )}
-                    {c.status === "cant_verify" && <p className="mt-1 text-[13px] text-muted-foreground">Cala has no source for this. Ask for evidence.</p>}
+                    {c.status === "cant_verify" && <p className="mt-1 text-[13px] text-muted-foreground">No source was found for this. Ask for evidence.</p>}
                     <span className="mt-2 inline-block text-[11px] capitalize text-subtle">{c.category}</span>
                   </div>
                   <div className="flex flex-col items-end gap-2">

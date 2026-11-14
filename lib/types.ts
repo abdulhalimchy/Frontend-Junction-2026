@@ -161,6 +161,8 @@ export type MarketCompany = {
   description: Sourced<string> | null;
   hq: Sourced<string> | null;
   founded: Sourced<FuzzyDate> | null;
+  /** Reported total raised (all instruments), when on record. */
+  totalFunding?: Sourced<Money> | null;
   rounds: FundingRound[];
   /** aliases and website come from Cala and are used to merge records of the same investor. */
   investors: { id: string; name: string; sources: Source[]; aliases?: string[]; website?: string | null }[];

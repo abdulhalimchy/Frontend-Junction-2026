@@ -50,7 +50,7 @@ export function SourceChip({ sources, className }: { sources: Source[]; classNam
                 <span className="truncate">{s.document.replace(/^https?:\/\//, "")}</span>
               </a>
               ) : (
-                <div className="mt-1 text-xs text-muted-foreground">Derived by Cala from other sources</div>
+                <div className="mt-1 text-xs text-muted-foreground">Derived from other sources</div>
               )}
               <div className="mt-0.5 text-xs text-subtle">{formatSourceDate(s)}</div>
             </li>

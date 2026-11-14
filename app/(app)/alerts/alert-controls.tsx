@@ -21,7 +21,7 @@ export function ScanButton({ variant = "default" }: { variant?: "default" | "out
           const { entities, alerts_created, skipped, errors } = res.result;
           const failed = Object.keys(errors).length;
           if (!entities && !failed)
-            return void toast.info(skipped ? "Only demo entities are watched. Watch a live Cala company to get alerts." : "Watch a company or investor first.");
+            return void toast.info(skipped ? "Only demo entities are watched. Watch a live company to get alerts." : "Watch a company or investor first.");
           toast.success(
             `Checked ${entities} ${entities === 1 ? "entity" : "entities"}: ${alerts_created ? `${alerts_created} new ${alerts_created === 1 ? "alert" : "alerts"}` : "nothing new"}.`,
             failed ? { description: `${failed} could not be checked; try again later.` } : undefined,
@@ -30,7 +30,7 @@ export function ScanButton({ variant = "default" }: { variant?: "default" | "out
       }
     >
       {pending ? <Loader2 className="animate-spin" /> : <RefreshCw />}
-      {pending ? "Checking Cala…" : "Check for changes"}
+      {pending ? "Checking for changes…" : "Check for changes"}
     </Button>
   );
 }

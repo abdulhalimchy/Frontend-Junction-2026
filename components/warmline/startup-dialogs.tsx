@@ -44,7 +44,7 @@ const FIELDS: { key: StartupField | "domain"; label: string; placeholder: string
   { key: "industry", label: "Industry", placeholder: "Marine robotics" },
 ];
 
-const ORIGIN_LABEL = { cala: "From Cala", website: "From website", domain: "From domain" } as const;
+const ORIGIN_LABEL = { cala: "From records", website: "From website", domain: "From domain" } as const;
 
 function valuesOf(s: Partial<Startup> | null): Values {
   const v = { ...EMPTY };
@@ -229,7 +229,7 @@ export function AddStartupDialog({ open, onOpenChange }: { open: boolean; onOpen
               ? draft
                 ? "Here is what we found. Check each value, change anything that is wrong, then save."
                 : "Fill in what you know. Only the name is required."
-              : "Start with its website. We look it up in Cala and on the site, and fill in what we find."}
+              : "Start with its website. We look it up in verified records and on the site, and fill in what we find."}
           </DialogDescription>
         </DialogHeader>
 
@@ -269,7 +269,7 @@ export function AddStartupDialog({ open, onOpenChange }: { open: boolean; onOpen
               <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
               <div className="min-w-0">
                 <p className="text-sm font-medium">Looking up {draft?.domain}</p>
-                <p className="text-xs text-muted-foreground">Checking Cala and reading the company&apos;s website. This usually takes 5–20 seconds.</p>
+                <p className="text-xs text-muted-foreground">Checking verified records and reading the company&apos;s website. This usually takes 5–20 seconds.</p>
               </div>
             </div>
             <div className="space-y-2">
@@ -476,7 +476,7 @@ export function DeleteStartupDialog({
         <DialogHeader>
           <DialogTitle>Delete {startup?.name}?</DialogTitle>
           <DialogDescription>
-            This removes the startup and everything you entered for it. It cannot be undone. Its record in Cala is not affected.
+            This removes the startup and everything you entered for it. It cannot be undone. Its public record is not affected.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

@@ -46,7 +46,7 @@ async function SlushPageContent({ params, searchParams }: PageProps<"/events/slu
           <PageHeader
             eyebrow={<SlushTag label="Event space" />}
             title="Slush 2026"
-            description="Attendees are pulled from Cala's event graph and refreshed daily. Use this to plan who to meet."
+            description="Attendees are pulled from the verified event records and refreshed daily. Use this to plan who to meet."
           >
             <div className="mt-4 flex items-center gap-5 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5">
@@ -83,14 +83,14 @@ async function SlushPageContent({ params, searchParams }: PageProps<"/events/slu
               facts={[
                 { label: "City", value: e.city.value, sources: e.city.sources },
                 { label: "Dates", value: `${formatDay(e.dates.value.start)} – ${formatDay(e.dates.value.end)}`, sources: e.dates.sources },
-                { label: "Cala event ID", value: <code className="text-xs">{e.id}</code> },
+                { label: "Event ID", value: <code className="text-xs">{e.id}</code> },
               ]}
             />
           </Panel>
         </div>
       )}
       {tab === "new" && (
-        <Panel title="New attendees" description="Most recent first, by the date Cala first saw them on the attendee list.">
+        <Panel title="New attendees" description="Most recent first, by the date they first appeared on the attendee list.">
           <CompanyTable
             companies={newest}
             showSlush={false}

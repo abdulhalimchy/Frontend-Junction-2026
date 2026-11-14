@@ -47,7 +47,7 @@ async function WatchlistContent({ searchParams }: PageProps<"/watchlist">) {
     <>
       <PageHeader
         title="Watch list"
-        description="Companies and investors you follow. Alerts tell you when Cala sees a change on any of them. Only you can see this list."
+        description="Companies and investors you follow. Alerts tell you when the records show a change on any of them. Only you can see this list."
       />
 
       {error ? (

@@ -39,7 +39,7 @@ export async function LiveSlush({ tab, q, page }: { tab: LiveTab; q: string; pag
           <PageHeader
             eyebrow={<SlushTag label="Event space" />}
             title={e.name}
-            description="Attendees come from Cala's event graph and refresh daily. Use this to plan who to meet."
+            description="Attendees come from the verified event records and refresh daily. Use this to plan who to meet."
           >
             <div className="mt-4 flex flex-wrap items-center gap-5 text-sm text-muted-foreground">
               {e.date.value && (
@@ -74,7 +74,7 @@ export async function LiveSlush({ tab, q, page }: { tab: LiveTab; q: string; pag
             <StatCard
               label="Added in the last 7 days"
               value={e.addedLast7Days.toLocaleString("en")}
-              hint="By the date Cala first saw them on the list"
+              hint="By the date they first appeared on the list"
               icon={Sparkles}
               sources={e.listSources}
               tone="slush"
@@ -82,13 +82,13 @@ export async function LiveSlush({ tab, q, page }: { tab: LiveTab; q: string; pag
             <StatCard
               label="Investors"
               value={<Link href="/events/slush-2026/investors" className="text-base font-medium text-primary hover:underline">See who is coming →</Link>}
-              hint="Cala does not mark investors on the attendee list"
+              hint="The attendee list does not mark investors"
               icon={Landmark}
               tone="slush"
             />
           </div>
           <AttendeeSearch q="" />
-          <Panel title="Recently added" description="Newest first, by the date Cala first saw them on the attendee list.">
+          <Panel title="Recently added" description="Newest first, by the date they first appeared on the attendee list.">
             <AttendeeList attendees={newest.slice(0, 10)} />
             <div className="mt-3 text-right">
               <Link href="/events/slush-2026/attendees" className="text-[13px] font-medium text-primary hover:underline">
@@ -102,7 +102,7 @@ export async function LiveSlush({ tab, q, page }: { tab: LiveTab; q: string; pag
                 ...(e.location.value ? [{ label: "Venue", value: e.location.value, sources: e.location.sources }] : []),
                 ...(e.date.value ? [{ label: "Starts", value: formatDay(e.date.value), sources: e.date.sources }] : []),
                 ...(e.description ? [{ label: "Description", value: e.description }] : []),
-                { label: "Cala event ID", value: <code className="text-xs">{e.id}</code> },
+                { label: "Event ID", value: <code className="text-xs">{e.id}</code> },
               ]}
             />
           </Panel>
@@ -114,7 +114,7 @@ export async function LiveSlush({ tab, q, page }: { tab: LiveTab; q: string; pag
       {tab === "investors" && (
         <Panel
           title="Investors at Slush 2026"
-          description="Cala's attendee list types every attendee as a company and does not mark investors, so this is Cala's written answer. Each sentence links to the documents it rests on."
+          description="The attendee list types every attendee as a company and does not mark investors, so this is a written answer from the sources. Each sentence links to the documents it rests on."
         >
           <Suspense fallback={<AnswerSkeleton />}>
             <InvestorsAnswer />
@@ -138,7 +138,7 @@ function AttendeesTab({ attendees, q, page }: { attendees: SlushAttendee[]; q: s
       <AttendeeSearch q={q} />
       <Panel
         title={q ? `${matching.length.toLocaleString("en")} attendees matching “${q}”` : "All attendees"}
-        description="Newest first, by the date Cala first saw them on the list. Details load as you browse."
+        description="Newest first, by the date they first appeared on the list. Details load as you browse."
       >
         {shown.length ? (
           <AttendeeList attendees={shown} />
@@ -284,7 +284,7 @@ function citation(href: string | undefined, sources: CitedSource[]) {
 function AnswerSkeleton() {
   return (
     <div className="space-y-2.5">
-      <p className="text-[13px] text-muted-foreground">Asking Cala. The first answer can take up to a minute, then it is cached for a day.</p>
+      <p className="text-[13px] text-muted-foreground">Gathering verified data. The first answer can take up to a minute, then it is cached for a day.</p>
       {[92, 80, 86, 60].map((w) => (
         <Skeleton key={w} className="h-3.5" style={{ width: `${w}%` }} />
       ))}
@@ -296,12 +296,12 @@ function CalaProblem({ error, compact }: { error: unknown; compact?: boolean }) 
   const kind = calaErrorKind(error);
   const message =
     kind === "missing_key"
-      ? "Cala is not configured on the backend (CALA_API_KEY in its .env)."
+      ? "The data source is not configured on the backend (CALA_API_KEY in its .env)."
       : kind === "no_credit"
-        ? "The Cala credit balance is empty. Cached results still work; new ones will load once credit is added."
+        ? "The data credit balance is empty. Cached results still work; new ones will load once credit is added."
         : kind === "rate_limited"
-          ? "Cala is rate limiting requests. Reload in a minute."
-          : "Could not reach Cala. Reload to try again.";
+          ? "Too many requests right now. Reload in a minute."
+          : "Could not reach the data source. Reload to try again.";
   return (
     <div className={cn(!compact && "mt-6")}>
       <EmptyState title="Slush data is unavailable" description={message} compact={compact} />

@@ -32,7 +32,7 @@ export default async function CompanyMatchPage() {
       : [];
 
   return (
-    <OnboardingCard title="Is this your company?" description={`We matched your email domain, ${domain}, to this entity in Cala.`}>
+    <OnboardingCard title="Is this your company?" description={`We matched your email domain, ${domain}, to this verified company record.`}>
       <div className="rounded-xl border p-4">
         <div className="flex items-center gap-3">
           <EntityAvatar name={name} kind={investor ? "investor" : "company"} size="lg" />

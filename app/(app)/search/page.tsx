@@ -31,7 +31,7 @@ async function SearchPageContent({ searchParams }: PageProps<"/search">) {
   } catch (e) {
     const kind = calaErrorKind(e);
     problem =
-      kind === "missing_key" ? "Cala is not configured on this server." : kind === "no_credit" ? "The Cala credit balance is empty." : "Could not reach Cala. Try again.";
+      kind === "missing_key" ? "The data source is not configured on this server." : kind === "no_credit" ? "The data credit balance is empty." : "Could not reach the data source. Try again.";
   }
   const hits = type === "all" ? all : all.filter((h) => h.type === type);
 
@@ -41,8 +41,8 @@ async function SearchPageContent({ searchParams }: PageProps<"/search">) {
         title="Search"
         description={
           live
-            ? "Companies and organisations in Cala's knowledge graph, matched on name. Investor firms are companies too; their page shows their deals."
-            : "Companies, investors and people from Cala's knowledge graph. Matching uses descriptions, not just industry codes."
+            ? "Companies and organisations with verified records, matched on name. Investor firms are companies too; their page shows their deals."
+            : "Companies, investors and people with verified records. Matching uses descriptions, not just industry codes."
         }
       />
       <form action="/search" className="relative mb-4">
@@ -93,7 +93,7 @@ async function SearchPageContent({ searchParams }: PageProps<"/search">) {
         ) : problem ? (
           <EmptyState icon={SearchIcon} title="Search is unavailable" description={problem} />
         ) : live && q.trim().length < 2 ? (
-          <EmptyState icon={SearchIcon} title="Search Cala" description="Type a company or investor name. Results come from Cala's knowledge graph." />
+          <EmptyState icon={SearchIcon} title="Search companies and investors" description="Type a company or investor name. Results come with their sources." />
         ) : (
           <EmptyState
             icon={SearchIcon}

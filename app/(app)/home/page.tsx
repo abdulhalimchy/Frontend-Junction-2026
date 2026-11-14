@@ -121,7 +121,7 @@ async function InvestorHome({ investorId, alerts, card, slush }: { investorId: s
     <div className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-6">
         <div className="grid grid-cols-3 gap-4">
-          <StatCard label="Portfolio companies" value={portfolio.length} icon={Building2} sources={data.investor.description.sources} hint="Prefilled from Cala" />
+          <StatCard label="Portfolio companies" value={portfolio.length} icon={Building2} sources={data.investor.description.sources} hint="Prefilled from verified records" />
           <StatCard label="Deals, last 12 months" value={data.check.stillActive.value.dealsLast12m} icon={Landmark} sources={data.check.stillActive.sources} />
           <StatCard label="Portfolio at Slush" value={portfolio.filter((c) => c.attendsSlush).length} icon={Users} tone="slush" sources={slush.event.attendeeCompanies.sources} />
         </div>
@@ -152,7 +152,7 @@ async function InvestorHome({ investorId, alerts, card, slush }: { investorId: s
             ))}
           </ul>
         </Panel>
-        <Panel title="Deck check" description="Upload a founder's deck and check each claim against Cala.">
+        <Panel title="Deck check" description="Upload a founder's deck and check each claim against verified sources.">
           <div className="flex items-center justify-between rounded-lg bg-muted/60 p-4">
             <div className="flex items-center gap-3">
               <FileSearch className="size-5 text-primary" />

@@ -144,8 +144,8 @@ async function WebFacts({ p, gaps, missing, leadRound }: { p: CompanyProfile; ga
           <div className="mb-3 flex items-center gap-2">
             <Globe className="size-4 text-muted-foreground" />
             <span className="text-sm font-semibold">From the web</span>
-            <Pill>Not in Cala&apos;s records</Pill>
-            <span className="text-xs text-muted-foreground">Found by Cala search; check the sources.</span>
+            <Pill>Not in the records</Pill>
+            <span className="text-xs text-muted-foreground">Found by search; check the sources.</span>
           </div>
           <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
             {result.facts.map((f) => (
@@ -170,7 +170,7 @@ function MissingLine({ missing, searching }: { missing: string[]; searching?: bo
   return (
     <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
       <Info className="size-3.5 shrink-0" />
-      {missing.length > 0 && <>Not in Cala yet: {joinList(missing)}.</>}
+      {missing.length > 0 && <>Not on record yet: {joinList(missing)}.</>}
       {searching && (
         <span className="inline-flex items-center gap-1.5">
           <span className="size-1.5 animate-pulse rounded-full bg-primary" />

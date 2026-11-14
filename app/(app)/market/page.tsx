@@ -12,6 +12,7 @@ import { findCompanies } from "@/lib/cala/company";
 import { REGIONS } from "@/lib/cala/market";
 import { cn } from "@/lib/utils";
 import { CompanyAnalysis } from "./company-analysis";
+import { MarketSearch } from "./history-controls";
 
 export const metadata: Metadata = { title: "Market analysis" };
 
@@ -19,7 +20,7 @@ export const metadata: Metadata = { title: "Market analysis" };
 // - Market analysis lives at /market/report (size, players, funding and deals, trends, checked summary).
 // - Company analysis lives here: /market?mode=company to find a company, /market?company=<id> to analyse it.
 
-const MARKET_PRESETS = ["mobile applications", "climate tech", "edtech", "industrial robotics", "fintech"];
+const MARKET_PRESETS = ["climate tech in the Nordics", "seed-stage fintech in Finland", "underwater drones in Europe", "AI chips worldwide"];
 const COMPANY_PRESETS = ["GE HealthCare", "Wheel.me", "Hyperion Robotics", "Aiven"];
 
 export default function AnalysisPage(props: PageProps<"/market">) {
@@ -41,7 +42,7 @@ async function Analysis({ searchParams }: PageProps<"/market">) {
   const companyMode = Boolean(companyId) || str("mode") === "company" || Boolean(str("company"));
 
   // Old market-view links (/market?sector=…) now open the market analysis.
-  if (!companyMode && text) redirect(`/market/report?${new URLSearchParams({ sector: text, region: regionParam || "nordics" })}`);
+  if (!companyMode && text) redirect(`/market/report?${new URLSearchParams({ sector: text, ...(regionParam ? { region: regionParam } : {}) })}`);
   if (!companyMode) return <Chooser />;
 
   // Competitors of a company default to anywhere.
@@ -51,11 +52,11 @@ async function Analysis({ searchParams }: PageProps<"/market">) {
       <PageHeader
         eyebrow={<BackToChooser />}
         title="Company analysis"
-        description="One company from Cala: sourced profile, funding history and investors, then the market of its competitors."
+        description="One company's verified profile, funding history and investors, then the market of its competitors."
       />
       <CompanySearch text={companyId ? "" : text} region={region} companyId={companyId} />
       {mocksEnabled() ? (
-        <EmptyState icon={Building2} title="Company analysis needs live Cala data" description="Set USE_MOCKS=false in .env.local. Cala itself is called by the backend (CALA_API_KEY in its .env)." />
+        <EmptyState icon={Building2} title="Company analysis needs live data" description="Set USE_MOCKS=false in .env.local. The data lookups run in the backend (CALA_API_KEY in its .env)." />
       ) : companyId ? (
         <Suspense key={`${companyId}|${region}`} fallback={<ResultsLoading />}>
           <CompanyAnalysis id={companyId} region={region} />
@@ -65,7 +66,7 @@ async function Analysis({ searchParams }: PageProps<"/market">) {
           <CompanyPicker text={text} region={region} />
         </Suspense>
       ) : (
-        <EmptyState icon={Building2} title="Type a company name" description="We look it up in Cala by name, then show its profile, funding and competitors." />
+        <EmptyState icon={Building2} title="Type a company name" description="We look it up by name, then show its profile, funding and competitors." />
       )}
     </>
   );
@@ -74,7 +75,7 @@ async function Analysis({ searchParams }: PageProps<"/market">) {
 function BackToChooser() {
   return (
     <Link href="/market" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-      <ArrowLeft className="size-3" /> Choose analysis
+      <ArrowLeft className="size-3" /> Back
     </Link>
   );
 }
@@ -85,7 +86,7 @@ function Chooser() {
     <>
       <PageHeader
         title="Market analysis"
-        description="Choose what to analyse. Every number comes from Cala with its sources; equity and grants are kept apart and currencies are never converted."
+        description="We use the Cala encyclopedia to get verified data with cited sources. Every number links to where it was published."
         actions={
           <Link href="/market/history" className="flex h-9 items-center gap-1.5 rounded-lg border bg-card px-3 text-sm hover:bg-muted">
             <History className="size-4" /> History
@@ -93,17 +94,26 @@ function Chooser() {
         }
       />
       <div className="grid grid-cols-2 gap-6">
-        <ChoiceCard
-          icon={LineChart}
-          title="Analyse a market"
-          description="Market size and growth, leading players, funding and deals, and trends, with a summary checked against Cala's sources."
-          action="/market/report"
-          placeholder="Describe the market, e.g. underwater drones"
-          button="Analyse market"
-          withRegion="nordics"
-          presets={MARKET_PRESETS.map((t) => ({ label: t, href: `/market/report?${new URLSearchParams({ sector: t, region: "nordics" })}` }))}
-          note="A new market takes about a minute and uses 4 Cala questions. Reports are saved to your history, so reopening one is free."
-        />
+        <section className="flex flex-col rounded-2xl border bg-card p-6 shadow-[0_1px_2px_rgba(22,24,26,0.04)]">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-teal-soft">
+            <LineChart className="size-5 text-primary" />
+          </div>
+          <h2 className="mt-4 text-lg font-semibold tracking-tight">Analyse a market</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Market size and growth, funding by year, the most funded companies, active investors and recent deals.</p>
+          <div className="mt-5">
+            <MarketSearch />
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Write it your way: the market, and a place or stage if you like.</p>
+          <div className="mt-4 flex flex-wrap items-center gap-1.5">
+            <span className="mr-1 text-xs text-muted-foreground">Try:</span>
+            {MARKET_PRESETS.map((t) => (
+              <Link key={t} href={`/market/report?${new URLSearchParams({ q: t })}`} className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground">
+                {t}
+              </Link>
+            ))}
+          </div>
+          <p className="mt-auto pt-5 text-xs text-subtle">A new market takes about a minute and can be stopped. Reports are saved to your history, so reopening one is free.</p>
+        </section>
         <ChoiceCard
           icon={Building2}
           title="Analyse a company"
@@ -113,7 +123,7 @@ function Chooser() {
           placeholder="Company name, e.g. GE HealthCare"
           button="Find company"
           presets={COMPANY_PRESETS.map((t) => ({ label: t, href: `/market?${new URLSearchParams({ mode: "company", sector: t })}` }))}
-          note="You pick the exact company first: Cala records brands, legal entities and subsidiaries separately."
+          note="You pick the exact company first: brands, legal entities and subsidiaries are recorded separately."
         />
       </div>
     </>
@@ -225,13 +235,13 @@ async function CompanyPicker({ text, region }: { text: string; region: string })
   const exactIds = new Set(res.exact.map((m) => m.id));
   const list = [...res.exact, ...res.all.filter((m) => !exactIds.has(m.id))];
   if (!list.length) {
-    return <EmptyState icon={Search} title={`No company named “${text}” in Cala`} description="Try the brand or the legal name, e.g. “Baron App” for Cameo." />;
+    return <EmptyState icon={Search} title={`No company named “${text}” found`} description="Try the brand or the legal name, e.g. “Baron App” for Cameo." />;
   }
   return (
     <div className="rounded-xl border bg-card">
       <div className="border-b px-5 py-3">
         <h2 className="text-[15px] font-semibold">Companies matching “{text}”</h2>
-        <p className="text-[13px] text-muted-foreground">Cala records brands, legal entities and national subsidiaries separately. Pick the one you mean.</p>
+        <p className="text-[13px] text-muted-foreground">Brands, legal entities and national subsidiaries are recorded separately. Pick the one you mean.</p>
       </div>
       <ul className="divide-y">
         {list.map((m) => (

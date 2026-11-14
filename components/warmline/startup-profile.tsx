@@ -62,8 +62,8 @@ export function StartupProfile({ startup: s }: { startup: Startup }) {
             <EmptyState
               compact
               icon={Building2}
-              title="Funding comes from Cala"
-              description="This startup is matched to a company in Cala. Its live brief shows the funding rounds on record."
+              title="Funding comes from verified records"
+              description="This startup is matched to a verified company record. Its live brief shows the funding rounds on record."
               action={
                 <Button variant="outline" size="sm" asChild>
                   <Link href={`/company/${s.calaCompanyId}`}>
@@ -77,7 +77,7 @@ export function StartupProfile({ startup: s }: { startup: Startup }) {
               compact
               icon={Building2}
               title="No funding on record"
-              description="When a round is reported publicly and Cala picks it up, it shows here with its sources."
+              description="When a round is reported publicly and it appears in the records, it shows here with its sources."
             />
           )}
         </Panel>
@@ -97,13 +97,13 @@ export function StartupProfile({ startup: s }: { startup: Startup }) {
             <p>Values found by the lookup keep their sources. Anything you typed or changed is shown as your own entry, with no source.</p>
             {s.calaCompanyId ? (
               <p>
-                Matched in Cala.{" "}
+                Matched to a verified record.{" "}
                 <Link href={`/company/${s.calaCompanyId}`} className="font-medium text-primary hover:underline">
                   See the public brief
                 </Link>
               </p>
             ) : (
-              <p>Not matched to a company in Cala yet.</p>
+              <p>Not matched to a verified company record yet.</p>
             )}
           </div>
         </Panel>

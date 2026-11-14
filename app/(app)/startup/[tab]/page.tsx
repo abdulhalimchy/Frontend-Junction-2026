@@ -54,7 +54,7 @@ async function StartupPageContent({ params, searchParams }: PageProps<"/startup/
     <>
       <PageHeader
         title={company.name}
-        description="How Cala sees your company. If something is wrong, fix it at the source; we show what the sources say."
+        description="How public records describe your company. If something is wrong, fix it at the source; we show what the sources say."
         eyebrow={company.attendsSlush ? <SlushTag label="Attending Slush 2026" /> : undefined}
         actions={
           <Button variant="outline" className="bg-card" asChild>
@@ -172,7 +172,7 @@ async function DeckTab({ companyName, startupId }: { companyName: string; startu
   return (
     <>
       <p className="mb-4 max-w-2xl text-sm text-muted-foreground">
-        Check your own deck before investors do. Each claim is matched against Cala; anything without a source is marked “Can&apos;t verify”.
+        Check your own deck before investors do. Each claim is matched against verified sources; anything without a source is marked “Can&apos;t verify”.
       </p>
       <DeckCheck initial={result} companyName={companyName} loadError={error} startupId={startupId} />
     </>

@@ -1,78 +1,61 @@
-import { ArrowLeft, Building2, CircleAlert, FileText, Handshake, History, Loader2, Scale, Search, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowLeft, Building2, Check, ChevronDown, CircleAlert, FileText, History, Loader2, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, PageHeader, Panel } from "@/components/warmline/blocks";
 import { Markdown } from "@/components/warmline/markdown";
+import { BarList, FundingByYearChart, MarketSizeChart, SizeLegend } from "@/components/warmline/market-charts";
 import { CompaniesTable, MarketError } from "@/components/warmline/market-view";
 import { SourceChip } from "@/components/warmline/source-chip";
 import { MarketGuardNotice } from "@/components/warmline/market-guard";
 import { Pill } from "@/components/warmline/badges";
-import {
-  getMarketAnalysis,
-  openMarketAnalysis,
-  type EvidenceSection,
-  type MarketAnalysis,
-  type PlayersSection,
-  type ReportSummary,
-  type SectionError,
-} from "@/lib/backend/markets";
+import { getMarketAnalysis, openMarketAnalysis, type Deal, type EvidenceSection, type MarketAnalysis, type SectionError, type SectionName } from "@/lib/backend/markets";
+import { REGIONS } from "@/lib/cala/market";
 import { formatMoney } from "@/lib/format";
-import { REGIONS, regionOf } from "@/lib/cala/market";
+import { money, reportNumbers, type ReportNumbers } from "@/lib/market-report";
 import type { Source } from "@/lib/types";
-import { DeleteAnalysisButton, PollWhileLoading, RefreshAnalysisButton } from "../history-controls";
+import { DeleteAnalysisButton, MarketSearch, PollWhileLoading, RefreshAnalysisButton, StopAnalysisButton } from "../history-controls";
 
 export const metadata: Metadata = { title: "Market analysis" };
 
 export default function ReportPage(props: PageProps<"/market/report">) {
   return (
-    <Suspense fallback={<SectionLoading label="Preparing the report" />}>
+    <Suspense fallback={<Building label="Reading your search" />}>
       <Report {...props} />
     </Suspense>
   );
 }
 
-const SECTIONS = [
-  { id: "summary", label: "Summary", icon: Sparkles },
-  { id: "size", label: "Market size", icon: Scale },
-  { id: "players", label: "Leading players", icon: Building2 },
-  { id: "deals", label: "Funding and deals", icon: Handshake },
-  { id: "trends", label: "Trends", icon: TrendingUp },
-];
-
-// The backend runs the analysis (Cala questions, then the checked summary) and keeps it in the user's history.
-// /market/report?sector=…&region=… opens (or starts) the analysis of typed text and redirects to its saved
-// report, /market/report?id=…, which reads the stored result: reopening it never spends Cala credit.
+// The backend reads the free text with its LLM (market, place, the four data lookups), runs them, writes a
+// checked summary, and keeps the report in the user's history. /market/report?q=… opens (or starts) the
+// analysis and redirects to /market/report?id=…, which reads the stored result: reopening it is free.
 
 async function Report({ searchParams }: PageProps<"/market/report">) {
   const sp = await searchParams;
-  const id = typeof sp.id === "string" && /^[0-9a-f-]{36}$/i.test(sp.id) ? sp.id : null;
-  const sector = (typeof sp.sector === "string" && sp.sector.trim().slice(0, 80)) || "";
-  const regionParam = typeof sp.region === "string" && REGIONS[sp.region] ? sp.region : "europe";
+  const str = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string).trim().slice(0, 300) : "");
+  const id = /^[0-9a-f-]{36}$/i.test(str("id")) ? str("id") : null;
 
   if (!id) {
-    const text = sector || "mobile applications";
+    // Old links carry ?sector=…&region=<key>; free text replaces both.
+    const legacyRegion = REGIONS[str("region")]?.label;
+    const text = str("q") || (str("sector") ? `${str("sector")}${legacyRegion && legacyRegion !== "Anywhere" ? ` in ${legacyRegion}` : ""}` : "");
+    if (!text) redirect("/market");
     let opened: Awaited<ReturnType<typeof openMarketAnalysis>>;
     try {
-      opened = await openMarketAnalysis({ text, region: regionParam, force: sp.force === "1" });
+      opened = await openMarketAnalysis({ text, force: sp.force === "1" });
     } catch (e) {
       return <ReportFailed title="Could not start the analysis" error={e} />;
     }
     if (!opened.analysis) {
       return (
         <>
-          <ReportHeader title="Market analysis" description={regionOf(regionParam).label} />
-          <SearchForm sector={text} region={regionParam} />
-          <MarketGuardNotice
-            text={text}
-            verdict={opened.verdict}
-            searchHref={(s) => `/market/report?${new URLSearchParams({ sector: s, region: regionParam })}`}
-            runAnywayHref={`/market/report?${new URLSearchParams({ sector: text, region: regionParam, force: "1" })}`}
-          />
+          <ReportHeader title="Market analysis" />
+          <div className="mb-4">
+            <MarketSearch defaultValue={text} />
+          </div>
+          <MarketGuardNotice text={text} verdict={opened.verdict} searchHref={(s) => `/market/report?${new URLSearchParams({ q: s })}`} runAnywayHref={`/market/report?${new URLSearchParams({ q: text, force: "1" })}`} />
         </>
       );
     }
@@ -86,162 +69,143 @@ async function Report({ searchParams }: PageProps<"/market/report">) {
     return <ReportFailed title="This analysis is not in your history" error={e} />;
   }
   const loading = a.status === "loading";
-  const typed = a.typed && a.typed !== a.sector ? a.typed : "";
+  const n = reportNumbers(a);
+  const s = a.summary;
 
   return (
     <>
       <PollWhileLoading active={loading} />
-      <ReportHeader
-        title={
-          <span>
-            Market analysis: <span className="capitalize">{a.sector}</span>
-          </span>
-        }
-        description={`${regionOf(a.region).label}. Every section is built from Cala: written answers come with the facts behind them, and every number links to its source. Reports are saved in your history; reopening one is free.`}
-      />
-      <SearchForm sector={typed || a.sector} region={a.region} />
-      {typed && (
-        <p className="-mt-1 mb-2 text-sm text-muted-foreground">
-          Showing <span className="font-medium text-foreground">“{a.sector}”</span> (you typed “{typed}”), so analyses of the same market are shared.{" "}
-          <Link href={`/market/report?${new URLSearchParams({ sector: typed, region: a.region, force: "1" })}`} className="text-primary hover:underline">
-            Search “{typed}” exactly
-          </Link>{" "}
-          <span className="text-xs">(may use Cala credit)</span>
-        </p>
-      )}
-      <div className="-mt-1 mb-4 flex items-center justify-end gap-3 text-xs text-muted-foreground">
-        {loading ? (
-          <span className="flex items-center gap-1.5">
-            <Loader2 className="size-3.5 animate-spin text-primary" />
-            {a.runs > 1 ? "Updating from Cala; the saved answers stay until new ones arrive…" : "Asking Cala; sections appear as they arrive…"}
-          </span>
-        ) : (
-          <span>Saved {a.finishedAt ? ago(Date.parse(a.finishedAt)) : ""} · run {a.runs} {a.runs === 1 ? "time" : "times"}</span>
-        )}
-        <RefreshAnalysisButton id={a.id} running={loading} />
-        <DeleteAnalysisButton id={a.id} name={a.sector} afterDelete="/market/history" />
+      <ReportHeader title={a.title || a.sector} />
+      <div className="mb-3">
+        <MarketSearch defaultValue={a.typed || a.title || a.sector} busy={loading} />
       </div>
+
+      <div className="mb-6 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <span>Market</span>
+        <Pill tone="teal">{a.sector}</Pill>
+        <span>in</span>
+        <Pill tone="neutral">{a.place}</Pill>
+        <span className="ml-auto flex items-center gap-2">
+          {loading ? (
+            <>
+              <span className="flex items-center gap-1.5">
+                <Loader2 className="size-3.5 animate-spin text-primary" /> {a.runs > 1 ? "Updating; the saved report stays until new data arrives" : "Building the report"}
+              </span>
+              <StopAnalysisButton id={a.id} />
+            </>
+          ) : (
+            <>
+              <span>Updated {a.finishedAt ? ago(Date.parse(a.finishedAt)) : ""}</span>
+              <RefreshAnalysisButton id={a.id} running={false} />
+            </>
+          )}
+          <DeleteAnalysisButton id={a.id} name={a.title || a.sector} afterDelete="/market/history" />
+        </span>
+      </div>
+
+      {loading && <Progress a={a} />}
 
       {!loading && a.runs > 1 && a.changes.length > 0 && (
-        <div className="mb-6 rounded-xl border border-primary/25 bg-teal-soft/40 p-4 text-sm">
-          <div className="font-medium">What changed in the last refresh</div>
-          <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-muted-foreground">
-            {a.changes.map((c, i) => (
-              <li key={i}>{c}</li>
-            ))}
-          </ul>
+        <div className="mb-6 rounded-xl border border-primary/25 bg-teal-soft/40 px-4 py-3 text-sm">
+          <span className="font-medium">Since the last update: </span>
+          <span className="text-muted-foreground">{a.changes.join(" ")}</span>
         </div>
       )}
 
-      <nav className="sticky top-14 z-10 -mx-1 mb-6 flex gap-1 bg-background/90 px-1 py-2 backdrop-blur">
-        {SECTIONS.map((s) => (
-          <a key={s.id} href={`#${s.id}`} className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground hover:text-foreground">
-            <s.icon className="size-3.5" />
-            {s.label}
-          </a>
-        ))}
-      </nav>
+      <div className="space-y-6">
+        <Kpis n={n} />
 
-      <div className="space-y-10">
-        <Section id="summary" title="Executive summary" description="Written from the Cala facts in the sections below. Every claim was checked against the facts it cites; anything that did not match was left out.">
-          <Part value={a.summary} error={a.errors.summary} loading={loading} label="Waiting for Cala's answers, then writing the summary">
-            {(s) => <ExecutiveSummary s={s} />}
-          </Part>
-        </Section>
-        <Section id="size" title="Market size and growth" description="Figures as published. Publishers define the market differently, so their numbers differ; we show them side by side and never average or convert them.">
-          <Part value={a.size} error={a.errors.size} loading={loading} label="Asking Cala about market size">
-            {(s) => <EvidenceView s={s} />}
-          </Part>
-        </Section>
-        <Section id="players" title="Leading players" description="Established companies and challengers, public or private, resolved to Cala company records.">
-          <Part value={a.players} error={a.errors.players} loading={loading} label="Finding the leading companies">
-            {(p) => <Players res={p} sector={a.sector} region={a.region} />}
-          </Part>
-        </Section>
-        <Section id="deals" title="Funding and deals" description={`Notable rounds, acquisitions, IPOs and exits in ${a.year - 1} and ${a.year}, as reported.`}>
-          <Part value={a.deals} error={a.errors.deals} loading={loading} label="Asking Cala about funding and deals">
-            {(s) => <EvidenceView s={s} />}
-          </Part>
-        </Section>
-        <Section id="trends" title="Trends, drivers and challenges">
-          <Part value={a.trends} error={a.errors.trends} loading={loading} label="Asking Cala about trends">
-            {(s) => <EvidenceView s={s} />}
-          </Part>
-        </Section>
-      </div>
-    </>
-  );
-}
+        {s?.headline || s?.bullets.length ? (
+          <Panel className="border-primary/25">
+            {s.headline && (
+              <p className="flex items-start gap-2 text-base font-medium leading-relaxed">
+                <span>{s.headline.text}</span>
+                <SourceChip sources={s.headline.sources} className="mt-1" />
+              </p>
+            )}
+            {s.bullets.length > 0 && (
+              <ul className="mt-3 grid gap-x-6 gap-y-2 md:grid-cols-2">
+                {s.bullets.slice(0, 4).map((b, i) => (
+                  <li key={i} className="flex items-start gap-2 text-[13px] leading-relaxed text-muted-foreground">
+                    <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
+                    <span className="flex-1">{b.text}</span>
+                    <SourceChip sources={b.sources} className="mt-0.5" />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        ) : (
+          !loading && a.errors.summary && <SectionProblem error={a.errors.summary} />
+        )}
 
-function ReportHeader({ title, description }: { title: React.ReactNode; description: string }) {
-  return (
-    <PageHeader
-      eyebrow={
-        <div className="flex items-center gap-4">
-          <Link href="/market" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="size-3" /> Choose analysis
-          </Link>
-          <Link href="/market/history" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-            <History className="size-3" /> History
-          </Link>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Panel title="Market size" description={n.size ? `${n.size.publisher} · ${n.size.scope}` : "Published market research figures"} action={n.size && <SizeLegend />}>
+            {n.size && n.size.series.length > 0 ? (
+              <>
+                <MarketSizeChart data={n.size.series.map((f) => ({ year: f.year, value: f.value.amount, forecast: f.kind === "forecast" }))} currency={n.size.series[0].value.currency} />
+                <p className="mt-2 flex items-center gap-2 text-xs text-subtle">
+                  Publishers define markets differently; other figures are listed under Sources.
+                  <SourceChip sources={n.size.series[0].sources} />
+                </p>
+              </>
+            ) : (
+              <Empty loading={loading} text="No published size figures were found for this market." />
+            )}
+          </Panel>
+          <Panel title="Funding raised per year" description={n.currency ? `Rounds of the leading companies, in ${n.currency}${n.otherCurrencyRounds ? ` (${n.otherCurrencyRounds} in other currencies not shown)` : ""}` : "Rounds of the leading companies"}>
+            {n.currency && n.fundingByYear.length ? <FundingByYearChart data={n.fundingByYear} currency={n.currency} /> : <Empty loading={loading} text="No dated rounds with an amount on record." />}
+          </Panel>
         </div>
-      }
-      title={title}
-      description={description}
-    />
-  );
-}
 
-function SearchForm({ sector, region }: { sector: string; region: string }) {
-  return (
-    <form action="/market/report" className="mb-4 flex items-center gap-2 rounded-xl border bg-card p-3">
-      <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input name="sector" defaultValue={sector} placeholder="Market, e.g. mobile applications" className="h-9 pl-9" />
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Panel className="lg:col-span-1" title="Most funded companies" description={`Equity raised${n.currency ? `, ${n.currency}` : ""}${n.reportedTotals ? "; * reported total, all instruments" : ""}`}>
+            <BarList data={n.topFunded} emptyText={loading ? "Loading…" : "No equity amounts on record."} />
+          </Panel>
+          <Panel title="Rounds by stage" description="Equity rounds of the leading companies">
+            <BarList data={n.stages} emptyText={loading ? "Loading…" : "No equity rounds on record."} />
+          </Panel>
+          <Panel title="Most active investors" description="Investors in these companies, by how many they back">
+            <BarList data={n.investors} emptyText={loading ? "Loading…" : "No investors on record."} />
+          </Panel>
+        </div>
+
+        <Panel title="Funding and deals" description="Rounds, acquisitions and exits named in the sources, newest first. Each row is quoted from its source; hover a row for the quote." bodyClassName="pt-1">
+          {s?.deals?.length ? <DealsTable deals={s.deals} /> : <Empty loading={loading} text={a.errors.deals ? a.errors.deals.message : "No recent deals were found for this market."} />}
+        </Panel>
+
+        {s && s.insights.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-3">
+            {s.insights.slice(0, 6).map((i, k) => (
+              <div key={k} className="rounded-xl border bg-card p-4">
+                <div className="flex items-center justify-between">
+                  <Pill tone={INSIGHT[i.kind].tone}>{INSIGHT[i.kind].label}</Pill>
+                  <SourceChip sources={i.sources} />
+                </div>
+                <div className="mt-2 text-sm font-semibold">{i.title}</div>
+                <p className="mt-1 line-clamp-3 text-[13px] leading-relaxed text-muted-foreground">{i.text}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <Panel title="Leading companies" description={a.players ? `${a.players.companies.length} companies with a verified company record` : "Companies with a verified company record"} bodyClassName="pt-3">
+          {a.players?.companies.length ? (
+            <CompaniesTable data={{ query: { sector: a.sector, region: a.region }, definition: a.players.definition, companies: a.players.companies, outsideRegion: [] }} currency={null} />
+          ) : a.errors.players ? (
+            <SectionProblem error={a.errors.players} />
+          ) : (
+            <Empty loading={loading} text="No leading companies were found. Try a broader description or place." icon={Building2} />
+          )}
+        </Panel>
+
+        <SourcesDetails a={a} />
+
+        <p className="text-xs text-subtle">
+          We use the Cala encyclopedia to get verified data with cited sources: every figure and company links to where it was published. Money is never converted between currencies, and grants are kept separate from equity.
+        </p>
       </div>
-      <select
-        name="region"
-        defaultValue={region}
-        aria-label="Region"
-        className="h-9 rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-      >
-        {Object.entries(REGIONS).map(([key, r]) => (
-          <option key={key} value={key}>
-            {r.label}
-          </option>
-        ))}
-      </select>
-      <Button type="submit" className="h-9">
-        Analyse market
-      </Button>
-    </form>
-  );
-}
-
-function ReportFailed({ title, error }: { title: string; error: unknown }) {
-  return (
-    <>
-      <ReportHeader title="Market analysis" description="" />
-      <EmptyState icon={CircleAlert} title={title} description={error instanceof Error ? error.message : "Unknown error"} />
     </>
-  );
-}
-
-/** One stored section: its value, its error, a loader while the backend is still answering, or nothing on record. */
-function Part<T>({ value, error, loading, label, children }: { value?: T; error?: SectionError; loading: boolean; label: string; children: (v: T) => React.ReactNode }) {
-  if (value) return <>{children(value)}</>;
-  if (loading) return <SectionLoading label={label} />;
-  if (error) return error.kind === "llm" ? <EmptyState compact icon={Sparkles} title="Could not write the summary" description={error.message} /> : <MarketError error={new Error(error.message)} />;
-  return <EmptyState compact icon={FileText} title="Not available" description="Refresh the report to ask Cala again." />;
-}
-
-function Section({ id, title, description, children }: { id: string; title: string; description?: string; children: React.ReactNode }) {
-  return (
-    <section id={id} className="scroll-mt-28">
-      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-      {description && <p className="mb-3 mt-0.5 max-w-3xl text-sm text-muted-foreground">{description}</p>}
-      <div className={description ? "" : "mt-3"}>{children}</div>
-    </section>
   );
 }
 
@@ -251,191 +215,203 @@ const INSIGHT = {
   risk: { label: "Risk", tone: "warning" },
 } as const;
 
-/** One row per report (same fact and scope): its figures by year, quotes joined; regional scopes before global ones. */
-function groupSizes(sizes: ReportSummary["sizes"]) {
-  type Row = { publisher: string; scope: string; quotes: string[]; cagr: ReportSummary["sizes"][number]["cagr"]; sources: Source[]; figures: ReportSummary["sizes"] };
-  const groups = new Map<string, Row>();
-  for (const f of sizes) {
-    const key = `${f.factId}|${f.scope.toLowerCase()}`;
-    const g = groups.get(key) ?? { publisher: f.publisher, scope: f.scope, quotes: [], cagr: null, sources: f.sources, figures: [] };
-    g.figures.push(f);
-    if (!g.quotes.includes(f.quote)) g.quotes.push(f.quote);
-    g.cagr ??= f.cagr;
-    groups.set(key, g);
-  }
-  const global = (scope: string) => Number(/global|world/i.test(scope));
-  return [...groups.values()]
-    .map((g) => ({ ...g, quote: g.quotes.join(" … "), figures: [...g.figures].sort((a, b) => a.year - b.year) }))
-    .sort((a, b) => global(a.scope) - global(b.scope) || a.figures[0].year - b.figures[0].year);
+function Kpis({ n }: { n: ReportNumbers }) {
+  const size = n.size?.latest;
+  const tiles = [
+    { label: size ? `Market size ${size.year}` : "Market size", value: size ? formatMoney(size.value) : "—", sub: n.size?.forecast ? `${formatMoney(n.size.forecast.value)} by ${n.size.forecast.year}` : n.size?.publisher },
+    { label: "Growth (CAGR)", value: n.size?.cagr ? `${n.size.cagr.percent}%` : "—", sub: n.size?.cagr?.period || (n.size?.cagr ? "" : "not published") },
+    { label: "Leading companies", value: String(n.companies || "—"), sub: "with a verified record" },
+    { label: "Raised by these companies", value: n.equityTotal ? money(n.equityTotal.amount, n.equityTotal.currency) : "—", sub: n.reportedTotals ? "equity, or reported totals" : "equity rounds" },
+    { label: `Rounds since ${n.recentSince}`, value: String(n.recentRounds || "—"), sub: "equity and grants" },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+      {tiles.map((t) => (
+        <div key={t.label} className="rounded-xl border bg-card px-4 py-3">
+          <div className="text-xs text-muted-foreground">{t.label}</div>
+          <div className="tabular mt-1 text-2xl font-semibold tracking-tight">{t.value}</div>
+          {t.sub && <div className="mt-0.5 truncate text-xs text-subtle">{t.sub}</div>}
+        </div>
+      ))}
+    </div>
+  );
 }
 
-function ExecutiveSummary({ s }: { s: ReportSummary & { fetchedAt?: number } }) {
+const DEAL_LABEL: Record<Deal["type"], string> = { funding: "Funding", grant: "Grant", acquisition: "Acquisition", merger: "Merger", ipo: "IPO", other: "Deal" };
+
+function DealsTable({ deals }: { deals: Deal[] }) {
   return (
-    <div className="space-y-6">
-      <Panel className="border-primary/25">
-        {s.headline && (
-          <p className="flex items-start gap-2 text-base font-medium leading-relaxed">
-            <span>{s.headline.text}</span>
-            <SourceChip sources={s.headline.sources} className="mt-1" />
-          </p>
-        )}
-        {s.bullets.length > 0 && (
-          <ul className="mt-4 space-y-2.5">
-            {s.bullets.map((b, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm leading-relaxed">
-                <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
-                <span className="flex-1">{b.text}</span>
-                <SourceChip sources={b.sources} className="mt-0.5" />
-              </li>
-            ))}
-          </ul>
-        )}
-      </Panel>
-
-      {s.sizes.length > 0 && (
-        <Panel title="Market size as published" description="Each figure is quoted from its source and matched to it. Publishers scope the market differently, so figures are not comparable with each other. Regional figures first.">
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2 font-medium">Publisher</th>
-                  <th className="px-3 py-2 font-medium">Scope</th>
-                  <th className="px-3 py-2 font-medium">Figures</th>
-                  <th className="px-3 py-2 font-medium">Growth</th>
-                  <th className="px-3 py-2 font-medium">Quote</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {groupSizes(s.sizes).map((g, i) => (
-                  <tr key={i} className="bg-card align-top">
-                    <td className="px-3 py-2.5 font-medium">{g.publisher}</td>
-                    <td className="px-3 py-2.5 text-[13px] text-muted-foreground">{g.scope}</td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex flex-col gap-0.5 whitespace-nowrap text-[13px] tabular">
-                        {g.figures.map((f, j) => (
-                          <span key={j}>
-                            <span className="text-muted-foreground">{f.year}</span> <span className="font-semibold">{formatMoney(f.value)}</span>
-                            {f.kind === "forecast" && <span className="text-xs text-subtle"> forecast</span>}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-3 py-2.5 text-[13px] whitespace-nowrap">
-                      {g.cagr ? `${g.cagr.percent}% CAGR${g.cagr.period ? ` (${g.cagr.period})` : ""}` : <span className="text-subtle">—</span>}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-start gap-2">
-                        <span className="line-clamp-3 text-xs italic text-muted-foreground">“{g.quote}”</span>
-                        <SourceChip sources={g.sources} />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Panel>
-      )}
-
-      {s.insights.length > 0 && (
-        <div className="grid grid-cols-3 gap-4">
-          {s.insights.map((i, k) => (
-            <div key={k} className="rounded-xl border bg-card p-4">
-              <div className="flex items-center justify-between">
-                <Pill tone={INSIGHT[i.kind].tone}>{INSIGHT[i.kind].label}</Pill>
-                <SourceChip sources={i.sources} />
-              </div>
-              <div className="mt-2 text-sm font-semibold">{i.title}</div>
-              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{i.text}</p>
-            </div>
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead className="text-left text-xs text-muted-foreground">
+          <tr className="border-b">
+            <th className="py-2 pr-3 font-medium">Company</th>
+            <th className="py-2 pr-3 font-medium">Type</th>
+            <th className="py-2 pr-3 text-right font-medium">Amount</th>
+            <th className="py-2 pr-3 font-medium">Date</th>
+            <th className="py-2 pr-3 font-medium">Investors / buyer</th>
+            <th className="py-2 font-medium" />
+          </tr>
+        </thead>
+        <tbody className="divide-y">
+          {deals.map((d, i) => (
+            <tr key={i} className="align-top" title={d.quote}>
+              <td className="py-2.5 pr-3 font-medium">{d.company || "—"}</td>
+              <td className="py-2.5 pr-3 text-[13px] text-muted-foreground whitespace-nowrap">
+                {DEAL_LABEL[d.type]}
+                {d.stage ? ` · ${d.stage}` : ""}
+              </td>
+              <td className="tabular py-2.5 pr-3 text-right whitespace-nowrap">{d.value ? formatMoney(d.value) : <span className="text-subtle">Undisclosed</span>}</td>
+              <td className="tabular py-2.5 pr-3 text-[13px] text-muted-foreground whitespace-nowrap">{d.date || "—"}</td>
+              <td className="py-2.5 pr-3 text-[13px] text-muted-foreground">{d.counterparty || "—"}</td>
+              <td className="py-2.5">
+                <SourceChip sources={d.sources} />
+              </td>
+            </tr>
           ))}
-        </div>
-      )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
-      <div className="text-xs text-muted-foreground">
-        Written by {s.model} from {s.factCount} Cala facts{s.fetchedAt ? `, ${ago(s.fetchedAt)}` : ""}
-        {s.tokens ? ` (${s.tokens.total.toLocaleString("en")} tokens: ${s.tokens.input.toLocaleString("en")} in, ${s.tokens.output.toLocaleString("en")} out, ${s.tokens.thinking.toLocaleString("en")} reasoning)` : ""}. {s.checked} claims checked
-        {s.dropped.length ? `, ${s.dropped.length} left out because they did not match their sources.` : ", all matched their sources."}
-        {s.dropped.length > 0 && (
-          <details className="mt-2">
-            <summary className="cursor-pointer text-primary">Show what was left out</summary>
-            <ul className="mt-2 space-y-1">
-              {s.dropped.map((d, i) => (
-                <li key={i}>
-                  <span className="text-foreground">{d.what}</span> — {d.reason}
+const STEPS: { key: SectionName; label: string }[] = [
+  { key: "size", label: "Market size" },
+  { key: "players", label: "Leading companies" },
+  { key: "deals", label: "Funding and deals" },
+  { key: "trends", label: "Trends" },
+  { key: "summary", label: "Checked summary" },
+];
+
+function Progress({ a }: { a: MarketAnalysis }) {
+  const started = a.startedAt ? Date.parse(a.startedAt) : 0;
+  const done = (k: SectionName) => Boolean(a.errors[k]) || (k === "summary" ? Boolean(a.summary && (a.summary.fetchedAt ?? 0) >= started) : Boolean(a[k] && (a[k]!.fetchedAt ?? 0) >= started));
+  return (
+    <div className="mb-6 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border bg-card px-4 py-3 text-[13px]">
+      {STEPS.map((s) => (
+        <span key={s.key} className={done(s.key) ? "flex items-center gap-1.5" : "flex items-center gap-1.5 text-muted-foreground"}>
+          {done(s.key) ? <Check className="size-3.5 text-primary" /> : <Loader2 className="size-3.5 animate-spin" />}
+          {s.label}
+        </span>
+      ))}
+      <span className="ml-auto text-xs text-subtle">Usually about a minute</span>
+    </div>
+  );
+}
+
+/** The written answers and every fact behind them, folded away: the charts above are built from these. */
+function SourcesDetails({ a }: { a: MarketAnalysis }) {
+  const parts: [string, EvidenceSection | undefined][] = [
+    ["Market size", a.size],
+    ["Funding and deals", a.deals],
+    ["Trends, drivers and challenges", a.trends],
+  ];
+  const sizes = a.summary?.sizes ?? [];
+  if (!parts.some(([, p]) => p) && !sizes.length) return null;
+  return (
+    <details className="group rounded-xl border bg-card">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-5 py-3.5 text-sm font-medium">
+        <FileText className="size-4 text-muted-foreground" /> Sources and full answers
+        <span className="text-xs font-normal text-muted-foreground">({parts.reduce((t, [, p]) => t + (p?.evidence.length ?? 0), 0)} facts)</span>
+        <ChevronDown className="ml-auto size-4 text-muted-foreground transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="space-y-6 border-t px-5 py-4">
+        {sizes.length > 0 && (
+          <div>
+            <h3 className="mb-2 text-sm font-semibold">All market size figures</h3>
+            <ul className="space-y-1 text-[13px]">
+              {sizes.map((f, i) => (
+                <li key={i} className="flex items-center gap-2">
+                  <span className="tabular w-12 text-muted-foreground">{f.year}</span>
+                  <span className="tabular w-20 font-medium">{formatMoney(f.value)}</span>
+                  <span className="truncate text-muted-foreground">
+                    {f.publisher} · {f.scope}
+                    {f.kind === "forecast" ? " (forecast)" : ""}
+                    {f.cagr ? ` · ${f.cagr.percent}% CAGR` : ""}
+                  </span>
+                  <SourceChip sources={f.sources} />
                 </li>
               ))}
             </ul>
-          </details>
+          </div>
+        )}
+        {parts.map(([title, p]) =>
+          p ? (
+            <div key={title}>
+              <div className="mb-1 flex items-center gap-2">
+                <h3 className="text-sm font-semibold">{title}</h3>
+                <SourceChip sources={dedupe(p.evidence.flatMap((e) => e.sources))} />
+              </div>
+              <div className="max-h-80 overflow-auto text-[13px] text-muted-foreground">
+                <Markdown>{p.summary}</Markdown>
+              </div>
+            </div>
+          ) : null,
+        )}
+        {a.summary && (
+          <p className="text-xs text-subtle">
+            Summary written by {a.summary.model} from {a.summary.factCount} verified facts; {a.summary.checked} claims checked
+            {a.summary.dropped.length ? `, ${a.summary.dropped.length} left out because they did not match their sources.` : ", all matched their sources."}
+          </p>
         )}
       </div>
-    </div>
+    </details>
   );
 }
 
-/** Cala's written answer on the left, the facts it rests on (with their sources) on the right. */
-function EvidenceView({ s }: { s: EvidenceSection }) {
-  if (!s.evidence.length && !s.summary.trim()) {
-    return <EmptyState compact title="Cala has nothing on record for this question" description="Try a broader market description or region." />;
-  }
-  const all = dedupe(s.evidence.flatMap((e) => e.sources));
+function ReportHeader({ title }: { title: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-5 gap-6">
-      <Panel
-        className="col-span-3"
-        title="Cala's answer"
-        description={`Written by Cala from the ${s.evidence.length} facts listed alongside. Check figures against their sources.${fetched(s.fetchedAt)}`}
-        action={<SourceChip sources={all} />}
-      >
-        <Markdown>{s.summary}</Markdown>
-      </Panel>
-      <Panel className="col-span-2 self-start" title="Facts behind it" description="Each fact as Cala extracted it, with its origin.">
-        {s.evidence.length ? (
-          <ul className="max-h-[560px] space-y-3 overflow-auto pr-1">
-            {s.evidence.map((e) => (
-              <li key={e.id} className="rounded-lg border bg-background/60 p-3">
-                <p className="line-clamp-5 text-[13px] leading-relaxed text-muted-foreground">{clean(e.text)}</p>
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  <span className="truncate text-xs font-medium">{e.sources[0]?.name ?? "Unknown source"}</span>
-                  <SourceChip sources={e.sources} />
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-muted-foreground">Cala returned no supporting facts for this answer, so treat it as unverified.</p>
-        )}
-      </Panel>
-    </div>
+    <PageHeader
+      eyebrow={
+        <div className="flex items-center gap-4">
+          <Link href="/market" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="size-3" /> Back
+          </Link>
+          <Link href="/market/history" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+            <History className="size-3" /> History
+          </Link>
+        </div>
+      }
+      title={<span className="first-letter:uppercase">{title}</span>}
+    />
   );
 }
 
-function Players({ res, sector, region }: { res: PlayersSection; sector: string; region: string }) {
-  if (!res.companies.length) {
-    return <EmptyState compact icon={Building2} title="No leading companies with a Cala profile" description="Try a broader market description or region." />;
-  }
+function ReportFailed({ title, error }: { title: string; error: unknown }) {
   return (
-    <Panel
-      title={`${res.companies.length} companies`}
-      description={`${res.unresolved ? `${res.unresolved} more were named by Cala without a company record, so they are not shown.` : "Resolved to Cala company records."}${fetched(res.fetchedAt)}`}
-      bodyClassName="pt-3"
-    >
-      <CompaniesTable data={{ query: { sector, region }, definition: res.definition, companies: res.companies, outsideRegion: [] }} currency={null} />
-    </Panel>
+    <>
+      <ReportHeader title="Market analysis" />
+      <EmptyState icon={CircleAlert} title={title} description={error instanceof Error ? error.message : "Unknown error"} />
+    </>
   );
 }
 
-function SectionLoading({ label }: { label: string }) {
+function SectionProblem({ error }: { error: SectionError }) {
+  return error.kind === "llm" ? <EmptyState compact icon={Sparkles} title="Could not write the summary" description={error.message} /> : <MarketError error={new Error(error.message)} />;
+}
+
+function Empty({ loading, text, icon }: { loading: boolean; text: string; icon?: typeof Building2 }) {
+  if (loading)
+    return (
+      <div className="space-y-2 py-4">
+        <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-4 w-2/3" />
+        <Skeleton className="h-4 w-1/2" />
+      </div>
+    );
+  return icon ? <EmptyState compact icon={icon} title="Nothing on record" description={text} /> : <p className="py-6 text-center text-sm text-muted-foreground">{text}</p>;
+}
+
+function Building({ label }: { label: string }) {
   return (
     <div className="rounded-xl border bg-card p-5">
       <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin text-primary" />
-        {label}… a new question takes Cala about a minute.
+        {label}…
       </div>
       <div className="space-y-2">
         <Skeleton className="h-4 w-3/4" />
         <Skeleton className="h-4 w-2/3" />
-        <Skeleton className="h-4 w-1/2" />
       </div>
     </div>
   );
@@ -445,20 +421,6 @@ function SectionLoading({ label }: { label: string }) {
 function ago(at: number) {
   const mins = Math.max(0, Math.round((Date.now() - at) / 60_000));
   return mins < 1 ? "just now" : mins < 60 ? `${mins} min ago` : mins < 48 * 60 ? `${Math.round(mins / 60)} h ago` : `${Math.round(mins / 1440)} days ago`;
-}
-
-/** " Fetched from Cala 3 h ago." for section descriptions; empty when unknown. */
-function fetched(at?: number) {
-  return at ? ` Fetched from Cala ${ago(at)}.` : "";
-}
-
-/** KnowBit text can carry markdown and page furniture; show it as plain text. */
-function clean(text: string) {
-  return text
-    .replace(/[#*_`>|]+/g, " ")
-    .replace(/\[(.*?)\]\(.*?\)/g, "$1")
-    .replace(/\s+/g, " ")
-    .trim();
 }
 
 function dedupe(sources: Source[]) {

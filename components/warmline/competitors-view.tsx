@@ -39,15 +39,15 @@ export function CompetitorsView({ data, startupName }: { data: CompetitorsAnalys
         description={
           peers
             ? `${startupName} next to ${data.companies.length} companies whose description matches your industry. Check that each one really competes with you.`
-            : `${startupName} next to the ${data.companies.length} companies Cala records as its competitors.`
+            : `${startupName} next to the ${data.companies.length} companies on record as its competitors.`
         }
         bodyClassName="px-0 pb-2"
       >
         <StandingTable rows={rows} />
-        <p className="px-5 pt-2 text-xs text-subtle">— not on record in Cala. Hover a raised amount to see what it is based on.</p>
+        <p className="px-5 pt-2 text-xs text-subtle">— not on record. Hover a raised amount to see what it is based on.</p>
         {data.unresolved > 0 && (
           <p className="px-5 pt-2 text-xs text-subtle">
-            {data.unresolved} more {data.unresolved === 1 ? "company was" : "companies were"} named without a Cala profile, so{" "}
+            {data.unresolved} more {data.unresolved === 1 ? "company was" : "companies were"} named without a verified profile, so{" "}
             {data.unresolved === 1 ? "it is" : "they are"} not shown.
           </p>
         )}
@@ -55,7 +55,7 @@ export function CompetitorsView({ data, startupName }: { data: CompetitorsAnalys
 
       <RaisedChart data={data} />
 
-      <Panel title={peers ? "Companies in your space" : "Competitors"} description="What each one does, from its Cala record.">
+      <Panel title={peers ? "Companies in your space" : "Competitors"} description="What each one does, from its record.">
         <CompetitorList companies={data.companies} />
       </Panel>
     </div>
@@ -157,7 +157,7 @@ function RaisedChart({ data }: { data: CompetitorsAnalysis }) {
   return (
     <Panel
       title="Total raised vs competitors"
-      description={`Equity rounds on record, summed per company; where none are on record, the total Cala reports. ${cur ? `Compared in ${cur} only.` : ""}`}
+      description={`Equity rounds on record, summed per company; where none are on record, the reported total. ${cur ? `Compared in ${cur} only.` : ""}`}
       action={
         data.rank ? (
           <span className="rounded-full bg-teal-soft px-2 py-0.5 text-xs font-medium text-accent-foreground">
@@ -211,7 +211,7 @@ function RaisedChart({ data }: { data: CompetitorsAnalysis }) {
 
 function CompetitorList({ companies }: { companies: StandingRow[] }) {
   if (!companies.length)
-    return <EmptyState compact icon={Building2} title="No companies on record" description="Cala has no sourced companies for this yet." />;
+    return <EmptyState compact icon={Building2} title="No companies on record" description="No sourced companies are on record for this yet." />;
   return (
     <ul className="divide-y">
       {companies.map((c) => (

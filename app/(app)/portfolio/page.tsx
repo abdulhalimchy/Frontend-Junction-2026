@@ -32,7 +32,7 @@ export default async function PortfolioPage() {
     <>
       <PageHeader
         title="Portfolio"
-        description={`Prefilled from Cala: companies with a sourced investment from ${investor.name}. Remove anything that is not yours.`}
+        description={`Prefilled from verified records: companies with a sourced investment from ${investor.name}. Remove anything that is not yours.`}
         actions={
           <Button variant="outline" className="bg-card">
             <Plus /> Add company

@@ -13,7 +13,7 @@ export default async function CardPage() {
       <div className="mb-6 text-center">
         <h1 className="text-xl font-semibold tracking-tight">Your Warmline card is ready</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Show the QR at Slush. Everything on it comes from Cala, with sources anyone can open.
+          Show the QR at Slush. Everything on it comes from verified records, with sources anyone can open.
         </p>
       </div>
       <ProfileCard data={card} size="lg" />

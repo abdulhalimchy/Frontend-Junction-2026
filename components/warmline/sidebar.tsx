@@ -119,8 +119,8 @@ export function Sidebar(
 
       {props.live ? (
         <div className="mt-auto rounded-lg border bg-card p-3 text-[11px] text-muted-foreground">
-          <div className="font-semibold text-foreground">Live Cala data</div>
-          Demo data is off (DEMO_DATA=off).
+          <div className="font-semibold text-foreground">Live data</div>
+          Verified, cited data from the Cala encyclopedia. Demo data is off.
         </div>
       ) : (
         <div className="mt-auto space-y-3">

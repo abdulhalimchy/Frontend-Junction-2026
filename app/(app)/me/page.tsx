@@ -20,7 +20,7 @@ export default async function MePage() {
       <div className="grid grid-cols-3 gap-6">
         <div className="col-span-2 space-y-6">
           <ProfileCard data={card} size="lg" />
-          <Panel title="Privacy" description="You control what other Warmline users see. Cala data about your company is public either way.">
+          <Panel title="Privacy" description="You control what other Warmline users see. Public records about your company are public either way.">
             <PrivacySettings initial={profile.privacy} />
           </Panel>
         </div>

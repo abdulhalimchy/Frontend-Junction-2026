@@ -28,7 +28,7 @@ export function MarketGuardNotice({
             {company ? `“${text}” looks like a company, not a market` : `“${text}” doesn't look like a market`}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {verdict.reason} Nothing was sent to Cala, so no credit was used.
+            {verdict.reason} No data lookup was run.
           </p>
 
           {company && (
@@ -61,7 +61,7 @@ export function MarketGuardNotice({
             <Link href={runAnywayHref} className="font-medium text-primary hover:underline">
               Run anyway
             </Link>{" "}
-            (uses Cala credit).
+            (runs the data lookups).
           </div>
         </div>
       </div>

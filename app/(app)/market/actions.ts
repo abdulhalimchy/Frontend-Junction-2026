@@ -1,21 +1,26 @@
 "use server";
 
 import { refresh } from "next/cache";
-import { clearMarketAnalyses, deleteMarketAnalysis, refreshMarketAnalysis } from "@/lib/backend/markets";
+import { cancelMarketAnalysis, clearMarketAnalyses, deleteMarketAnalysis, refreshMarketAnalysis } from "@/lib/backend/markets";
 
 // Market analysis history lives in the backend database. Phase 1: every request runs as the backend demo
 // account (see lib/backend/client.ts), so the backend only ever touches that account's analyses.
 
-type Result = { ok: true; count?: number } | { ok: false; error: string };
+type Result = { ok: true; count?: number; deleted?: boolean } | { ok: false; error: string };
 
-async function run(fn: () => Promise<number | void>): Promise<Result> {
+async function run(fn: () => Promise<number | boolean | void>): Promise<Result> {
   try {
-    const count = await fn();
+    const out = await fn();
     refresh();
-    return { ok: true, count: typeof count === "number" ? count : undefined };
+    return { ok: true, count: typeof out === "number" ? out : undefined, deleted: typeof out === "boolean" ? out : undefined };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Something went wrong." };
   }
+}
+
+/** Stops a running analysis and rolls it back to the last saved result (a first run is removed). */
+export async function cancelAnalysisAction(id: string) {
+  return run(() => cancelMarketAnalysis(id));
 }
 
 /** Re-asks Cala and rewrites the summary; the stored report is updated section by section. */

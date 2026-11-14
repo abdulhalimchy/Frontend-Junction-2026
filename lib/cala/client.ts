@@ -116,7 +116,7 @@ async function calaFetch<T>(
     });
   } catch (e) {
     const timeout = e instanceof Error && e.name === "TimeoutError";
-    throw new CalaError(timeout ? "Cala did not answer in time" : e instanceof Error ? e.message : String(e), timeout ? 504 : 503, "upstream");
+    throw new CalaError(timeout ? "The data source did not answer in time" : e instanceof Error ? e.message : String(e), timeout ? 504 : 503, "upstream");
   } finally {
     lane.release();
   }
