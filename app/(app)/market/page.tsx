@@ -176,6 +176,12 @@ async function MarketResults({ q }: { q: MarketQuery }) {
         How this market was defined: companies come from Cala&apos;s <code className="rounded bg-muted px-1">knowledge_query</code> for{" "}
         <code className="rounded bg-muted px-1">{data.definition}</code>. Every number above comes from sourced company and funding-round
         entities{mocksEnabled() ? " (mock data: USE_MOCKS=true)" : ""}.
+        {data.outsideRegion.length > 0 && (
+          <>
+            {" "}Left out because their headquarters on record are outside {region}:{" "}
+            {data.outsideRegion.map((c) => `${c.name} (${c.country})`).join(", ")}.
+          </>
+        )}
       </p>
     </>
   );

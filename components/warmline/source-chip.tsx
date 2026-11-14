@@ -36,7 +36,7 @@ export function SourceChip({ sources, className }: { sources: Source[]; classNam
               <div className="flex items-start justify-between gap-3">
                 <span className="text-sm font-medium leading-snug">{s.name}</span>
                 <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground tabular">
-                  {RANK_LABEL[s.source_rank ?? "null"]}
+                  {s.source_rank ? RANK_LABEL[s.source_rank] : s.document ? "Unranked" : "Derived"}
                 </span>
               </div>
               {s.document ? (
@@ -67,7 +67,6 @@ const RANK_LABEL: Record<string, string> = {
   PRIMARY: "Primary",
   PRESS: "Press",
   AGGREGATOR: "Aggregator",
-  null: "Derived",
 };
 
 function rankOrder(r: SourceRank) {

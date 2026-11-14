@@ -158,6 +158,8 @@ export type MarketData = {
   companies: MarketCompany[];
   /** The knowledge_query input we sent, shown so users can see how the market was defined. */
   definition: string;
+  /** Candidates dropped because their location on record is outside the region. */
+  outsideRegion: { name: string; country: string }[];
 };
 
 export type EventInfo = {

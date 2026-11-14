@@ -50,7 +50,6 @@ async function calaFetch<T>(path: string, init: { method: "GET" | "POST"; body?:
     method: init.method,
     headers: { "X-API-KEY": key, "Content-Type": "application/json" },
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
-    signal: AbortSignal.timeout(60_000),
   });
 
   if (!res.ok) {
@@ -105,11 +104,24 @@ export type EntityQuery = {
 
 // ---- Endpoints ----
 
-/** POST /v1/knowledge/query: structured rows plus matched entities. Rows carry no sources. */
-export async function knowledgeQuery(input: string): Promise<QueryResponse> {
-  "use cache";
-  cacheLife("hours");
-  return calaFetch<QueryResponse>("/v1/knowledge/query", { method: "POST", body: { input, return_entities: true } });
+/**
+ * POST /v1/knowledge/query: structured rows plus matched entities. Rows carry no sources.
+ *
+ * Not in "use cache": a query Cala has not seen before takes ~45–50s, which hits Next's 50s limit for
+ * cached functions. Instead we keep an in-process cache (6h) that also merges concurrent identical
+ * requests. Phase 2 moves this to Supabase so it survives restarts and is shared between instances.
+ */
+const QUERY_TTL_MS = 6 * 60 * 60 * 1000;
+const queryCache = new Map<string, { at: number; promise: Promise<QueryResponse> }>();
+
+export function knowledgeQuery(input: string): Promise<QueryResponse> {
+  const now = performance.timeOrigin + performance.now();
+  const hit = queryCache.get(input);
+  if (hit && now - hit.at < QUERY_TTL_MS) return hit.promise;
+  const promise = calaFetch<QueryResponse>("/v1/knowledge/query", { method: "POST", body: { input, return_entities: true } });
+  queryCache.set(input, { at: now, promise });
+  promise.catch(() => queryCache.delete(input)); // never cache failures
+  return promise;
 }
 
 /** GET /v1/entities: fuzzy search by name. */

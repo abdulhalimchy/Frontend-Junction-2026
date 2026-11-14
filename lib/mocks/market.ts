@@ -8,6 +8,7 @@ export function mockMarket(q: MarketQuery): MarketData {
   return {
     query: q,
     definition: `(mock data) startups.description=${q.sector}`,
+    outsideRegion: [],
     companies: list.map((c) => ({
       id: c.id,
       name: c.name,
