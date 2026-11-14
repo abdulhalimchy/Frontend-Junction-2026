@@ -65,7 +65,7 @@ export default async function PortfolioPage() {
                 </div>
                 <ul className="divide-y">
                   {competitors.map(({ company: c, reason, overlap }) => {
-                    const last = c.rounds.filter((r) => r.kind === "equity").sort((a, b) => b.date.date.localeCompare(a.date.date))[0];
+                    const last = c.rounds.filter((r) => r.kind === "equity").sort((a, b) => (b.date?.date ?? "").localeCompare(a.date?.date ?? ""))[0];
                     return (
                       <li key={c.id} className="flex items-center gap-4 px-4 py-3">
                         <div className="min-w-0 flex-1">

@@ -1,4 +1,4 @@
-import type { Alert, DeckCheckResult, EventInfo, MarketSnapshot, MetEntry, Profile, Role } from "@/lib/types";
+import type { Alert, DeckCheckResult, EventInfo, MetEntry, Profile, Role } from "@/lib/types";
 import { S } from "./sources";
 
 export const SLUSH_EVENT_ID = "bc844d56-6ab4-452b-96bf-2661e86e592b";
@@ -115,27 +115,6 @@ export const metByRole: Record<Role, MetEntry[]> = {
     { id: "m4", personId: "anna-virtanen", metAt: "2026-11-12", where: "Slush pre-event, Helsinki", note: "Hull inspection robots, raising seed. Check overlap with PortBotics.", slush: true },
     { id: "m5", personId: "maren-aas", metAt: "2026-10-21", where: "Portfolio day", note: "Trial readout in Q1.", slush: false },
   ],
-};
-
-export const market: MarketSnapshot = {
-  sector: "Maritime robotics",
-  region: "Nordics and Benelux",
-  companyCount: { value: 46, sources: [S.news("Cala knowledge graph query", "maritime-robotics", "2026-11-13")] },
-  equityTotal: { value: { amount: 61_400_000, currency: "EUR" }, sources: [S.news("Cala knowledge graph query", "maritime-robotics-rounds", "2026-11-13")] },
-  grantTotal: { value: { amount: 7_900_000, currency: "EUR" }, sources: [S.news("Cala knowledge graph query", "maritime-robotics-grants", "2026-11-13")] },
-  medianSeed: { value: { amount: 2_100_000, currency: "EUR" }, sources: [S.news("Cala knowledge graph query", "maritime-robotics-seed", "2026-11-13")] },
-  byYear: [
-    { year: 2021, equity: 4.2, grants: 0.8, currency: "EUR", rounds: 5 },
-    { year: 2022, equity: 7.9, grants: 1.1, currency: "EUR", rounds: 8 },
-    { year: 2023, equity: 11.6, grants: 1.6, currency: "EUR", rounds: 11 },
-    { year: 2024, equity: 17.3, grants: 2.2, currency: "EUR", rounds: 13 },
-    { year: 2025, equity: 12.4, grants: 1.4, currency: "EUR", rounds: 9 },
-    { year: 2026, equity: 8.0, grants: 0.8, currency: "EUR", rounds: 6 },
-  ],
-  topCompanyIds: ["tidewise", "portbotics", "ostra-sensing", "northlight-robotics", "brightwake-marine", "saltline-systems"],
-  topInvestorIds: ["fjord-ventures", "northbound-capital", "harbour-seed"],
-  companiesWithoutFunding: 17,
-  otherCurrencyRounds: { count: 9, currencies: ["NOK", "SEK", "DKK"] },
 };
 
 export const deckChecks: Record<string, DeckCheckResult> = {

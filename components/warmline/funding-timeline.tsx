@@ -19,7 +19,7 @@ export function FundingTimeline({ rounds, investors }: { rounds: FundingRound[];
     );
   }
   const name = (id: string) => investors.find((i) => i.id === id);
-  const sorted = [...rounds].sort((a, b) => b.date.date.localeCompare(a.date.date));
+  const sorted = [...rounds].sort((a, b) => (b.date?.date ?? "").localeCompare(a.date?.date ?? ""));
   const equity = totalsByCurrency(rounds, "equity");
   const grants = totalsByCurrency(rounds, "grant");
 

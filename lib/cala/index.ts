@@ -1,10 +1,13 @@
 import "server-only";
-import type { Company, EventInfo, Investor, InvestorCheck, MarketSnapshot, Person } from "@/lib/types";
+import type { Company, EventInfo, Investor, InvestorCheck, MarketData, MarketQuery, Person } from "@/lib/types";
 import { companies, competitorsOf } from "@/lib/mocks/companies";
 import { investorChecks, investors, people } from "@/lib/mocks/investors";
-import { market, slushEvent } from "@/lib/mocks/misc";
+import { slushEvent } from "@/lib/mocks/misc";
+import { mockMarket } from "@/lib/mocks/market";
+import { mocksEnabled } from "./client";
+import { fetchMarket } from "./market";
 
-// Phase 1: every function returns fixtures from lib/mocks.
+// Market (getMarket) is live from Cala; see ./market.ts. Everything else still returns fixtures from lib/mocks.
 // Phase 3 replaces the bodies with real Cala calls (entity_search, entity_lookup, entity_retrieval,
 // entity_introspection) behind the USE_MOCKS flag, keeping these signatures.
 
@@ -75,8 +78,9 @@ export async function getSimilarCompanies(companyId: string) {
     .filter((c) => c.company);
 }
 
-export async function getMarket(_sector: string): Promise<MarketSnapshot> {
-  return market;
+/** Market view. Live from Cala unless USE_MOCKS=true. Throws CalaError on API problems. */
+export async function getMarket(q: MarketQuery): Promise<MarketData> {
+  return mocksEnabled() ? mockMarket(q) : fetchMarket(q);
 }
 
 /** Attendees are the event's incoming PARTICIPATES_IN_EVENT relationships. */

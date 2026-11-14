@@ -26,7 +26,10 @@ app/(app)/             the app (AppShell: sidebar + top bar with ⌘K)
 components/warmline/   shared components: SourceChip, TrustBadge, StatCard, FactGrid,
                        FundingTimeline, DataTable, SlushTag, EmptyState, shells
 components/ui/         shadcn/ui primitives
-lib/cala/              data functions (searchEntity, getCompany, getRounds, …). Phase 1 returns mocks.
+lib/cala/client.ts     typed Cala REST client (X-API-KEY, cached with "use cache")
+lib/cala/market.ts     live market data: knowledge_query for candidates, sourced entities for every number
+lib/market.ts          market aggregation (shared by live and mock data)
+lib/cala/index.ts      data functions; getMarket is live, the rest still return mocks
 lib/mocks/             fictional fixtures
 lib/session.ts         current role/profile, alerts, met list (cookie-based until Supabase)
 lib/format.ts          money, fuzzy dates, per-currency totals

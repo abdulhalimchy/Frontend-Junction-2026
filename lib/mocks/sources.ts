@@ -1,8 +1,10 @@
-import type { Source } from "@/lib/types";
+import type { Source, SourceRank } from "@/lib/types";
+
+const RANKS: SourceRank[] = ["FILING", "PRESS", "PRIMARY", "AGGREGATOR"];
 
 // Fixture sources. URLs point at example.com on purpose: these are mocks, not real documents.
 export function src(name: string, path: string, date: string, rank = 1): Source {
-  return { name, document: `https://example.com/${path}`, date, source_rank: rank };
+  return { name, document: `https://example.com/${path}`, date, date_precision: "day", source_rank: RANKS[rank - 1] ?? null };
 }
 
 export const S = {

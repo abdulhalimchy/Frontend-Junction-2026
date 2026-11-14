@@ -1,10 +1,15 @@
 // Shared domain types. Every fact coming from Cala is wrapped in Sourced<T>.
 
+/** Cala's source categories, most authoritative first. null = derived by Cala itself. */
+export type SourceRank = "FILING" | "PRIMARY" | "PRESS" | "AGGREGATOR" | null;
+
+/** Mirrors the source objects Cala returns on every property and relationship. */
 export type Source = {
   name: string;
-  document: string; // URL of the source document
-  date: string; // ISO date the source was published or retrieved
-  source_rank: number; // lower is more authoritative
+  document: string; // URL of the source document; "" when Cala derived the value
+  date: string; // ISO date of the source
+  date_precision?: "year" | "month" | "day" | null;
+  source_rank: SourceRank;
 };
 
 export type Sourced<T> = {
@@ -26,13 +31,15 @@ export type FuzzyDate = {
   precision: "year" | "month" | "day";
 };
 
-export type RoundKind = "equity" | "grant";
+/** Cala round instruments: EQUITY → equity, GRANT → grant, everything else (debt, loans, …) → other. */
+export type RoundKind = "equity" | "grant" | "other";
 
 export type FundingRound = {
   id: string;
   kind: RoundKind;
   stage: string; // "Pre-seed", "Seed", "Series A", "Grant"
-  date: FuzzyDate;
+  instrument?: string | null; // Cala's raw instrument, e.g. "EQUITY", "GRANT", "DEBT"
+  date: FuzzyDate | null; // null = no dated source
   amount: Money | null; // null = undisclosed
   leadInvestorIds: string[];
   participantIds: string[];
@@ -132,19 +139,25 @@ export type DeckCheckResult = {
   claims: DeckClaim[];
 };
 
-export type MarketSnapshot = {
-  sector: string;
-  region: string;
-  companyCount: Sourced<number>;
-  equityTotal: Sourced<Money>;
-  grantTotal: Sourced<Money>;
-  medianSeed: Sourced<Money>;
-  byYear: { year: number; equity: number; grants: number; currency: string; rounds: number }[];
-  topCompanyIds: string[];
-  topInvestorIds: string[];
-  companiesWithoutFunding: number;
-  /** Totals and chart only sum rounds in the snapshot currency; the rest are counted here, not converted. */
-  otherCurrencyRounds: { count: number; currencies: string[] };
+/** A company in a market view, built only from sourced Cala properties. */
+export type MarketCompany = {
+  id: string;
+  name: string;
+  description: Sourced<string> | null;
+  hq: Sourced<string> | null;
+  founded: Sourced<FuzzyDate> | null;
+  rounds: FundingRound[];
+  investors: { id: string; name: string; sources: Source[] }[];
+};
+
+export type MarketQuery = { sector: string; region: string };
+
+/** Raw market data. Totals and charts are derived in lib/market.ts so mocks and Cala share one code path. */
+export type MarketData = {
+  query: MarketQuery;
+  companies: MarketCompany[];
+  /** The knowledge_query input we sent, shown so users can see how the market was defined. */
+  definition: string;
 };
 
 export type EventInfo = {

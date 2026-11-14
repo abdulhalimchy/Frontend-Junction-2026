@@ -32,7 +32,7 @@ export async function CompanyOverview({ company: c }: { company: Company }) {
                   value: c.stage,
                   sources: c.rounds
                     .filter((r) => r.kind === "equity")
-                    .sort((a, b) => a.date.date.localeCompare(b.date.date))
+                    .sort((a, b) => (a.date?.date ?? "").localeCompare(b.date?.date ?? ""))
                     .at(-1)?.sources,
                 },
                 {

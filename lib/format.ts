@@ -3,7 +3,8 @@ import type { FundingRound, FuzzyDate, Money } from "@/lib/types";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /** Formats a date at the precision Cala actually has. Never pads a year into a full date. */
-export function formatFuzzyDate(d: FuzzyDate): string {
+export function formatFuzzyDate(d: FuzzyDate | null): string {
+  if (!d) return "Date not on record";
   const [y, m, day] = d.date.split("-");
   if (d.precision === "year" || !m) return y;
   if (d.precision === "month" || !day) return `${MONTHS[Number(m) - 1]} ${y}`;

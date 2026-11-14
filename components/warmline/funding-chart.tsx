@@ -2,7 +2,7 @@
 
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-type Datum = { year: number; equity: number; grants: number; currency: string; rounds: number };
+type Datum = { year: number; equity: number; grants: number; rounds: number };
 
 /** Equity and grants as two separate series (grouped, never stacked into one total). Values in millions. */
 export function FundingChart({ data, currency }: { data: Datum[]; currency: string }) {
@@ -17,7 +17,6 @@ export function FundingChart({ data, currency }: { data: Datum[]; currency: stri
             axisLine={false}
             tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
             tickFormatter={(v) => `${v}M`}
-            label={{ value: currency, position: "insideTopLeft", offset: 0, dy: -4, dx: 12, fontSize: 11, fill: "var(--subtle)" }}
           />
           <Tooltip
             cursor={{ fill: "var(--muted)", opacity: 0.6 }}

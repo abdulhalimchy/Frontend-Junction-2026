@@ -7,7 +7,7 @@ import { DataTable, type Column, type Row } from "./data-table";
 import { SourceChip } from "./source-chip";
 
 function lastEquity(c: Company) {
-  return [...c.rounds].filter((r) => r.kind === "equity").sort((a, b) => b.date.date.localeCompare(a.date.date))[0];
+  return [...c.rounds].filter((r) => r.kind === "equity").sort((a, b) => (b.date?.date ?? "").localeCompare(a.date?.date ?? ""))[0];
 }
 
 export function CompanyName({ c, sub }: { c: Company; sub?: React.ReactNode }) {
@@ -80,7 +80,7 @@ export function CompanyTable({
           ) : (
             <span className="text-[13px] text-muted-foreground">No funding on record</span>
           ),
-          sort: last?.date.date ?? null,
+          sort: last?.date?.date ?? null,
         },
         grants: {
           display: grants.length ? <span className="tabular">{grants.map(formatMoney).join(" + ")}</span> : <span className="text-subtle">—</span>,
