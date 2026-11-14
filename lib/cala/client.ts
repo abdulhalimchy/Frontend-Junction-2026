@@ -2,13 +2,12 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { backendFetchShared } from "@/lib/backend/client";
 import type { Source } from "@/lib/types";
 
-// Typed client for Cala's REST API (https://docs.cala.ai, OpenAPI at https://api.cala.ai/openapi.json).
-// Server-only: the API key never reaches the browser.
-// Caching: Next's "use cache" for now. Phase 2 moves this to a Supabase table so the cache survives deploys.
-
-const BASE = "https://api.cala.ai";
+// Typed client for Cala's REST API (https://docs.cala.ai). The frontend never calls Cala itself: every request
+// goes through the backend's Cala gateway (/api/v1/cala/…), which holds the API key and forwards only the
+// endpoints below. This file keeps the request shapes, the cache and the error kinds the pages rely on.
 
 export class CalaError extends Error {
   constructor(
@@ -29,11 +28,6 @@ export function calaErrorKind(e: unknown): CalaError["kind"] {
   if (/rate limit/i.test(m)) return "rate_limited";
   if (/rejected the request/.test(m)) return "invalid_request";
   return "upstream";
-}
-
-/** Call before any cached Cala request so a missing key fails fast with a clear error. */
-export function assertCalaKey() {
-  if (!process.env.CALA_API_KEY) throw new CalaError("CALA_API_KEY is not set", 401, "missing_key");
 }
 
 export function mocksEnabled() {
@@ -65,12 +59,8 @@ function limiter(max: number) {
 const entityLimit = limiter(4);
 const knowledgeLimit = limiter(6); // a report asks 6 questions; Cala accepted 6 in parallel in testing
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 /**
- * Real Cala network calls per endpoint since the server started (cache hits are not counted). Kept on
+ * Cala requests per endpoint since the server started (cache hits are not counted). Kept on
  * globalThis because pages and route handlers load separate copies of this module.
  */
 const g = globalThis as unknown as { __calaUsage?: Record<string, number> };
@@ -90,62 +80,55 @@ function endpointName(path: string, method: string) {
 const CREDIT_PAUSE_MS = 10 * 60 * 1000;
 const gb = globalThis as unknown as { __calaNoCreditUntil?: number };
 
+const KINDS = new Set<CalaError["kind"]>(["missing_key", "rate_limited", "invalid_request", "no_credit", "upstream"]);
+
+/**
+ * One Cala request, sent through the backend gateway. The backend retries Cala's rate limits and transient
+ * errors itself, so a failure here is final; it comes back as { error: { code, message } } with code set to
+ * one of our error kinds.
+ */
 async function calaFetch<T>(
   path: string,
   init: { method: "GET" | "POST"; body?: unknown; query?: Record<string, string | string[] | number>; unlimited?: boolean /* true = knowledge lane */ },
 ): Promise<T> {
-  const key = process.env.CALA_API_KEY;
-  if (!key) throw new CalaError("CALA_API_KEY is not set", 401, "missing_key");
   if ((gb.__calaNoCreditUntil ?? 0) > performance.timeOrigin + performance.now()) {
     throw new CalaError("Cala credit balance is empty (paused new calls for 10 minutes)", 402, "no_credit");
   }
 
-  const url = new URL(path, BASE);
+  const params = new URLSearchParams();
   for (const [k, v] of Object.entries(init.query ?? {})) {
-    for (const item of Array.isArray(v) ? v : [v]) url.searchParams.append(k, String(item));
+    for (const item of Array.isArray(v) ? v : [v]) params.append(k, String(item));
   }
+  const name = endpointName(path, init.method);
+  calaUsage[name] = (calaUsage[name] ?? 0) + 1;
 
-  // Requests go through a per-lane limit, and rate limits or transient server errors are retried with
-  // growing waits, so a page that needs many lookups slows down instead of failing.
+  // Requests go through a per-lane limit so a page that needs many lookups queues instead of flooding.
+  const lane = init.unlimited ? knowledgeLimit : entityLimit;
+  await lane.acquire();
   let res: Response;
-  for (let attempt = 0; ; attempt++) {
-    const name = endpointName(url.pathname, init.method);
-    calaUsage[name] = (calaUsage[name] ?? 0) + 1;
-    const lane = init.unlimited ? knowledgeLimit : entityLimit;
-    await lane.acquire();
-    try {
-      res = await fetch(url, {
-        method: init.method,
-        headers: { "X-API-KEY": key, "Content-Type": "application/json" },
-        body: init.body === undefined ? undefined : JSON.stringify(init.body),
-        // A hung request must not hold a page (or a lane slot) forever.
-        signal: AbortSignal.timeout(init.unlimited ? 120_000 : 30_000),
-      });
-    } catch (e) {
-      if (attempt < 1 && e instanceof Error && e.name === "TimeoutError") continue; // one retry
-      throw new CalaError(e instanceof Error && e.name === "TimeoutError" ? "Cala did not answer in time" : `Could not reach Cala: ${String(e)}`, 504, "upstream");
-    } finally {
-      lane.release();
-    }
-    if (process.env.CALA_LOG === "1") console.log(`[cala] ${name} ${url.pathname}${url.search} -> ${res.status}`);
-    // Retry rate limits (up to 3 times) and transient server errors such as 502 (up to 2 times).
-    const retryable = res.status === 429 ? attempt < 3 : res.status >= 500 && attempt < 2;
-    if (!retryable) break;
-    await res.body?.cancel();
-    const retryAfter = Number(res.headers.get("retry-after"));
-    await sleep(retryAfter > 0 ? Math.min(retryAfter, 10) * 1000 : 1000 * 2 ** attempt);
+  try {
+    res = await backendFetchShared(`/cala${path}${params.size ? `?${params}` : ""}`, {
+      method: init.method,
+      headers: init.body === undefined ? undefined : { "Content-Type": "application/json" },
+      body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      // A hung request must not hold a page (or a lane slot) forever. The backend retries, so allow for that.
+      signal: AbortSignal.timeout(init.unlimited ? 240_000 : 90_000),
+    });
+  } catch (e) {
+    const timeout = e instanceof Error && e.name === "TimeoutError";
+    throw new CalaError(timeout ? "Cala did not answer in time" : e instanceof Error ? e.message : String(e), timeout ? 504 : 503, "upstream");
+  } finally {
+    lane.release();
   }
+  if (process.env.CALA_LOG === "1") console.log(`[cala] ${name} ${path}${params.size ? `?${params}` : ""} -> ${res.status}`);
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    if (res.status === 429) throw new CalaError("Cala rate limit exceeded", 429, "rate_limited");
-    if (res.status === 402) {
-      gb.__calaNoCreditUntil = performance.timeOrigin + performance.now() + CREDIT_PAUSE_MS;
-      throw new CalaError("Cala credit balance is empty", 402, "no_credit");
-    }
-    if (res.status === 401 || res.status === 403) throw new CalaError("Cala rejected the API key", res.status, "missing_key");
-    if (res.status === 422) throw new CalaError(`Cala rejected the request: ${text.slice(0, 300)}`, 422, "invalid_request");
-    throw new CalaError(`Cala returned ${res.status}: ${text.slice(0, 300)}`, res.status, "upstream");
+    const body = (await res.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null;
+    const code = body?.error?.code as CalaError["kind"] | undefined;
+    const kind: CalaError["kind"] = code && KINDS.has(code) ? code : "upstream";
+    const message = body?.error?.message ?? `Backend returned ${res.status} for a Cala request`;
+    if (kind === "no_credit") gb.__calaNoCreditUntil = performance.timeOrigin + performance.now() + CREDIT_PAUSE_MS;
+    throw new CalaError(message, res.status, kind);
   }
   return (await res.json()) as T;
 }

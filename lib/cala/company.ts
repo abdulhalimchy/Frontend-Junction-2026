@@ -1,7 +1,6 @@
 import "server-only";
 import type { CompanyMatch, CompanyProfile, MarketData, Money, Source, Sourced } from "@/lib/types";
 import {
-  assertCalaKey,
   knowledgeQuery,
   retrieveEntity,
   searchEntities,
@@ -33,7 +32,6 @@ export { normaliseName };
  * would flag every market phrase ("climate tech") as a company.
  */
 export async function findCompanies(text: string): Promise<{ exact: CompanyMatch[]; all: CompanyMatch[] }> {
-  assertCalaKey();
   const res = await searchEntities(text.slice(0, 100), ["Company", "Organization"], 8);
   const all = res.entities.map((e) => ({ id: e.id, name: e.name, entityType: e.entity_type, description: e.description ?? null }));
   const target = normaliseName(text);
@@ -41,7 +39,6 @@ export async function findCompanies(text: string): Promise<{ exact: CompanyMatch
 }
 
 export async function fetchCompanyProfile(id: string): Promise<CompanyProfile> {
-  assertCalaKey();
   // Same request shape as every other company view, so it shares their cache entry.
   const e = await retrieveEntity(id, { properties: COMPANY_PROPS, relationships: COMPANY_RELATIONSHIPS });
   const base = await toMarketCompany(e);
@@ -118,7 +115,6 @@ const PEOPLE_QUERY = {
 
 /** People and events for a company page: one extra Cala call per company, cached for 7 days. */
 export async function fetchCompanyPeople(id: string): Promise<CompanyPeople> {
-  assertCalaKey();
   const e = await retrieveEntity(id, PEOPLE_QUERY);
   const inc = e.relationships.incoming;
   const person = (r: RelationshipEdge, role: string): PersonLink => ({

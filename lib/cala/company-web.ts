@@ -1,6 +1,6 @@
 import "server-only";
 import type { Source } from "@/lib/types";
-import { assertCalaKey, knowledgeSearch, type KnowBit } from "./client";
+import { knowledgeSearch, type KnowBit } from "./client";
 import { cite } from "./citations";
 
 // Gaps in a company's Cala record, filled from Cala's knowledge search (web sources). One search per
@@ -30,7 +30,6 @@ export type WebGapRequest = {
 };
 
 export async function fetchWebFacts(req: WebGapRequest): Promise<{ facts: WebFact[]; unanswered: WebGap[] }> {
-  assertCalaKey();
   const items: [WebFactKey, string][] = [];
   if (req.gaps.includes("employees")) items.push(["employees", "latest total number of employees, with the date it applies to"]);
   if (req.gaps.includes("totalFunding")) items.push(["totalFunding", "total capital raised from investors to date, with currency (before any IPO for public companies)"]);

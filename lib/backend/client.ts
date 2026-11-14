@@ -21,6 +21,9 @@ export class BackendError extends Error {
 }
 
 let token: { access: string; at: number } | null = null;
+// performance clock, not Date.now(): Cache Components forbids Date.now() during prerendering, and the Cala
+// gateway path below can run there.
+const now = () => performance.timeOrigin + performance.now();
 const TOKEN_TTL_MS = 10 * 60 * 1000; // backend access tokens last 15 minutes by default
 
 async function authenticate(): Promise<string> {
@@ -35,7 +38,7 @@ async function authenticate(): Promise<string> {
   if (res.status === 401) res = await post("/accounts/auth/register/", { email, password, full_name: "Demo user", role: "founder" }).catch(unreachable);
   if (!res.ok) throw new BackendError(`Backend sign-in failed (${res.status}). Check BACKEND_DEMO_EMAIL / BACKEND_DEMO_PASSWORD.`, res.status);
   const { access } = (await res.json()) as { access: string };
-  token = { access, at: Date.now() };
+  token = { access, at: now() };
   return access;
 }
 
@@ -43,23 +46,45 @@ function unreachable(): never {
   throw new BackendError(`Cannot reach the backend at ${BASE}. Is it running? (python manage.py runserver)`, 503);
 }
 
+// One sign-in at a time: requests that need a token while one is being fetched wait for it.
+let signingIn: Promise<string> | null = null;
+
 async function getToken(force = false) {
-  return !force && token && Date.now() - token.at < TOKEN_TTL_MS ? token.access : authenticate();
+  if (!force && token && now() - token.at < TOKEN_TTL_MS) return token.access;
+  signingIn ??= authenticate().finally(() => {
+    signingIn = null;
+  });
+  return signingIn;
 }
 
 /** Authenticated fetch against /api/v1. Retries once with a fresh token on 401. */
 export async function backendFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  // Backend data is per user and per request: never prerender it (Cache Components would otherwise trip
-  // over Date.now() in the token cache).
+  // Backend data is per user and per request: never prerender it.
   await connection();
-  const send = async (force: boolean) =>
+  return send(path, init);
+}
+
+/**
+ * Like backendFetch, without marking the render dynamic. Only for the Cala gateway (lib/cala/client.ts):
+ * its results are shared across renders by the Cala cache, so a request must not be tied to the render that
+ * started it, just as a direct fetch to Cala was not.
+ */
+export function backendFetchShared(path: string, init: RequestInit = {}): Promise<Response> {
+  return send(path, init);
+}
+
+async function send(path: string, init: RequestInit): Promise<Response> {
+  const once = async (force: boolean) =>
     fetch(`${API}${path}`, {
       ...init,
       cache: "no-store",
       headers: { ...init.headers, Authorization: `Bearer ${await getToken(force)}` },
-    }).catch(unreachable);
-  const res = await send(false);
-  return res.status === 401 ? send(true) : res;
+    }).catch((e: unknown) => {
+      if (e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError")) throw e;
+      return unreachable();
+    });
+  const res = await once(false);
+  return res.status === 401 ? once(true) : res;
 }
 
 /** The backend's error envelope is { error: { message, details } }. */

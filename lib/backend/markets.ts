@@ -1,10 +1,10 @@
 import "server-only";
 import { memoCala } from "@/lib/cala/client";
-import type { Money, Source } from "@/lib/types";
+import type { MarketCompany, Money, Source } from "@/lib/types";
 import { backendError, backendFetch } from "./client";
 
-// LLM steps of a market analysis, run by the backend (/api/v1/markets/), like deck checks. Cala stays here:
-// the frontend fetches and caches the Cala facts, the backend writes and checks the text from them.
+// Market analysis runs in the backend (/api/v1/markets/): it asks Cala, has the LLM write and check the
+// summary, and stores every report as the user's history. This file is the typed client for it.
 
 export type TokenUsage = { input: number; output: number; thinking: number; total: number };
 
@@ -100,4 +100,155 @@ export async function summariseMarket(input: { market: string; region: string; y
   const { fact_count, sizes, ...s } = await post<ApiSummary>("/markets/summary/", input);
   count(s.tokens);
   return { ...s, factCount: fact_count, sizes: sizes.map(({ fact_id, ...z }) => ({ ...z, factId: fact_id })) };
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Stored market analyses: the backend asks Cala, writes the summary, and keeps each report as the user's
+// history. Opening a stored report spends no Cala credit; refresh re-asks Cala and updates it.
+
+
+export type Evidence = { id: string; text: string; sources: Source[] };
+/** A question answered by Cala: its markdown summary plus every fact it rests on, each with its origin. */
+export type EvidenceSection = { question: string; summary: string; evidence: Evidence[]; fetchedAt?: number };
+export type PlayersSection = { definition: string; companies: MarketCompany[]; unresolved: number; fetchedAt?: number };
+export type SectionError = { message: string; kind: string };
+export type SectionName = "size" | "deals" | "trends" | "players" | "summary";
+
+export type MarketAnalysisRow = {
+  id: string;
+  sector: string;
+  typed: string;
+  region: string;
+  year: number;
+  status: "loading" | "ready" | "failed";
+  runs: number;
+  error: string;
+  headline: string;
+  playerCount: number;
+  createdAt: string;
+  updatedAt: string;
+  finishedAt: string | null;
+};
+
+export type MarketAnalysis = MarketAnalysisRow & {
+  startedAt: string | null;
+  changes: string[];
+  size?: EvidenceSection;
+  deals?: EvidenceSection;
+  trends?: EvidenceSection;
+  players?: PlayersSection;
+  summary?: ReportSummary & { fetchedAt?: number };
+  errors: Partial<Record<SectionName, SectionError>>;
+};
+
+type ApiRow = {
+  id: string;
+  sector: string;
+  typed: string;
+  region: string;
+  year: number;
+  status: MarketAnalysisRow["status"];
+  runs: number;
+  error: string;
+  headline: string;
+  player_count: number;
+  created_at: string;
+  updated_at: string;
+  finished_at: string | null;
+};
+type WithFetched = { fetched_at?: number };
+type ApiAnalysis = ApiRow & {
+  started_at: string | null;
+  changes: string[];
+  data: {
+    size?: EvidenceSection & WithFetched;
+    deals?: EvidenceSection & WithFetched;
+    trends?: EvidenceSection & WithFetched;
+    players?: PlayersSection & WithFetched;
+    summary?: ApiSummary & WithFetched;
+    errors?: MarketAnalysis["errors"];
+  };
+};
+
+function toRow(r: ApiRow): MarketAnalysisRow {
+  return {
+    id: r.id,
+    sector: r.sector,
+    typed: r.typed,
+    region: r.region,
+    year: r.year,
+    status: r.status,
+    runs: r.runs,
+    error: r.error,
+    headline: r.headline,
+    playerCount: r.player_count,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    finishedAt: r.finished_at,
+  };
+}
+
+function section<T extends object>(s: (T & WithFetched) | undefined): (T & { fetchedAt?: number }) | undefined {
+  if (!s) return undefined;
+  const { fetched_at, ...rest } = s;
+  return { ...(rest as T), fetchedAt: fetched_at };
+}
+
+function toAnalysis(a: ApiAnalysis): MarketAnalysis {
+  const d = a.data ?? {};
+  let summary: MarketAnalysis["summary"];
+  if (d.summary) {
+    const { fact_count, sizes, fetched_at, ...s } = d.summary;
+    summary = { ...s, factCount: fact_count, sizes: sizes.map(({ fact_id, ...z }) => ({ ...z, factId: fact_id })), fetchedAt: fetched_at };
+  }
+  return {
+    ...toRow(a),
+    startedAt: a.started_at,
+    changes: a.changes ?? [],
+    size: section(d.size),
+    deals: section(d.deals),
+    trends: section(d.trends),
+    players: section(d.players),
+    summary,
+    errors: d.errors ?? {},
+  };
+}
+
+async function call<T>(path: string, method: "GET" | "POST" | "DELETE", body?: unknown): Promise<T> {
+  const res = await backendFetch(path, {
+    method,
+    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!res.ok) throw await backendError(res);
+  return (res.status === 204 ? null : await res.json()) as T;
+}
+
+/**
+ * Opens the analysis of typed market text: the backend checks the text (unless force), then returns the stored
+ * analysis for that market, starting it if it never ran. analysis is null when the text is not a market.
+ */
+export async function openMarketAnalysis(input: { text: string; region: string; force?: boolean }) {
+  const res = await call<{ verdict: GuardVerdict; analysis: ApiAnalysis | null }>("/markets/analyses/", "POST", input);
+  return { verdict: res.verdict, analysis: res.analysis ? toAnalysis(res.analysis) : null };
+}
+
+export async function getMarketAnalysis(id: string) {
+  return toAnalysis(await call<ApiAnalysis>(`/markets/analyses/${encodeURIComponent(id)}/`, "GET"));
+}
+
+export async function listMarketAnalyses() {
+  return (await call<ApiRow[]>("/markets/analyses/", "GET")).map(toRow);
+}
+
+export async function refreshMarketAnalysis(id: string) {
+  return toAnalysis(await call<ApiAnalysis>(`/markets/analyses/${encodeURIComponent(id)}/refresh/`, "POST"));
+}
+
+export async function deleteMarketAnalysis(id: string) {
+  await call<null>(`/markets/analyses/${encodeURIComponent(id)}/`, "DELETE");
+}
+
+export async function clearMarketAnalyses() {
+  return (await call<{ deleted: number }>("/markets/analyses/", "DELETE")).deleted;
 }

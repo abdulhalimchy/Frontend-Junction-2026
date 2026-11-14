@@ -1,6 +1,6 @@
 import "server-only";
 import type { FundingRound, Source } from "@/lib/types";
-import { assertCalaKey, retrieveEntity, toSources } from "./client";
+import { retrieveEntity, toSources } from "./client";
 import { ROUND_PROPS, parseRound } from "./market";
 
 // One funding round with its participants: who raised it (ISSUER), who led it (is_lead) and who joined.
@@ -16,7 +16,6 @@ export type RoundDetail = {
 };
 
 export async function fetchRoundDetail(id: string, fallbackName = "Funding round"): Promise<RoundDetail> {
-  assertCalaKey();
   const r = await retrieveEntity(id, {
     properties: ROUND_PROPS,
     relationships: { incoming: { PARTICIPATES_IN_FUNDING_ROUND: { limit: 25 } } },

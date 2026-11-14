@@ -253,7 +253,7 @@ export function MarketError({ error }: { error: unknown }) {
     missing_key: {
       icon: KeyRound,
       title: "Cala API key missing or rejected",
-      description: "Add CALA_API_KEY to .env.local and restart the dev server, or set USE_MOCKS=true to use fixture data.",
+      description: "Cala is called by the backend: set CALA_API_KEY in the backend's .env and restart it, or set USE_MOCKS=true here to use fixture data.",
     },
     rate_limited: { icon: AlertCircle, title: "Cala rate limit reached", description: "Wait a minute and reload. Results are cached once they load." },
     no_credit: {

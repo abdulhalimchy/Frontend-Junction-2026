@@ -1,6 +1,6 @@
 import "server-only";
 import type { Source, Sourced } from "@/lib/types";
-import { assertCalaKey, retrieveEntity, toSources, type RelationshipEdge } from "./client";
+import { retrieveEntity, toSources, type RelationshipEdge } from "./client";
 import { companyCountries, labelise, sourced } from "./market";
 import { fetchRoundDetail, type RoundDetail } from "./rounds";
 
@@ -66,7 +66,6 @@ const QUERY = {
 };
 
 export async function fetchInvestorProfile(id: string): Promise<InvestorProfile> {
-  assertCalaKey();
   const e = await retrieveEntity(id, QUERY);
   const out = e.relationships.outgoing;
   const inc = e.relationships.incoming;

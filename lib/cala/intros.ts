@@ -1,7 +1,7 @@
 import "server-only";
 import type { Source } from "@/lib/types";
 import { normaliseName } from "@/lib/names";
-import { assertCalaKey, mapLimit, retrieveEntity, toSources, type RelationshipEdge } from "./client";
+import { mapLimit, retrieveEntity, toSources, type RelationshipEdge } from "./client";
 import { fetchRoundDetail } from "./rounds";
 import { slushAttendeeIndex } from "./slush";
 
@@ -165,7 +165,6 @@ function linkBetween(a: Ties, t: Ties, skip: Set<string> = new Set()): { link: L
 }
 
 export async function findIntroPaths(fromId: string, toId: string): Promise<IntroResult> {
-  assertCalaKey();
   const [f, t, slush] = await Promise.all([loadTies(fromId), loadTies(toId), slushAttendeeIndex().catch(() => null)]);
   const node = (x: Ties): Node => ({
     id: x.id,

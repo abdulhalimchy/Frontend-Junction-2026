@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Building2, LineChart, Search } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, History, LineChart, Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -55,7 +55,7 @@ async function Analysis({ searchParams }: PageProps<"/market">) {
       />
       <CompanySearch text={companyId ? "" : text} region={region} companyId={companyId} />
       {mocksEnabled() ? (
-        <EmptyState icon={Building2} title="Company analysis needs live Cala data" description="Set USE_MOCKS=false and add CALA_API_KEY to .env.local." />
+        <EmptyState icon={Building2} title="Company analysis needs live Cala data" description="Set USE_MOCKS=false in .env.local. Cala itself is called by the backend (CALA_API_KEY in its .env)." />
       ) : companyId ? (
         <Suspense key={`${companyId}|${region}`} fallback={<ResultsLoading />}>
           <CompanyAnalysis id={companyId} region={region} />
@@ -86,6 +86,11 @@ function Chooser() {
       <PageHeader
         title="Market analysis"
         description="Choose what to analyse. Every number comes from Cala with its sources; equity and grants are kept apart and currencies are never converted."
+        actions={
+          <Link href="/market/history" className="flex h-9 items-center gap-1.5 rounded-lg border bg-card px-3 text-sm hover:bg-muted">
+            <History className="size-4" /> History
+          </Link>
+        }
       />
       <div className="grid grid-cols-2 gap-6">
         <ChoiceCard
@@ -97,7 +102,7 @@ function Chooser() {
           button="Analyse market"
           withRegion="nordics"
           presets={MARKET_PRESETS.map((t) => ({ label: t, href: `/market/report?${new URLSearchParams({ sector: t, region: "nordics" })}` }))}
-          note="A new market takes about a minute and uses 4 Cala questions; repeat views are free."
+          note="A new market takes about a minute and uses 4 Cala questions. Reports are saved to your history, so reopening one is free."
         />
         <ChoiceCard
           icon={Building2}

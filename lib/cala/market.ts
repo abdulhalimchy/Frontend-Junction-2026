@@ -2,7 +2,6 @@ import "server-only";
 import { normaliseName } from "@/lib/names";
 import type { FundingRound, FuzzyDate, MarketCompany, MarketData, MarketQuery, Sourced } from "@/lib/types";
 import {
-  assertCalaKey,
   knowledgeQuery,
   mapLimit,
   retrieveEntity,
@@ -94,7 +93,6 @@ function rowName(r: Record<string, unknown>) {
 }
 
 export async function fetchMarket(input: MarketQuery): Promise<MarketData> {
-  assertCalaKey();
   const q = { ...input, sector: normaliseSector(input.sector) };
   const definition = marketDefinition(q);
   const res = await knowledgeQuery(definition);

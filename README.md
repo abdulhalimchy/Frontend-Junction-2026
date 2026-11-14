@@ -26,7 +26,7 @@ app/(app)/             the app (AppShell: sidebar + top bar with ⌘K)
 components/warmline/   shared components: SourceChip, TrustBadge, StatCard, FactGrid,
                        FundingTimeline, DataTable, SlushTag, EmptyState, shells
 components/ui/         shadcn/ui primitives
-lib/cala/client.ts     typed Cala REST client (X-API-KEY, cached with "use cache")
+lib/cala/client.ts     typed Cala client: calls the backend's /api/v1/cala/ gateway (the key lives there), cached
 lib/cala/market.ts     live market data: knowledge_query for candidates, sourced entities for every number
 lib/market.ts          market aggregation (shared by live and mock data)
 lib/cala/index.ts      data functions; getMarket is live, the rest still return mocks
