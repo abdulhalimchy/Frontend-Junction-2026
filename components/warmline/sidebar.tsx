@@ -9,19 +9,20 @@ import {
   Handshake,
   House,
   LineChart,
-  Rocket,
   Route,
   Search,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import type { Role } from "@/lib/types";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import type { Role, StartupSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
 import { RoleSwitch } from "./role-switch";
+import { StartupNav } from "./startup-nav";
 
-type Item = { href: string; match: string; label: string; icon: typeof House; badge?: number; slush?: boolean };
+type Item = { href: string; match: string; label: string; icon: typeof House; badge?: number; slush?: boolean; startups?: boolean };
 
 function navFor(role: Role, unread: number): Item[] {
   const top: Item[] = [
@@ -32,7 +33,7 @@ function navFor(role: Role, unread: number): Item[] {
   ];
   const roleItems: Item[] =
     role === "founder"
-      ? [{ href: "/startup/overview", match: "/startup", label: "My startup", icon: Rocket }]
+      ? [{ href: "/startup/overview", match: "/startup", label: "My startup", icon: House, startups: true }]
       : [
           { href: "/portfolio", match: "/portfolio", label: "Portfolio", icon: BriefcaseBusiness },
           { href: "/deck-check", match: "/deck-check", label: "Deck check", icon: FileSearch },
@@ -57,18 +58,44 @@ const liveItems = (unread: number): Item[] => [
   { href: "/events/slush-2026/overview", match: "/events", label: "Slush 2026", icon: CalendarDays, slush: true },
 ];
 
+type StartupsProp = { items: StartupSummary[]; activeId: string; error: string | null };
+
 export function Sidebar(
-  props: { live: true; unread: number } | { live?: false; role: Role; unread: number; user: { name: string; org: string } },
+  props:
+    | { live: true; unread: number }
+    | {
+        live?: false;
+        role: Role;
+        unread: number;
+        user: { name: string; org: string };
+        /** Founder only: the startups listed under "My startup". */
+        startups?: StartupsProp;
+      },
 ) {
   const pathname = usePathname();
+  const params = useSearchParams();
+  const startups = props.live ? undefined : props.startups;
   // Live mode (DEMO_DATA=off): only the pages backed by real data (Cala, the backend).
   const items: Item[] = props.live ? liveItems(props.unread) : navFor(props.role, props.unread);
+  // The startup on screen: the URL's on My startup pages, else the last one chosen.
+  const [chosen, setChosen] = useState(startups?.activeId ?? "");
+  const fromUrl = pathname.startsWith("/startup") ? params.get("s") : null;
+  const current = startups?.items.some((s) => s.id === fromUrl) ? fromUrl! : chosen;
+  const org = props.live
+    ? ""
+    : startups
+      ? (startups.items.find((s) => s.id === current)?.name ?? props.user.org)
+      : props.user.org;
 
   return (
     <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r bg-card/60 px-3 py-4">
       <Logo className="px-2" />
       <nav className="mt-6 flex flex-col gap-0.5">
         {items.map((it) => {
+          if (it.startups && startups)
+            return (
+              <StartupNav key={it.href} startups={startups.items} activeId={current} onChoose={setChosen} loadError={startups.error} />
+            );
           const active = pathname.startsWith(it.match);
           return (
             <Link
@@ -114,7 +141,7 @@ export function Sidebar(
             </span>
             <span className="min-w-0">
               <span className="block truncate text-[13px] font-medium">{props.user.name}</span>
-              <span className="block truncate text-[11px] text-muted-foreground">{props.user.org}</span>
+              <span className="block truncate text-[11px] text-muted-foreground">{org}</span>
             </span>
           </Link>
         </div>

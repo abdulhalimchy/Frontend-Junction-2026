@@ -35,18 +35,23 @@ export async function getDeckCheckById(id: string): Promise<DeckCheckResult> {
   return toResult(await res.json());
 }
 
-/** The newest deck check, with its claims. null when nothing has been uploaded yet. */
-export async function getLatestDeckCheck(): Promise<DeckCheckResult | null> {
-  const res = await backendFetch("/deck-checks/?page_size=1");
+/**
+ * The newest deck check, with its claims. null when nothing has been uploaded yet.
+ * startupId scopes it to one startup (null: decks with no startup, i.e. the demo company); undefined: any deck.
+ */
+export async function getLatestDeckCheck(startupId?: string | null): Promise<DeckCheckResult | null> {
+  const scope = startupId === undefined ? "" : `&startup=${encodeURIComponent(startupId ?? "none")}`;
+  const res = await backendFetch(`/deck-checks/?page_size=1${scope}`);
   if (!res.ok) throw await backendError(res);
   const latest = ((await res.json()) as { results: ApiDeckCheck[] }).results[0];
   return latest ? getDeckCheckById(latest.id) : null;
 }
 
-export async function uploadDeck(file: File, companyName: string): Promise<DeckCheckResult> {
+export async function uploadDeck(file: File, companyName: string, startupId?: string): Promise<DeckCheckResult> {
   const form = new FormData();
   form.append("file", file, file.name);
   if (companyName) form.append("company_name", companyName);
+  if (startupId) form.append("startup", startupId);
   const res = await backendFetch("/deck-checks/", { method: "POST", body: form });
   if (!res.ok) throw await backendError(res);
   return toResult(await res.json());
