@@ -1,0 +1,114 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* Warmline design tokens. Light mode only; these are the source of truth for colour and type. */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-inter);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Warmline-specific */
+  --color-teal: var(--teal);
+  --color-teal-soft: var(--teal-soft);
+  --color-slush: var(--slush);
+  --color-slush-soft: var(--slush-soft);
+  --color-slush-foreground: var(--slush-foreground);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-subtle: var(--subtle);
+
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.34);
+  --radius-2xl: calc(var(--radius) * 1.67);
+}
+
+:root {
+  --radius: 0.75rem; /* 12px cards; xl = 16px */
+
+  --background: #faf7f2;
+  --foreground: #16181a;
+  --card: #ffffff;
+  --card-foreground: #16181a;
+  --popover: #ffffff;
+  --popover-foreground: #16181a;
+
+  --primary: #0f6e6e;
+  --primary-foreground: #ffffff;
+  --secondary: #f3efe8;
+  --secondary-foreground: #16181a;
+  --muted: #f3efe8;
+  --muted-foreground: #6b6862;
+  --subtle: #9a968e;
+  --accent: #e8f1f0;
+  --accent-foreground: #0b5555;
+  --destructive: #b42318;
+  --border: #e9e3d9;
+  --input: #e2dbcf;
+  --ring: #0f6e6e;
+
+  --teal: #0f6e6e;
+  --teal-soft: #e8f1f0;
+  --slush: #f2b33d;
+  --slush-soft: #fdf3df;
+  --slush-foreground: #7a5200;
+  --success: #1f7a4d;
+  --success-soft: #e7f4ec;
+  --warning: #9a5b00;
+  --warning-soft: #fbf0dc;
+
+  /* Charts: teal family for equity, warm grey for grants. Never mix them in one series. */
+  --chart-1: #0f6e6e;
+  --chart-2: #5fa3a3;
+  --chart-3: #b7d3d1;
+  --chart-4: #a89f91;
+  --chart-5: #d8d1c5;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv11", "ss01";
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
