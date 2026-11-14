@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { SlushTag } from "@/components/warmline/badges";
 import { EmptyState, EntityAvatar, PageHeader, Panel } from "@/components/warmline/blocks";
 import { searchEntity } from "@/lib/cala";
+import { calaErrorKind, mocksEnabled } from "@/lib/cala/client";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Search" };
@@ -22,20 +23,37 @@ async function SearchPageContent({ searchParams }: PageProps<"/search">) {
   const sp = await searchParams;
   const q = typeof sp.q === "string" ? sp.q : "";
   const type = typeof sp.type === "string" ? sp.type : "all";
-  const all = await searchEntity(q);
+  const live = !mocksEnabled();
+  let all: Awaited<ReturnType<typeof searchEntity>> = [];
+  let problem: string | null = null;
+  try {
+    all = await searchEntity(q);
+  } catch (e) {
+    const kind = calaErrorKind(e);
+    problem =
+      kind === "missing_key" ? "Cala is not configured on this server." : kind === "no_credit" ? "The Cala credit balance is empty." : "Could not reach Cala. Try again.";
+  }
   const hits = type === "all" ? all : all.filter((h) => h.type === type);
 
   return (
     <>
-      <PageHeader title="Search" description="Companies, investors and people from Cala's knowledge graph. Matching uses descriptions, not just industry codes." />
+      <PageHeader
+        title="Search"
+        description={
+          live
+            ? "Companies and organisations in Cala's knowledge graph, matched on name. Investor firms are companies too; their page shows their deals."
+            : "Companies, investors and people from Cala's knowledge graph. Matching uses descriptions, not just industry codes."
+        }
+      />
       <form action="/search" className="relative mb-4">
         <SearchIcon className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input name="q" defaultValue={q} placeholder="Try “hull inspection”, “Fjord” or “Bergen”" className="h-11 rounded-xl bg-card pl-10 text-[15px]" />
+        <Input name="q" defaultValue={q} placeholder={live ? "Try “Planhat”, “Creandum” or “Wolt”" : "Try “hull inspection”, “Fjord” or “Bergen”"} className="h-11 rounded-xl bg-card pl-10 text-[15px]" />
         {type !== "all" && <input type="hidden" name="type" value={type} />}
       </form>
       <div className="mb-5 flex gap-2">
         {FILTERS.map((f) => {
           const count = f.key === "all" ? all.length : all.filter((h) => h.type === f.key).length;
+          if (live && f.key !== "all" && !count && type !== f.key) return null; // hide types live search never returns
           const params = new URLSearchParams({ ...(q && { q }), ...(f.key !== "all" && { type: f.key }) });
           return (
             <Link
@@ -72,8 +90,16 @@ async function SearchPageContent({ searchParams }: PageProps<"/search">) {
               );
             })}
           </ul>
+        ) : problem ? (
+          <EmptyState icon={SearchIcon} title="Search is unavailable" description={problem} />
+        ) : live && q.trim().length < 2 ? (
+          <EmptyState icon={SearchIcon} title="Search Cala" description="Type a company or investor name. Results come from Cala's knowledge graph." />
         ) : (
-          <EmptyState icon={SearchIcon} title={`Nothing on record for “${q}”`} description="Try describing what the company does instead of its name." />
+          <EmptyState
+            icon={SearchIcon}
+            title={`Nothing on record for “${q}”`}
+            description={live ? "Live search matches names. To find companies by what they do, use Market." : "Try describing what the company does instead of its name."}
+          />
         )}
       </Panel>
     </>

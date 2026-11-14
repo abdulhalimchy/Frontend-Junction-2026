@@ -2,12 +2,14 @@
 
 import {
   Bell,
+  Bookmark,
   BriefcaseBusiness,
   CalendarDays,
   FileSearch,
   Handshake,
   House,
   LineChart,
+  Route,
   Search,
   UserRound,
 } from "lucide-react";
@@ -27,6 +29,7 @@ function navFor(role: Role, unread: number): Item[] {
     { href: "/home", match: "/home", label: "Home", icon: House },
     { href: "/search", match: "/search", label: "Search", icon: Search },
     { href: "/market", match: "/market", label: "Market", icon: LineChart },
+    { href: "/intros", match: "/intros", label: "Warm intros", icon: Route },
   ];
   const roleItems: Item[] =
     role === "founder"
@@ -36,6 +39,7 @@ function navFor(role: Role, unread: number): Item[] {
           { href: "/deck-check", match: "/deck-check", label: "Deck check", icon: FileSearch },
         ];
   const rest: Item[] = [
+    { href: "/watchlist", match: "/watchlist", label: "Watch list", icon: Bookmark },
     { href: "/met", match: "/met", label: "Met", icon: Handshake },
     { href: "/alerts", match: "/alerts", label: "Alerts", icon: Bell, badge: unread || undefined },
     { href: "/events/slush-2026/overview", match: "/events", label: "Events", icon: CalendarDays, slush: true },
@@ -44,26 +48,44 @@ function navFor(role: Role, unread: number): Item[] {
   return [...top, ...roleItems, ...rest];
 }
 
-export function Sidebar({
-  role,
-  unread,
-  user,
-  startups,
-}: {
-  role: Role;
-  unread: number;
-  user: { name: string; org: string };
-  /** Founder only: the startups listed under "My startup". */
-  startups?: { items: StartupSummary[]; activeId: string; error: string | null };
-}) {
+const liveItems = (unread: number): Item[] => [
+  { href: "/search", match: "/search", label: "Search", icon: Search },
+  { href: "/market", match: "/market", label: "Market", icon: LineChart },
+  { href: "/intros", match: "/intros", label: "Warm intros", icon: Route },
+  { href: "/deck-check", match: "/deck-check", label: "Deck check", icon: FileSearch },
+  { href: "/watchlist", match: "/watchlist", label: "Watch list", icon: Bookmark },
+  { href: "/alerts", match: "/alerts", label: "Alerts", icon: Bell, badge: unread || undefined },
+  { href: "/events/slush-2026/overview", match: "/events", label: "Slush 2026", icon: CalendarDays, slush: true },
+];
+
+type StartupsProp = { items: StartupSummary[]; activeId: string; error: string | null };
+
+export function Sidebar(
+  props:
+    | { live: true; unread: number }
+    | {
+        live?: false;
+        role: Role;
+        unread: number;
+        user: { name: string; org: string };
+        /** Founder only: the startups listed under "My startup". */
+        startups?: StartupsProp;
+      },
+) {
   const pathname = usePathname();
   const params = useSearchParams();
-  const items = navFor(role, unread);
+  const startups = props.live ? undefined : props.startups;
+  // Live mode (DEMO_DATA=off): only the pages backed by real data (Cala, the backend).
+  const items: Item[] = props.live ? liveItems(props.unread) : navFor(props.role, props.unread);
   // The startup on screen: the URL's on My startup pages, else the last one chosen.
   const [chosen, setChosen] = useState(startups?.activeId ?? "");
   const fromUrl = pathname.startsWith("/startup") ? params.get("s") : null;
   const current = startups?.items.some((s) => s.id === fromUrl) ? fromUrl! : chosen;
-  const org = startups ? (startups.items.find((s) => s.id === current)?.name ?? user.org) : user.org;
+  const org = props.live
+    ? ""
+    : startups
+      ? (startups.items.find((s) => s.id === current)?.name ?? props.user.org)
+      : props.user.org;
 
   return (
     <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r bg-card/60 px-3 py-4">
@@ -95,28 +117,35 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="mt-auto space-y-3">
-        <div className="rounded-lg border border-slush/40 bg-slush-soft/50 p-3">
-          <div className="text-xs font-semibold text-slush-foreground">Slush 2026</div>
-          <div className="mt-0.5 text-[11px] text-slush-foreground/80">Helsinki · 18–19 Nov</div>
+      {props.live ? (
+        <div className="mt-auto rounded-lg border bg-card p-3 text-[11px] text-muted-foreground">
+          <div className="font-semibold text-foreground">Live Cala data</div>
+          Demo data is off (DEMO_DATA=off).
         </div>
-        <div className="px-1">
-          <div className="mb-1.5 text-[11px] font-medium text-subtle">View as (demo)</div>
-          <RoleSwitch role={role} />
+      ) : (
+        <div className="mt-auto space-y-3">
+          <div className="rounded-lg border border-slush/40 bg-slush-soft/50 p-3">
+            <div className="text-xs font-semibold text-slush-foreground">Slush 2026</div>
+            <div className="mt-0.5 text-[11px] text-slush-foreground/80">Helsinki · 18–19 Nov</div>
+          </div>
+          <div className="px-1">
+            <div className="mb-1.5 text-[11px] font-medium text-subtle">View as (demo)</div>
+            <RoleSwitch role={props.role} />
+          </div>
+          <Link href="/me" className="flex items-center gap-2 rounded-lg px-1 py-1 hover:bg-muted">
+            <span className="flex size-7 items-center justify-center rounded-full bg-teal-soft text-[11px] font-semibold text-accent-foreground">
+              {props.user.name
+                .split(" ")
+                .map((p) => p[0])
+                .join("")}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-[13px] font-medium">{props.user.name}</span>
+              <span className="block truncate text-[11px] text-muted-foreground">{org}</span>
+            </span>
+          </Link>
         </div>
-        <Link href="/me" className="flex items-center gap-2 rounded-lg px-1 py-1 hover:bg-muted">
-          <span className="flex size-7 items-center justify-center rounded-full bg-teal-soft text-[11px] font-semibold text-accent-foreground">
-            {user.name
-              .split(" ")
-              .map((p) => p[0])
-              .join("")}
-          </span>
-          <span className="min-w-0">
-            <span className="block truncate text-[13px] font-medium">{user.name}</span>
-            <span className="block truncate text-[11px] text-muted-foreground">{org}</span>
-          </span>
-        </Link>
-      </div>
+      )}
     </aside>
   );
 }

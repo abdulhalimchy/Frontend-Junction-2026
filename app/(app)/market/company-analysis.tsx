@@ -1,14 +1,16 @@
-import { Banknote, Building2, Coins, Globe, Landmark, MapPin, Users } from "lucide-react";
+import { Banknote, Building2, Globe, MapPin, Users } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Pill } from "@/components/warmline/badges";
-import { EmptyState, EntityAvatar, Panel, StatCard } from "@/components/warmline/blocks";
+import { EmptyState, EntityAvatar, Panel } from "@/components/warmline/blocks";
 import { DataTable, type Row } from "@/components/warmline/data-table";
 import { MarketError, MarketView, ResultsLoading } from "@/components/warmline/market-view";
 import { SourceChip } from "@/components/warmline/source-chip";
 import { fetchCompanyProfile, fetchCompetitorMarket } from "@/lib/cala/company";
+import { fetchCompanyExtras } from "@/lib/cala/company-extras";
+import { CompanyKeyFacts, CompanyKeyFactsSkeleton } from "@/components/warmline/company-facts";
 import { FILING_LABEL, regionOf } from "@/lib/cala/market";
-import { formatFuzzyDate, formatMoney, formatTotals, totalsByCurrency } from "@/lib/format";
+import { formatFuzzyDate, formatMoney, shortPlace } from "@/lib/format";
 import { groupInvestors, type InvestorGroup } from "@/lib/names";
 import type { CompanyProfile, FundingRound, Source } from "@/lib/types";
 
@@ -24,7 +26,11 @@ export async function CompanyAnalysis({ id, region }: { id: string; region: stri
   return (
     <>
       <Header p={profile} />
-      <FundingStats p={profile} />
+      <div className="mb-6">
+        <Suspense fallback={<CompanyKeyFactsSkeleton />}>
+          <KeyFacts p={profile} />
+        </Suspense>
+      </div>
       <div className="mb-6 grid grid-cols-3 gap-6">
         <Panel
           className="col-span-2"
@@ -84,7 +90,7 @@ async function Competitors({ profile, region }: { profile: CompanyProfile; regio
 
 export function Header({ p }: { p: CompanyProfile }) {
   const facts: { icon: typeof MapPin; label: string; value: string; sources: Source[] }[] = [];
-  if (p.hq) facts.push({ icon: MapPin, label: "Headquarters", value: p.hq.value, sources: p.hq.sources });
+  if (p.hq) facts.push({ icon: MapPin, label: "Headquarters", value: shortPlace(p.hq.value) || p.hq.value, sources: p.hq.sources });
   if (p.founded) facts.push({ icon: Building2, label: "Founded", value: formatFuzzyDate(p.founded.value), sources: p.founded.sources });
   if (p.employees) facts.push({ icon: Users, label: "Employees", value: p.employees.value, sources: p.employees.sources });
   if (p.website) facts.push({ icon: Globe, label: "Website", value: p.website.value, sources: p.website.sources });
@@ -154,43 +160,10 @@ export function Header({ p }: { p: CompanyProfile }) {
   );
 }
 
-export function FundingStats({ p }: { p: CompanyProfile }) {
-  const equity = totalsByCurrency(p.rounds, "equity");
-  const grants = totalsByCurrency(p.rounds, "grant");
-  const equityRounds = p.rounds.filter((r) => r.kind === "equity");
-  const grantRounds = p.rounds.filter((r) => r.kind === "grant");
-  return (
-    <div className="mb-6 grid grid-cols-4 gap-4">
-      <StatCard
-        label="Total funding (reported)"
-        value={p.totalFunding ? formatMoney(p.totalFunding.value) : "Not on record"}
-        icon={Banknote}
-        sources={p.totalFunding?.sources}
-        hint="Company total as reported, all instruments"
-      />
-      <StatCard
-        label="Excluding debt"
-        value={p.totalFundingExDebt ? formatMoney(p.totalFundingExDebt.value) : "Not on record"}
-        icon={Coins}
-        sources={p.totalFundingExDebt?.sources}
-        hint="Reported total minus loan facilities"
-      />
-      <StatCard
-        label="Equity rounds on record"
-        value={equity.length ? formatTotals(equity) : "None on record"}
-        icon={Coins}
-        sources={equityRounds.length ? dedupe(equityRounds.flatMap((r) => r.sources)) : undefined}
-        hint={`${equityRounds.length} round${equityRounds.length === 1 ? "" : "s"}, summed per currency`}
-      />
-      <StatCard
-        label="Grants on record"
-        value={grants.length ? formatTotals(grants) : "None on record"}
-        icon={Landmark}
-        sources={grantRounds.length ? dedupe(grantRounds.flatMap((r) => r.sources)) : undefined}
-        hint="Kept separate from equity"
-      />
-    </div>
-  );
+/** Same key facts as the company page; the listing (for "Public") comes from the cached extras. */
+async function KeyFacts({ p }: { p: CompanyProfile }) {
+  const extras = await fetchCompanyExtras(p.id).catch(() => null);
+  return <CompanyKeyFacts p={p} listing={extras?.listings[0]} />;
 }
 
 const KIND_LABEL = { equity: "Equity", grant: "Grant", other: "Debt or other" } as const;
@@ -253,8 +226,4 @@ export function InvestorList({ investors }: { investors: InvestorGroup[] }) {
       ))}
     </ul>
   );
-}
-
-function dedupe(sources: Source[]) {
-  return sources.filter((s, i, arr) => arr.findIndex((x) => x.name === s.name && x.document === s.document) === i);
 }

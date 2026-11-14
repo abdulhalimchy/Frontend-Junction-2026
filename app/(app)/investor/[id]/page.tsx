@@ -3,11 +3,13 @@ import Loading from "@/app/(app)/loading";
 import { AlertTriangle, CheckCircle2, CircleDashed, Handshake } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { demoDataEnabled } from "@/lib/demo";
 import { Button } from "@/components/ui/button";
 import { SlushTag, TrustBadge } from "@/components/warmline/badges";
 import { EntityAvatar, FactGrid, PageHeader, Panel } from "@/components/warmline/blocks";
 import { SourceChip } from "@/components/warmline/source-chip";
 import { CompanyTable } from "@/components/warmline/tables";
+import { WatchButton } from "@/components/warmline/watch-button";
 import { getCompanies, getInvestor, getPeople, getSimilarCompanies } from "@/lib/cala";
 import { formatFuzzyDate, formatMoney } from "@/lib/format";
 import { getProfile } from "@/lib/session";
@@ -24,14 +26,18 @@ export async function generateMetadata({ params }: PageProps<"/investor/[id]">) 
     const p = await fetchInvestorProfile(id).catch(() => null);
     return { title: p?.name ?? "Investor" };
   }
+  if (!demoDataEnabled()) return { title: "Not found" };
   const d = await getInvestor(id);
   return { title: d?.investor.name ?? "Investor" };
 }
 
-async function InvestorPageContent({ params }: PageProps<"/investor/[id]">) {
+async function InvestorPageContent({ params, searchParams }: PageProps<"/investor/[id]">) {
   const { id } = await params;
+  const { deals } = await searchParams;
   // Cala entity IDs show the live overview; the demo persona (fjord-ventures) keeps its mock page.
-  if (UUID.test(id)) return <LiveInvestor id={id} />;
+  if (UUID.test(id)) return <LiveInvestor id={id} showDeals={deals === "1"} />;
+  // DEMO_DATA=off: demo persona pages are hidden.
+  if (!demoDataEnabled()) notFound();
   const data = await getInvestor(id);
   if (!data) notFound();
   const { investor: i, check } = data;
@@ -69,11 +75,14 @@ async function InvestorPageContent({ params }: PageProps<"/investor/[id]">) {
           </span>
         }
         actions={
-          <Button variant="outline" className="bg-card" asChild>
-            <Link href="/met">
-              <Handshake /> Add to Met
-            </Link>
-          </Button>
+          <>
+            <WatchButton entityType="investor" calaId={i.id} name={i.name} />
+            <Button variant="outline" className="bg-card" asChild>
+              <Link href="/met">
+                <Handshake /> Add to Met
+              </Link>
+            </Button>
+          </>
         }
       />
 

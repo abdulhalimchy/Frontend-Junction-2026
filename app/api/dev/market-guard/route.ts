@@ -1,5 +1,5 @@
 import { knownMarkets } from "@/lib/cala/known-markets";
-import { checkMarketText } from "@/lib/llm/market-guard";
+import { checkMarketText } from "@/lib/backend/markets";
 
 // Development only: what the market-text guard decides for ?text=…, against the markets already analysed.
 export async function GET(req: Request) {

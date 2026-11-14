@@ -1,13 +1,15 @@
 import { Suspense } from "react";
 import Loading from "@/app/(app)/loading";
-import { Bookmark, FileSearch } from "lucide-react";
+import { FileSearch } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { demoDataEnabled } from "@/lib/demo";
 import { Button } from "@/components/ui/button";
 import { SlushTag } from "@/components/warmline/badges";
 import { EntityAvatar, PageHeader, Panel } from "@/components/warmline/blocks";
 import { CompanyOverview } from "@/components/warmline/company-overview";
 import { CompanyTable } from "@/components/warmline/tables";
+import { WatchButton } from "@/components/warmline/watch-button";
 import { getCompany, getSimilarCompanies } from "@/lib/cala";
 import { getRole } from "@/lib/session";
 import { fetchCompanyProfile } from "@/lib/cala/company";
@@ -21,6 +23,7 @@ export async function generateMetadata({ params }: PageProps<"/company/[id]">) {
     const p = await fetchCompanyProfile(id).catch(() => null);
     return { title: p?.name ?? "Company" };
   }
+  if (!demoDataEnabled()) return { title: "Not found" };
   const c = await getCompany(id);
   return { title: c?.name ?? "Company" };
 }
@@ -29,6 +32,8 @@ async function CompanyPageContent({ params }: PageProps<"/company/[id]">) {
   const { id } = await params;
   // Cala entity IDs show the live overview; the demo personas (e.g. northlight-robotics) keep their mock page.
   if (UUID.test(id)) return <LiveCompany id={id} />;
+  // DEMO_DATA=off: demo persona pages are hidden.
+  if (!demoDataEnabled()) notFound();
   const [c, similar, role] = await Promise.all([getCompany(id), getSimilarCompanies(id), getRole()]);
   if (!c) notFound();
 
@@ -56,9 +61,7 @@ async function CompanyPageContent({ params }: PageProps<"/company/[id]">) {
         }
         actions={
           <>
-            <Button variant="outline" className="bg-card">
-              <Bookmark /> Watch
-            </Button>
+            <WatchButton entityType="company" calaId={c.id} name={c.name} />
             {role === "investor" && (
               <Button asChild>
                 <Link href="/deck-check">

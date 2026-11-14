@@ -4,10 +4,12 @@ import { companies, competitorsOf } from "@/lib/mocks/companies";
 import { investorChecks, investors, people } from "@/lib/mocks/investors";
 import { slushEvent } from "@/lib/mocks/misc";
 import { mockMarket } from "@/lib/mocks/market";
-import { mocksEnabled } from "./client";
-import { fetchMarket } from "./market";
+import { assertCalaKey, mocksEnabled, searchEntities } from "./client";
+import { fetchMarket, normaliseName } from "./market";
+import { slushAttendeeIndex } from "./slush";
 
-// Market (getMarket) is live from Cala; see ./market.ts. Everything else still returns fixtures from lib/mocks.
+// Market (getMarket) and search (searchEntity) are live from Cala; see ./market.ts. The live Slush event
+// space is in ./slush.ts. Everything else still returns fixtures from lib/mocks.
 // Phase 3 replaces the bodies with real Cala calls (entity_search, entity_lookup, entity_retrieval,
 // entity_introspection) behind the USE_MOCKS flag, keeping these signatures.
 
@@ -16,7 +18,30 @@ export type SearchHit =
   | { type: "investor"; id: string; name: string; subtitle: string; attendsSlush: boolean }
   | { type: "person"; id: string; name: string; subtitle: string; href: string };
 
-export async function searchEntity(query: string): Promise<SearchHit[]> {
+/**
+ * Companies matching the text, from Cala's fuzzy name search (entity_search). Live unless USE_MOCKS=true.
+ * Cala types investors as companies too, so live hits are all "company"; their pages detect investing
+ * activity. People are left out until there is a live person page to link to.
+ */
+export async function searchEntity(query: string, limit = 20): Promise<SearchHit[]> {
+  if (mocksEnabled()) return searchMockEntities(query);
+  const q = query.trim();
+  if (q.length < 2) return [];
+  assertCalaKey();
+  const [res, slush] = await Promise.all([
+    searchEntities(q.slice(0, 100), ["Company", "Organization"], limit),
+    slushAttendeeIndex().catch(() => null), // the Slush tag is a nice-to-have; search works without it
+  ]);
+  return res.entities.map((e) => ({
+    type: "company" as const,
+    id: e.id,
+    name: e.name,
+    subtitle: e.description ?? (e.entity_type === "Organization" ? "Organisation" : "Company"),
+    attendsSlush: !!slush && (slush.ids.has(e.id) || slush.names.has(normaliseName(e.name))),
+  }));
+}
+
+function searchMockEntities(query: string): SearchHit[] {
   const q = query.trim().toLowerCase();
   const match = (...fields: string[]) => !q || fields.some((f) => f.toLowerCase().includes(q));
   const hits: SearchHit[] = [];

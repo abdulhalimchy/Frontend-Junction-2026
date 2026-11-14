@@ -2,10 +2,11 @@ import "server-only";
 import { cookies } from "next/headers";
 import type { Role, StartupSummary } from "@/lib/types";
 import { getCompany } from "@/lib/cala";
+import { getUnreadCount, listAlerts } from "@/lib/backend/alerts";
 import { listStartups } from "@/lib/backend/startups";
 import { DEMO_STARTUP_ID, STARTUP_COOKIE } from "@/lib/startup-cookie";
 import { getLatestDeckCheck } from "@/lib/backend/deck-checks";
-import { alerts, metByRole, profiles } from "@/lib/mocks/misc";
+import { metByRole, profiles } from "@/lib/mocks/misc";
 
 // Phase 1: the role lives in a cookie so it can be switched from the UI.
 // Phase 2 reads the signed-in user and their profile from Supabase instead.
@@ -21,9 +22,18 @@ export async function getProfile() {
   return profiles[await getRole()];
 }
 
+/** The user's alerts from the backend (created by its alert scan), or a readable error. */
 export async function getAlerts() {
-  const role = await getRole();
-  return alerts.filter((a) => a.roles.includes(role)).sort((a, b) => b.date.localeCompare(a.date));
+  try {
+    return { alerts: await listAlerts(), error: null };
+  } catch (e) {
+    return { alerts: [], error: e instanceof Error ? e.message : "Could not load alerts." };
+  }
+}
+
+/** For the sidebar badge. 0 when the backend is unavailable, so the shell never fails over a badge. */
+export async function getUnread() {
+  return getUnreadCount().catch(() => 0);
 }
 
 export async function getMet() {

@@ -1,15 +1,36 @@
 import { companies } from "@/lib/mocks/companies";
 import { investors, people } from "@/lib/mocks/investors";
-import { getActiveStartupId, getAlerts, getProfile, getStartups } from "@/lib/session";
+import { getActiveStartupId, getProfile, getStartups, getUnread } from "@/lib/session";
 import { DEMO_STARTUP_ID, startupHref } from "@/lib/startup-cookie";
 import { getCompany, getInvestor } from "@/lib/cala";
+import { demoDataEnabled } from "@/lib/demo";
 import { Sidebar } from "./sidebar";
 import { TopBar, type PaletteItem } from "./top-bar";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
+  // DEMO_DATA=off: live Cala features only, no personas or mock entities.
+  if (!demoDataEnabled()) {
+    const palette: PaletteItem[] = [
+      { type: "page", label: "Analyse a market", hint: "Market analysis", href: "/market" },
+      { type: "page", label: "Analyse a company", hint: "Company analysis", href: "/market?mode=company" },
+      { type: "page", label: "Slush 2026", hint: "Event space", href: "/events/slush-2026/overview" },
+      { type: "page", label: "Warm intros", hint: "Who can introduce you", href: "/intros" },
+      { type: "page", label: "Alerts", hint: "Page", href: "/alerts" },
+    ];
+    const unread = await getUnread();
+    return (
+      <div className="flex min-h-screen">
+        <Sidebar live unread={unread} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <TopBar items={palette} unread={unread} live />
+          <main className="mx-auto w-full max-w-[1160px] flex-1 px-8 py-8">{children}</main>
+        </div>
+      </div>
+    );
+  }
+
   const profile = await getProfile();
-  const alerts = await getAlerts();
-  const unread = alerts.filter((a) => !a.read).length;
+  const unread = await getUnread();
   const startups = profile.role === "founder" ? await getStartups() : null;
   const activeId = startups ? await getActiveStartupId(startups.items) : null;
   const org = startups
@@ -22,6 +43,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   const palette: PaletteItem[] = [
     { type: "page", label: "Slush 2026", hint: "Event space", href: "/events/slush-2026/overview" },
     { type: "page", label: "Market or company analysis", hint: "Page", href: "/market" },
+    { type: "page", label: "Warm intros", hint: "Who can introduce you", href: "/intros" },
     { type: "page", label: "Alerts", hint: "Page", href: "/alerts" },
     ...(profile.role === "founder"
       ? [{ type: "page" as const, label: "My startup", hint: "Page", href: startupHref(activeId ?? DEMO_STARTUP_ID) }]

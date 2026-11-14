@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/warmline/blocks";
 import { DeckCheck } from "@/components/warmline/deck-check";
+import { demoDataEnabled } from "@/lib/demo";
 import { getDeckCheck, getRole } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Deck check" };
 
 export default async function DeckCheckPage() {
-  if ((await getRole()) !== "investor") redirect("/startup/deck");
+  // Demo mode has roles (founders check their own deck under My startup); live mode has no roles yet.
+  if (demoDataEnabled() && (await getRole()) !== "investor") redirect("/startup/deck");
   const { result, error } = await getDeckCheck();
   return (
     <>

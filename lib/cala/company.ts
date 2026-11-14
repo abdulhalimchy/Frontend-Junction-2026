@@ -106,6 +106,8 @@ const PEOPLE_QUERY = {
       FOUNDED: { limit: 10 },
       IS_CEO_OF: { limit: 5 },
       IS_CTO_OF: { limit: 5 },
+      IS_CFO_OF: { limit: 5 },
+      IS_EXECUTIVE_OF: { limit: 10 },
       IS_VICEPRESIDENT_OF: { limit: 10 },
       IS_BOARD_MEMBER_OF: { limit: 15 },
       WORKS_AT: { limit: 25 },
@@ -130,6 +132,8 @@ export async function fetchCompanyPeople(id: string): Promise<CompanyPeople> {
   const leadership = [
     ...(inc.IS_CEO_OF ?? []).map((r) => person(r, "CEO")),
     ...(inc.IS_CTO_OF ?? []).map((r) => person(r, "CTO")),
+    ...(inc.IS_CFO_OF ?? []).map((r) => person(r, "CFO")),
+    ...(inc.IS_EXECUTIVE_OF ?? []).map((r) => person(r, "Executive")),
     ...(inc.IS_VICEPRESIDENT_OF ?? []).map((r) => person(r, "Vice President")),
   ];
   const shown = new Set(leadership.map((p) => `${p.id}|${p.role}`));

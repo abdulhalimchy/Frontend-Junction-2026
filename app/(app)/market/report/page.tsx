@@ -11,12 +11,11 @@ import { Markdown } from "@/components/warmline/markdown";
 import { CompaniesTable, MarketError } from "@/components/warmline/market-view";
 import { SourceChip } from "@/components/warmline/source-chip";
 import { mocksEnabled } from "@/lib/cala/client";
-import { checkMarketText, type GuardVerdict } from "@/lib/llm/market-guard";
+import { checkMarketText, type GuardVerdict } from "@/lib/backend/markets";
 import { knownMarkets, rememberMarket } from "@/lib/cala/known-markets";
 import { MarketGuardNotice } from "@/components/warmline/market-guard";
 import { RefreshButton } from "@/components/warmline/refresh-button";
 import { reportSummary, type ReportSummary } from "@/lib/cala/report-summary";
-import { llmConfigured } from "@/lib/llm/gemini";
 import { formatMoney } from "@/lib/format";
 import { Pill } from "@/components/warmline/badges";
 import { REGIONS, normaliseSector, regionOf } from "@/lib/cala/market";
@@ -145,13 +144,9 @@ async function Report({ searchParams }: PageProps<"/market/report">) {
       ) : (
         <div className="space-y-10">
           <Section id="summary" title="Executive summary" description="Written from the Cala facts in the sections below. Every claim was checked against the facts it cites; anything that did not match was left out.">
-            {llmConfigured() ? (
-              <Suspense fallback={<SectionLoading label="Waiting for Cala's answers, then writing the summary" />}>
-                <ExecutiveSummary q={q} />
-              </Suspense>
-            ) : (
-              <SummaryPlaceholder />
-            )}
+            <Suspense fallback={<SectionLoading label="Waiting for Cala's answers, then writing the summary" />}>
+              <ExecutiveSummary q={q} />
+            </Suspense>
           </Section>
           <Section id="size" title="Market size and growth" description="Figures as published. Publishers define the market differently, so their numbers differ; we show them side by side and never average or convert them.">
             <Suspense fallback={<SectionLoading label="Asking Cala about market size" />}>
@@ -186,15 +181,6 @@ function Section({ id, title, description, children }: { id: string; title: stri
       {description && <p className="mb-3 mt-0.5 max-w-3xl text-sm text-muted-foreground">{description}</p>}
       <div className={description ? "" : "mt-3"}>{children}</div>
     </section>
-  );
-}
-
-function SummaryPlaceholder() {
-  return (
-    <div className="flex items-start gap-3 rounded-xl border border-dashed bg-card/60 p-4 text-sm text-muted-foreground">
-      <Sparkles className="mt-0.5 size-4 text-primary" />
-      Add LLM_API_KEY to .env.local to get a written summary and extracted size figures, each checked against the Cala facts below.
-    </div>
   );
 }
 

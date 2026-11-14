@@ -2,6 +2,7 @@ import "server-only";
 import type { Source, Sourced } from "@/lib/types";
 import { assertCalaKey, retrieveEntity, toSources, type RelationshipEdge } from "./client";
 import { companyCountries, labelise, sourced } from "./market";
+import { fetchRoundDetail, type RoundDetail } from "./rounds";
 
 // Investor overview from Cala: one request per investor (cached 7 days) for its profile, portfolio
 // (outgoing INVESTED_IN), funding-round participations (with role and is_lead) and team.
@@ -32,7 +33,18 @@ export type InvestorProfile = {
   industries: { name: string; label: string | null; sources: Source[] }[];
   portfolio: PortfolioCompany[];
   portfolioCapped: boolean;
-  rounds: { total: number; led: number; capped: boolean; byStage: { stage: string; count: number }[]; sources: Source[] };
+  rounds: {
+    total: number;
+    led: number;
+    capped: boolean;
+    byStage: { stage: string; count: number }[];
+    /** e.g. "Pre-seed–Seed": the stages that together cover most of its rounds, in ladder order. */
+    typicalStage: string | null;
+    sources: Source[];
+    /** Round IDs it joined, with whether it led; detail (company, amount, date) is loaded on request. */
+    refs: { id: string; stage: string; led: boolean }[];
+  };
+  events: { id: string; name: string; role: string | null; sources: Source[] }[];
   team: { id: string; name: string; role: string; sources: Source[] }[];
   /** People and organisations that invested in this investor (e.g. fund LPs, when on record). */
   backers: { id: string; name: string; sources: Source[] }[];
@@ -47,6 +59,7 @@ const QUERY = {
       HAS_HEADQUARTERS_IN: { limit: 3 },
       IS_REGISTERED_IN: { limit: 3 },
       OPERATES_IN_INDUSTRY: { limit: 5 },
+      PARTICIPATES_IN_EVENT: { limit: 10 },
     },
     incoming: { WORKS_AT: { limit: 25 }, INVESTED_IN: { limit: 15 } },
   },
@@ -91,8 +104,16 @@ export async function fetchInvestorProfile(id: string): Promise<InvestorProfile>
       led: roundEdges.filter((r) => r.properties.is_lead === true).length,
       capped: (out.PARTICIPATES_IN_FUNDING_ROUND ?? []).length >= ROUNDS_LIMIT,
       byStage: [...stages.entries()].map(([stage, count]) => ({ stage, count })).sort((a, b) => b.count - a.count),
+      typicalStage: typicalStage(stages),
       sources: dedupe(roundEdges.flatMap((r) => toSources(r.properties.sources))),
+      refs: roundEdges.map((r) => ({ id: r.id, stage: r.name, led: r.properties.is_lead === true })),
     },
+    events: (out.PARTICIPATES_IN_EVENT ?? []).map((r) => ({
+      id: r.id,
+      name: r.name,
+      role: typeof r.properties.role === "string" ? labelise(r.properties.role) : null,
+      sources: toSources(r.properties.sources),
+    })),
     team: (inc.WORKS_AT ?? []).map((r: RelationshipEdge) => ({
       id: r.id,
       name: r.name,
@@ -101,6 +122,42 @@ export async function fetchInvestorProfile(id: string): Promise<InvestorProfile>
     })),
     backers: (inc.INVESTED_IN ?? []).map((r) => ({ id: r.id, name: r.name, sources: toSources(r.properties.sources) })),
   };
+}
+
+const LADDER = ["pre-seed", "seed", "series a", "series b", "series c", "series d", "series e", "growth"];
+
+/** The smallest set of most common stages covering at least 60% of rounds, shown as a ladder range. */
+function typicalStage(stages: Map<string, number>): string | null {
+  const total = [...stages.values()].reduce((a, b) => a + b, 0);
+  if (!total) return null;
+  const picked: string[] = [];
+  let covered = 0;
+  for (const [stage, n] of [...stages.entries()].sort((a, b) => b[1] - a[1])) {
+    if (covered / total >= 0.6) break;
+    picked.push(stage);
+    covered += n;
+  }
+  const rank = (s: string) => {
+    const i = LADDER.indexOf(s.toLowerCase().replace(/-/g, " ").replace("pre seed", "pre-seed"));
+    return i < 0 ? 99 : i;
+  };
+  const ordered = picked.sort((a, b) => rank(a) - rank(b));
+  return ordered.length === 1 ? ordered[0] : `${ordered[0]}–${ordered[ordered.length - 1]}`;
+}
+
+export type InvestorDeal = RoundDetail & { led: boolean };
+export const DEALS_LIMIT = 12;
+
+/**
+ * Recent deals with company, amount and date: one Cala call per round, so it runs only on request and is
+ * capped at DEALS_LIMIT rounds (led rounds first). Each round is cached for 7 days.
+ */
+export async function fetchInvestorDeals(p: InvestorProfile): Promise<InvestorDeal[]> {
+  const picked = [...p.rounds.refs].sort((a, b) => Number(b.led) - Number(a.led)).slice(0, DEALS_LIMIT);
+  const deals = await Promise.all(
+    picked.map(async (r) => ({ ...(await fetchRoundDetail(r.id, r.stage)), led: r.led })),
+  );
+  return deals.sort((a, b) => (b.round.date?.date ?? "").localeCompare(a.round.date?.date ?? ""));
 }
 
 function dedupe(sources: Source[]) {

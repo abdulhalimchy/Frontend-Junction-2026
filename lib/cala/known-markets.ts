@@ -22,7 +22,7 @@ function load(): Promise<Set<string>> {
   })());
 }
 
-/** First run: collect market names from cached report summaries (key "summary:vN:model:sector|region|year"). */
+/** First run: collect market names from cached report summaries (keys "summary:v4:model:sector|region|year" and "summary:v5:sector|region|year"). */
 async function seedFromCache(): Promise<Set<string>> {
   const names = new Set<string>();
   try {
@@ -30,7 +30,7 @@ async function seedFromCache(): Promise<Set<string>> {
       if (!f.endsWith(".json") || f.startsWith("_")) continue;
       try {
         const key = (JSON.parse(await readFile(path.join(CACHE_DIR, f), "utf8")) as { key?: string }).key ?? "";
-        const m = /^summary:v\d+:[^:]+:(.+?)\|/.exec(key);
+        const m = /^summary:v\d+:(?:[^:|]+:)?(.+?)\|/.exec(key);
         if (m) names.add(m[1]);
       } catch {
         // skip unreadable files
