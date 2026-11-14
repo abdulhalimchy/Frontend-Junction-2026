@@ -206,19 +206,36 @@ const CACHE_DIR = process.env.CALA_CACHE_DIR || path.join(process.cwd(), ".cache
 const gc = globalThis as unknown as { __calaCache?: Map<string, { at: number; promise: Promise<unknown> }> };
 const knowledgeCache = (gc.__calaCache ??= new Map());
 
-export function memoCala<T>(key: string, load: () => Promise<T>, ttl = TTL.knowledge): Promise<T> {
+/**
+ * Returns the cached value for `key`, or loads and caches it. `maxAge` (e.g. for a user-requested refresh)
+ * shortens the lifetime for this read only, so a refresh refetches once and repeated renders within the
+ * window share that one fetch.
+ */
+export function memoCala<T>(key: string, load: () => Promise<T>, ttl = TTL.knowledge, maxAge?: number): Promise<T> {
   const now = performance.timeOrigin + performance.now();
+  const life = Math.min(ttl, maxAge ?? ttl);
   const hit = knowledgeCache.get(key);
-  if (hit && now - hit.at < ttl) return hit.promise as Promise<T>;
-  const promise = fromDisk<T>(key, now, ttl).then(async (saved) => {
-    if (saved) return saved.value;
+  if (hit && now - hit.at < life) return hit.promise as Promise<T>;
+  const entry: { at: number; promise: Promise<unknown> } = { at: now, promise: Promise.resolve() };
+  const promise = fromDisk<T>(key, now, life).then(async (saved) => {
+    if (saved) {
+      entry.at = saved.at; // keep the original fetch time, so pages can say how old the data is
+      return saved.value;
+    }
     const value = await load();
-    await toDisk(key, { at: now, value });
+    entry.at = performance.timeOrigin + performance.now();
+    await toDisk(key, { at: entry.at, value });
     return value;
   });
-  knowledgeCache.set(key, { at: now, promise });
+  entry.promise = promise;
+  knowledgeCache.set(key, entry);
   promise.catch(() => knowledgeCache.delete(key));
   return promise;
+}
+
+/** When the cached value for `key` was fetched from Cala (ms since epoch); call after awaiting it. */
+export function calaFetchedAt(key: string): number | undefined {
+  return knowledgeCache.get(key)?.at;
 }
 
 function cacheFile(key: string) {
@@ -244,9 +261,12 @@ async function toDisk(key: string, entry: { at: number; value: unknown }) {
 }
 
 /** POST /v1/knowledge/query: structured rows plus matched entities. Rows carry no sources. */
-export function knowledgeQuery(input: string): Promise<QueryResponse> {
-  return memoCala(`query:${input}`, () =>
-    calaFetch<QueryResponse>("/v1/knowledge/query", { method: "POST", body: { input, return_entities: true }, unlimited: true }),
+export function knowledgeQuery(input: string, maxAge?: number): Promise<QueryResponse> {
+  return memoCala(
+    `query:${input}`,
+    () => calaFetch<QueryResponse>("/v1/knowledge/query", { method: "POST", body: { input, return_entities: true }, unlimited: true }),
+    TTL.knowledge,
+    maxAge,
   );
 }
 
@@ -258,13 +278,17 @@ export type KnowBit = {
 export type SearchAnswer = { content: string; context: KnowBit[]; entities: EntityMention[] | null };
 
 /** POST /v1/knowledge/search: a markdown answer plus the facts (KnowBits) it rests on, each with its origin URLs. */
-export function knowledgeSearch(input: string): Promise<SearchAnswer> {
-  return memoCala(`search:${input}`, () =>
-    calaFetch<SearchAnswer>("/v1/knowledge/search", {
-      method: "POST",
-      body: { input, explainability: false, return_entities: true },
-      unlimited: true,
-    }),
+export function knowledgeSearch(input: string, maxAge?: number): Promise<SearchAnswer> {
+  return memoCala(
+    `search:${input}`,
+    () =>
+      calaFetch<SearchAnswer>("/v1/knowledge/search", {
+        method: "POST",
+        body: { input, explainability: false, return_entities: true },
+        unlimited: true,
+      }),
+    TTL.knowledge,
+    maxAge,
   );
 }
 

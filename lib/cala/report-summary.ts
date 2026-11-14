@@ -3,8 +3,8 @@ import { LLM_MODEL, generateJson, type TokenUsage } from "@/lib/llm/gemini";
 import { lastEquityRound } from "@/lib/market";
 import { formatFuzzyDate, formatMoney } from "@/lib/format";
 import type { Money, Source } from "@/lib/types";
-import { memoCala } from "./client";
-import { marketDeals, marketPlayers, marketSize, marketTrends, type EvidenceSection, type ReportQuery } from "./report";
+import { TTL, calaFetchedAt, memoCala } from "./client";
+import { REFRESH_WINDOW_MS, marketDeals, marketPlayers, marketSize, marketTrends, type EvidenceSection, type ReportQuery } from "./report";
 
 // Executive summary for a market report: Gemini writes only from numbered Cala facts, then code checks every
 // claim against the facts it cites. Anything that does not check out is dropped and counted, never shown.
@@ -38,8 +38,10 @@ export type ReportSummary = {
   dropped: { what: string; reason: string }[];
 };
 
-export function reportSummary(q: ReportQuery): Promise<ReportSummary> {
-  return memoCala(`summary:v4:${LLM_MODEL}:${q.sector}|${q.region}|${q.year}`, () => build(q));
+export async function reportSummary(q: ReportQuery): Promise<ReportSummary & { fetchedAt?: number }> {
+  const key = `summary:v4:${LLM_MODEL}:${q.sector}|${q.region}|${q.year}`;
+  const s = await memoCala(key, () => build(q), TTL.knowledge, q.refresh ? REFRESH_WINDOW_MS : undefined);
+  return { ...s, fetchedAt: calaFetchedAt(key) };
 }
 
 async function build(q: ReportQuery): Promise<ReportSummary> {

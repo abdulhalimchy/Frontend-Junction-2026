@@ -13,6 +13,7 @@ import { SourceChip } from "@/components/warmline/source-chip";
 import { mocksEnabled } from "@/lib/cala/client";
 import { checkMarketText, type GuardVerdict } from "@/lib/llm/market-guard";
 import { MarketGuardNotice } from "@/components/warmline/market-guard";
+import { RefreshButton } from "@/components/warmline/refresh-button";
 import { reportSummary, type ReportSummary } from "@/lib/cala/report-summary";
 import { llmConfigured } from "@/lib/llm/gemini";
 import { formatMoney } from "@/lib/format";
@@ -23,6 +24,7 @@ import {
   marketPlayers,
   marketSize,
   marketTrends,
+  REFRESH_WINDOW_MS,
   type EvidenceSection,
   type ReportQuery,
 } from "@/lib/cala/report";
@@ -53,7 +55,11 @@ async function Report({ searchParams }: PageProps<"/market/report">) {
   await connection();
   // Cache keys and Cala questions use a normalised sector, so "Mobile Applications" and "mobile  applications"
   // share one cached report; the page title keeps what the user typed.
-  const q: ReportQuery = { sector: normaliseSector(sector), region, year: new Date().getFullYear() };
+  const now = currentTime();
+  // A refresh token is the click time; only a recent one counts, so reloads never re-spend credit.
+  const token = Number(typeof sp.refresh === "string" ? sp.refresh : NaN);
+  const refresh = Number.isFinite(token) && token <= now + 5_000 && now - token < REFRESH_WINDOW_MS;
+  const q: ReportQuery = { sector: normaliseSector(sector), region, year: new Date(now).getFullYear(), refresh };
   const place = regionOf(region).label;
   // Check the text is a market before spending Cala credit; "Run anyway" (force=1) skips the check.
   const verdict: GuardVerdict =
@@ -96,6 +102,12 @@ async function Report({ searchParams }: PageProps<"/market/report">) {
           Analyse market
         </Button>
       </form>
+      {verdict.kind === "market" && !mocksEnabled() && (
+        <div className="-mt-1 mb-4 flex items-center justify-end gap-3 text-xs text-muted-foreground">
+          {refresh ? "Fetching fresh answers from Cala…" : "Answers are cached for 24 hours."}
+          <RefreshButton href={`/market/report?${new URLSearchParams({ sector, region, force: "1" })}`} />
+        </div>
+      )}
 
 {verdict.kind === "market" && (
       <nav className="sticky top-14 z-10 -mx-1 mb-6 flex gap-1 bg-background/90 px-1 py-2 backdrop-blur">
@@ -198,7 +210,7 @@ function groupSizes(sizes: ReportSummary["sizes"]) {
 }
 
 async function ExecutiveSummary({ q }: { q: ReportQuery }) {
-  let s: ReportSummary;
+  let s: Awaited<ReturnType<typeof reportSummary>>;
   try {
     s = await reportSummary(q);
   } catch (e) {
@@ -294,7 +306,7 @@ async function ExecutiveSummary({ q }: { q: ReportQuery }) {
       )}
 
       <div className="text-xs text-muted-foreground">
-        Written by {s.model} from {s.factCount} Cala facts
+        Written by {s.model} from {s.factCount} Cala facts{s.fetchedAt ? `, ${ago(s.fetchedAt)}` : ""}
         {s.tokens ? ` (${s.tokens.total.toLocaleString("en")} tokens: ${s.tokens.input.toLocaleString("en")} in, ${s.tokens.output.toLocaleString("en")} out, ${s.tokens.thinking.toLocaleString("en")} reasoning)` : ""}. {s.checked} claims checked
         {s.dropped.length ? `, ${s.dropped.length} left out because they did not match their sources.` : ", all matched their sources."}
         {s.dropped.length > 0 && (
@@ -331,7 +343,7 @@ async function EvidenceView({ load }: { load: Promise<EvidenceSection> }) {
       <Panel
         className="col-span-3"
         title="Cala's answer"
-        description={`Written by Cala from the ${s.evidence.length} facts listed alongside. Check figures against their sources.`}
+        description={`Written by Cala from the ${s.evidence.length} facts listed alongside. Check figures against their sources.${fetched(s.fetchedAt)}`}
         action={<SourceChip sources={all} />}
       >
         <Markdown>{s.summary}</Markdown>
@@ -370,7 +382,7 @@ async function Players({ q }: { q: ReportQuery }) {
   return (
     <Panel
       title={`${res.companies.length} companies`}
-      description={res.unresolved ? `${res.unresolved} more were named by Cala without a company record, so they are not shown.` : undefined}
+      description={`${res.unresolved ? `${res.unresolved} more were named by Cala without a company record, so they are not shown.` : "Resolved to Cala company records."}${fetched(res.fetchedAt)}`}
       bodyClassName="pt-3"
     >
       <CompaniesTable data={{ query: { sector: q.sector, region: q.region }, definition: res.definition, companies: res.companies, outsideRegion: [] }} currency={null} />
@@ -392,6 +404,22 @@ function SectionLoading({ label }: { label: string }) {
       </div>
     </div>
   );
+}
+
+/** Request time; this page renders per request (after connection()), so reading the clock is intended. */
+function currentTime() {
+  return Date.now();
+}
+
+/** "just now", "12 min ago", "3 h ago", "2 days ago". */
+function ago(at: number) {
+  const mins = Math.max(0, Math.round((Date.now() - at) / 60_000));
+  return mins < 1 ? "just now" : mins < 60 ? `${mins} min ago` : mins < 48 * 60 ? `${Math.round(mins / 60)} h ago` : `${Math.round(mins / 1440)} days ago`;
+}
+
+/** " Fetched from Cala 3 h ago." for section descriptions; empty when unknown. */
+function fetched(at?: number) {
+  return at ? ` Fetched from Cala ${ago(at)}.` : "";
 }
 
 /** KnowBit text can carry markdown and page furniture; show it as plain text. */
