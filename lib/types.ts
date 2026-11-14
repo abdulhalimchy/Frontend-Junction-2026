@@ -131,10 +131,15 @@ export type DeckClaim = {
   sources: Source[];
 };
 
+export type DeckCheckStatus = "pending" | "processing" | "completed" | "failed";
+
 export type DeckCheckResult = {
+  id: string;
+  status: DeckCheckStatus;
+  error: string | null; // set when status is "failed"
   fileName: string;
-  companyId: string;
-  pages: number;
+  companyName: string;
+  pages: number | null;
   checkedAt: string;
   claims: DeckClaim[];
 };

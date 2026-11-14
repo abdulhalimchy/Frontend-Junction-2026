@@ -1,7 +1,8 @@
 import "server-only";
 import { cookies } from "next/headers";
 import type { Role } from "@/lib/types";
-import { alerts, deckChecks, metByRole, profiles } from "@/lib/mocks/misc";
+import { getLatestDeckCheck } from "@/lib/backend/deck-checks";
+import { alerts, metByRole, profiles } from "@/lib/mocks/misc";
 
 // Phase 1: the role lives in a cookie so it can be switched from the UI.
 // Phase 2 reads the signed-in user and their profile from Supabase instead.
@@ -26,6 +27,11 @@ export async function getMet() {
   return metByRole[await getRole()];
 }
 
-export async function getDeckCheck(companyId: string) {
-  return deckChecks[companyId] ?? null;
+/** The latest deck check from the backend, or a readable error when the backend is unavailable. */
+export async function getDeckCheck() {
+  try {
+    return { result: await getLatestDeckCheck(), error: null };
+  } catch (e) {
+    return { result: null, error: e instanceof Error ? e.message : "Could not load deck checks." };
+  }
 }
