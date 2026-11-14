@@ -41,8 +41,8 @@ async function CompanyPageContent({ params }: PageProps<"/company/[id]">) {
     <>
       <PageHeader
         eyebrow={
-          <Link href="/search" className="text-xs text-muted-foreground hover:text-foreground">
-            ← Search
+          <Link href="/market" className="text-xs text-muted-foreground hover:text-foreground">
+            ← Market
           </Link>
         }
         title={
