@@ -4,7 +4,7 @@ import { companies, competitorsOf } from "@/lib/mocks/companies";
 import { investorChecks, investors, people } from "@/lib/mocks/investors";
 import { slushEvent } from "@/lib/mocks/misc";
 import { mockMarket } from "@/lib/mocks/market";
-import { assertCalaKey, mocksEnabled, searchEntities } from "./client";
+import { mocksEnabled, searchEntities } from "./client";
 import { fetchMarket, normaliseName } from "./market";
 import { slushAttendeeIndex } from "./slush";
 
@@ -27,7 +27,6 @@ export async function searchEntity(query: string, limit = 20): Promise<SearchHit
   if (mocksEnabled()) return searchMockEntities(query);
   const q = query.trim();
   if (q.length < 2) return [];
-  assertCalaKey();
   const [res, slush] = await Promise.all([
     searchEntities(q.slice(0, 100), ["Company", "Organization"], limit),
     slushAttendeeIndex().catch(() => null), // the Slush tag is a nice-to-have; search works without it

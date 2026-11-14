@@ -1,7 +1,6 @@
 import "server-only";
 import type { Source, Sourced } from "@/lib/types";
 import {
-  assertCalaKey,
   introspectEntity,
   retrieveEntity,
   toSources,
@@ -93,7 +92,6 @@ const METRICS: { key: MetricKey; label: string; curated: string; cadence: string
 ];
 
 export async function fetchCompanyExtras(id: string): Promise<CompanyExtras> {
-  assertCalaKey();
   const intro = await introspectEntity(id);
   const out = new Set(intro.relationships.outgoing);
   const inc = new Set(intro.relationships.incoming);

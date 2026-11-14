@@ -296,7 +296,7 @@ function CalaProblem({ error, compact }: { error: unknown; compact?: boolean }) 
   const kind = calaErrorKind(error);
   const message =
     kind === "missing_key"
-      ? "Cala is not configured on this server (CALA_API_KEY)."
+      ? "Cala is not configured on the backend (CALA_API_KEY in its .env)."
       : kind === "no_credit"
         ? "The Cala credit balance is empty. Cached results still work; new ones will load once credit is added."
         : kind === "rate_limited"

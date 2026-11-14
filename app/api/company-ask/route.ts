@@ -1,4 +1,4 @@
-import { assertCalaKey, calaErrorKind, knowledgeSearch } from "@/lib/cala/client";
+import { calaErrorKind, knowledgeSearch } from "@/lib/cala/client";
 import { cite } from "@/lib/cala/citations";
 import { fetchCompanyProfile } from "@/lib/cala/company";
 
@@ -24,7 +24,6 @@ export async function POST(request: Request) {
   if (!companyId || !question) return Response.json({ error: "Send a company and a question." }, { status: 400 });
 
   try {
-    assertCalaKey();
     const profile = await fetchCompanyProfile(companyId);
     const place = profile.hq?.value ?? profile.countries[0];
     const subject = place ? `${profile.name} (${place})` : profile.name;

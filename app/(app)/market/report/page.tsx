@@ -1,7 +1,7 @@
-import { ArrowLeft, Building2, FileText, Handshake, Loader2, Scale, Search, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowLeft, Building2, CircleAlert, FileText, Handshake, History, Loader2, Scale, Search, Sparkles, TrendingUp } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { connection } from "next/server";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,25 +10,21 @@ import { EmptyState, PageHeader, Panel } from "@/components/warmline/blocks";
 import { Markdown } from "@/components/warmline/markdown";
 import { CompaniesTable, MarketError } from "@/components/warmline/market-view";
 import { SourceChip } from "@/components/warmline/source-chip";
-import { mocksEnabled } from "@/lib/cala/client";
-import { checkMarketText, type GuardVerdict } from "@/lib/backend/markets";
-import { knownMarkets, rememberMarket } from "@/lib/cala/known-markets";
 import { MarketGuardNotice } from "@/components/warmline/market-guard";
-import { RefreshButton } from "@/components/warmline/refresh-button";
-import { reportSummary, type ReportSummary } from "@/lib/cala/report-summary";
-import { formatMoney } from "@/lib/format";
 import { Pill } from "@/components/warmline/badges";
-import { REGIONS, normaliseSector, regionOf } from "@/lib/cala/market";
 import {
-  marketDeals,
-  marketPlayers,
-  marketSize,
-  marketTrends,
-  REFRESH_WINDOW_MS,
+  getMarketAnalysis,
+  openMarketAnalysis,
   type EvidenceSection,
-  type ReportQuery,
-} from "@/lib/cala/report";
+  type MarketAnalysis,
+  type PlayersSection,
+  type ReportSummary,
+  type SectionError,
+} from "@/lib/backend/markets";
+import { formatMoney } from "@/lib/format";
+import { REGIONS, regionOf } from "@/lib/cala/market";
 import type { Source } from "@/lib/types";
+import { DeleteAnalysisButton, PollWhileLoading, RefreshAnalysisButton } from "../history-controls";
 
 export const metadata: Metadata = { title: "Market analysis" };
 
@@ -48,80 +44,95 @@ const SECTIONS = [
   { id: "trends", label: "Trends", icon: TrendingUp },
 ];
 
+// The backend runs the analysis (Cala questions, then the checked summary) and keeps it in the user's history.
+// /market/report?sector=…&region=… opens (or starts) the analysis of typed text and redirects to its saved
+// report, /market/report?id=…, which reads the stored result: reopening it never spends Cala credit.
+
 async function Report({ searchParams }: PageProps<"/market/report">) {
   const sp = await searchParams;
-  const sector = (typeof sp.sector === "string" && sp.sector.trim().slice(0, 80)) || "mobile applications";
-  const region = typeof sp.region === "string" && REGIONS[sp.region] ? sp.region : "europe";
-  await connection();
-  const now = currentTime();
-  // A refresh token is the click time; only a recent one counts, so reloads never re-spend credit.
-  const token = Number(typeof sp.refresh === "string" ? sp.refresh : NaN);
-  const refresh = Number.isFinite(token) && token <= now + 5_000 && now - token < REFRESH_WINDOW_MS;
-  const place = regionOf(region).label;
-  const typed = normaliseSector(sector);
-  // Before spending Cala credit: is this a market, and what is its standard name? Matching known markets lets
-  // different wordings ("mobile apps", "mobile applications") share one cached analysis. "Run anyway" and the
-  // exact-wording link (force=1) skip the check and use the text as typed.
-  const verdict: GuardVerdict =
-    sp.force === "1" || mocksEnabled() ? { kind: "market", reason: "", suggestions: [] } : await checkMarketText(sector, await knownMarkets());
-  const name = verdict.kind === "market" && verdict.canonical ? verdict.canonical : typed;
-  const q: ReportQuery = { sector: name, region, year: new Date(now).getFullYear(), refresh };
-  if (verdict.kind === "market" && !mocksEnabled()) await rememberMarket(name);
+  const id = typeof sp.id === "string" && /^[0-9a-f-]{36}$/i.test(sp.id) ? sp.id : null;
+  const sector = (typeof sp.sector === "string" && sp.sector.trim().slice(0, 80)) || "";
+  const regionParam = typeof sp.region === "string" && REGIONS[sp.region] ? sp.region : "europe";
+
+  if (!id) {
+    const text = sector || "mobile applications";
+    let opened: Awaited<ReturnType<typeof openMarketAnalysis>>;
+    try {
+      opened = await openMarketAnalysis({ text, region: regionParam, force: sp.force === "1" });
+    } catch (e) {
+      return <ReportFailed title="Could not start the analysis" error={e} />;
+    }
+    if (!opened.analysis) {
+      return (
+        <>
+          <ReportHeader title="Market analysis" description={regionOf(regionParam).label} />
+          <SearchForm sector={text} region={regionParam} />
+          <MarketGuardNotice
+            text={text}
+            verdict={opened.verdict}
+            searchHref={(s) => `/market/report?${new URLSearchParams({ sector: s, region: regionParam })}`}
+            runAnywayHref={`/market/report?${new URLSearchParams({ sector: text, region: regionParam, force: "1" })}`}
+          />
+        </>
+      );
+    }
+    redirect(`/market/report?id=${opened.analysis.id}`);
+  }
+
+  let a: MarketAnalysis;
+  try {
+    a = await getMarketAnalysis(id);
+  } catch (e) {
+    return <ReportFailed title="This analysis is not in your history" error={e} />;
+  }
+  const loading = a.status === "loading";
+  const typed = a.typed && a.typed !== a.sector ? a.typed : "";
 
   return (
     <>
-      <PageHeader
-        eyebrow={
-          <Link href="/market" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="size-3" /> Choose analysis
-          </Link>
-        }
+      <PollWhileLoading active={loading} />
+      <ReportHeader
         title={
           <span>
-            Market analysis: <span className="capitalize">{name}</span>
+            Market analysis: <span className="capitalize">{a.sector}</span>
           </span>
         }
-        description={`${place}. Every section is built from Cala: written answers come with the facts behind them, and every number links to its source. Sections appear as Cala answers; a new market takes about a minute and four Cala questions.`}
+        description={`${regionOf(a.region).label}. Every section is built from Cala: written answers come with the facts behind them, and every number links to its source. Reports are saved in your history; reopening one is free.`}
       />
-
-      <form action="/market/report" className="mb-4 flex items-center gap-2 rounded-xl border bg-card p-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input name="sector" defaultValue={sector} placeholder="Market, e.g. mobile applications" className="h-9 pl-9" />
-        </div>
-        <select
-          name="region"
-          defaultValue={region}
-          aria-label="Region"
-          className="h-9 rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          {Object.entries(REGIONS).map(([key, r]) => (
-            <option key={key} value={key}>
-              {r.label}
-            </option>
-          ))}
-        </select>
-        <Button type="submit" className="h-9">
-          Analyse market
-        </Button>
-      </form>
-      {name !== typed && verdict.kind === "market" && (
+      <SearchForm sector={typed || a.sector} region={a.region} />
+      {typed && (
         <p className="-mt-1 mb-2 text-sm text-muted-foreground">
-          Showing <span className="font-medium text-foreground">“{name}”</span> (you typed “{sector}”), so analyses of the same market are shared.{" "}
-          <Link href={`/market/report?${new URLSearchParams({ sector, region, force: "1" })}`} className="text-primary hover:underline">
-            Search “{sector}” exactly
+          Showing <span className="font-medium text-foreground">“{a.sector}”</span> (you typed “{typed}”), so analyses of the same market are shared.{" "}
+          <Link href={`/market/report?${new URLSearchParams({ sector: typed, region: a.region, force: "1" })}`} className="text-primary hover:underline">
+            Search “{typed}” exactly
           </Link>{" "}
           <span className="text-xs">(may use Cala credit)</span>
         </p>
       )}
-      {verdict.kind === "market" && !mocksEnabled() && (
-        <div className="-mt-1 mb-4 flex items-center justify-end gap-3 text-xs text-muted-foreground">
-          {refresh ? "Fetching fresh answers from Cala…" : "Answers are cached for 24 hours."}
-          <RefreshButton href={`/market/report?${new URLSearchParams({ sector: name, region, force: "1" })}`} />
+      <div className="-mt-1 mb-4 flex items-center justify-end gap-3 text-xs text-muted-foreground">
+        {loading ? (
+          <span className="flex items-center gap-1.5">
+            <Loader2 className="size-3.5 animate-spin text-primary" />
+            {a.runs > 1 ? "Updating from Cala; the saved answers stay until new ones arrive…" : "Asking Cala; sections appear as they arrive…"}
+          </span>
+        ) : (
+          <span>Saved {a.finishedAt ? ago(Date.parse(a.finishedAt)) : ""} · run {a.runs} {a.runs === 1 ? "time" : "times"}</span>
+        )}
+        <RefreshAnalysisButton id={a.id} running={loading} />
+        <DeleteAnalysisButton id={a.id} name={a.sector} afterDelete="/market/history" />
+      </div>
+
+      {!loading && a.runs > 1 && a.changes.length > 0 && (
+        <div className="mb-6 rounded-xl border border-primary/25 bg-teal-soft/40 p-4 text-sm">
+          <div className="font-medium">What changed in the last refresh</div>
+          <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-muted-foreground">
+            {a.changes.map((c, i) => (
+              <li key={i}>{c}</li>
+            ))}
+          </ul>
         </div>
       )}
 
-{verdict.kind === "market" && (
       <nav className="sticky top-14 z-10 -mx-1 mb-6 flex gap-1 bg-background/90 px-1 py-2 backdrop-blur">
         {SECTIONS.map((s) => (
           <a key={s.id} href={`#${s.id}`} className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground hover:text-foreground">
@@ -130,48 +141,98 @@ async function Report({ searchParams }: PageProps<"/market/report">) {
           </a>
         ))}
       </nav>
-      )}
 
-      {mocksEnabled() ? (
-        <EmptyState icon={FileText} title="Market reports need live Cala data" description="Set USE_MOCKS=false and add CALA_API_KEY to .env.local." />
-      ) : verdict.kind !== "market" ? (
-        <MarketGuardNotice
-          text={sector}
-          verdict={verdict}
-          searchHref={(s) => `/market/report?${new URLSearchParams({ sector: s, region })}`}
-          runAnywayHref={`/market/report?${new URLSearchParams({ sector, region, force: "1" })}`}
-        />
-      ) : (
-        <div className="space-y-10">
-          <Section id="summary" title="Executive summary" description="Written from the Cala facts in the sections below. Every claim was checked against the facts it cites; anything that did not match was left out.">
-            <Suspense fallback={<SectionLoading label="Waiting for Cala's answers, then writing the summary" />}>
-              <ExecutiveSummary q={q} />
-            </Suspense>
-          </Section>
-          <Section id="size" title="Market size and growth" description="Figures as published. Publishers define the market differently, so their numbers differ; we show them side by side and never average or convert them.">
-            <Suspense fallback={<SectionLoading label="Asking Cala about market size" />}>
-              <EvidenceView load={marketSize(q)} />
-            </Suspense>
-          </Section>
-          <Section id="players" title="Leading players" description="Established companies and challengers, public or private, resolved to Cala company records.">
-            <Suspense fallback={<SectionLoading label="Finding the leading companies" />}>
-              <Players q={q} />
-            </Suspense>
-          </Section>
-          <Section id="deals" title="Funding and deals" description={`Notable rounds, acquisitions, IPOs and exits in ${q.year - 1} and ${q.year}, as reported.`}>
-            <Suspense fallback={<SectionLoading label="Asking Cala about funding and deals" />}>
-              <EvidenceView load={marketDeals(q)} />
-            </Suspense>
-          </Section>
-          <Section id="trends" title="Trends, drivers and challenges">
-            <Suspense fallback={<SectionLoading label="Asking Cala about trends" />}>
-              <EvidenceView load={marketTrends(q)} />
-            </Suspense>
-          </Section>
-        </div>
-      )}
+      <div className="space-y-10">
+        <Section id="summary" title="Executive summary" description="Written from the Cala facts in the sections below. Every claim was checked against the facts it cites; anything that did not match was left out.">
+          <Part value={a.summary} error={a.errors.summary} loading={loading} label="Waiting for Cala's answers, then writing the summary">
+            {(s) => <ExecutiveSummary s={s} />}
+          </Part>
+        </Section>
+        <Section id="size" title="Market size and growth" description="Figures as published. Publishers define the market differently, so their numbers differ; we show them side by side and never average or convert them.">
+          <Part value={a.size} error={a.errors.size} loading={loading} label="Asking Cala about market size">
+            {(s) => <EvidenceView s={s} />}
+          </Part>
+        </Section>
+        <Section id="players" title="Leading players" description="Established companies and challengers, public or private, resolved to Cala company records.">
+          <Part value={a.players} error={a.errors.players} loading={loading} label="Finding the leading companies">
+            {(p) => <Players res={p} sector={a.sector} region={a.region} />}
+          </Part>
+        </Section>
+        <Section id="deals" title="Funding and deals" description={`Notable rounds, acquisitions, IPOs and exits in ${a.year - 1} and ${a.year}, as reported.`}>
+          <Part value={a.deals} error={a.errors.deals} loading={loading} label="Asking Cala about funding and deals">
+            {(s) => <EvidenceView s={s} />}
+          </Part>
+        </Section>
+        <Section id="trends" title="Trends, drivers and challenges">
+          <Part value={a.trends} error={a.errors.trends} loading={loading} label="Asking Cala about trends">
+            {(s) => <EvidenceView s={s} />}
+          </Part>
+        </Section>
+      </div>
     </>
   );
+}
+
+function ReportHeader({ title, description }: { title: React.ReactNode; description: string }) {
+  return (
+    <PageHeader
+      eyebrow={
+        <div className="flex items-center gap-4">
+          <Link href="/market" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="size-3" /> Choose analysis
+          </Link>
+          <Link href="/market/history" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+            <History className="size-3" /> History
+          </Link>
+        </div>
+      }
+      title={title}
+      description={description}
+    />
+  );
+}
+
+function SearchForm({ sector, region }: { sector: string; region: string }) {
+  return (
+    <form action="/market/report" className="mb-4 flex items-center gap-2 rounded-xl border bg-card p-3">
+      <div className="relative flex-1">
+        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input name="sector" defaultValue={sector} placeholder="Market, e.g. mobile applications" className="h-9 pl-9" />
+      </div>
+      <select
+        name="region"
+        defaultValue={region}
+        aria-label="Region"
+        className="h-9 rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        {Object.entries(REGIONS).map(([key, r]) => (
+          <option key={key} value={key}>
+            {r.label}
+          </option>
+        ))}
+      </select>
+      <Button type="submit" className="h-9">
+        Analyse market
+      </Button>
+    </form>
+  );
+}
+
+function ReportFailed({ title, error }: { title: string; error: unknown }) {
+  return (
+    <>
+      <ReportHeader title="Market analysis" description="" />
+      <EmptyState icon={CircleAlert} title={title} description={error instanceof Error ? error.message : "Unknown error"} />
+    </>
+  );
+}
+
+/** One stored section: its value, its error, a loader while the backend is still answering, or nothing on record. */
+function Part<T>({ value, error, loading, label, children }: { value?: T; error?: SectionError; loading: boolean; label: string; children: (v: T) => React.ReactNode }) {
+  if (value) return <>{children(value)}</>;
+  if (loading) return <SectionLoading label={label} />;
+  if (error) return error.kind === "llm" ? <EmptyState compact icon={Sparkles} title="Could not write the summary" description={error.message} /> : <MarketError error={new Error(error.message)} />;
+  return <EmptyState compact icon={FileText} title="Not available" description="Refresh the report to ask Cala again." />;
 }
 
 function Section({ id, title, description, children }: { id: string; title: string; description?: string; children: React.ReactNode }) {
@@ -208,20 +269,7 @@ function groupSizes(sizes: ReportSummary["sizes"]) {
     .sort((a, b) => global(a.scope) - global(b.scope) || a.figures[0].year - b.figures[0].year);
 }
 
-async function ExecutiveSummary({ q }: { q: ReportQuery }) {
-  let s: Awaited<ReturnType<typeof reportSummary>>;
-  try {
-    s = await reportSummary(q);
-  } catch (e) {
-    return (
-      <EmptyState
-        compact
-        icon={Sparkles}
-        title="Could not write the summary"
-        description={e instanceof Error ? e.message : "Unknown error"}
-      />
-    );
-  }
+function ExecutiveSummary({ s }: { s: ReportSummary & { fetchedAt?: number } }) {
   return (
     <div className="space-y-6">
       <Panel className="border-primary/25">
@@ -326,13 +374,7 @@ async function ExecutiveSummary({ q }: { q: ReportQuery }) {
 }
 
 /** Cala's written answer on the left, the facts it rests on (with their sources) on the right. */
-async function EvidenceView({ load }: { load: Promise<EvidenceSection> }) {
-  let s: EvidenceSection;
-  try {
-    s = await load;
-  } catch (e) {
-    return <MarketError error={e} />;
-  }
+function EvidenceView({ s }: { s: EvidenceSection }) {
   if (!s.evidence.length && !s.summary.trim()) {
     return <EmptyState compact title="Cala has nothing on record for this question" description="Try a broader market description or region." />;
   }
@@ -368,13 +410,7 @@ async function EvidenceView({ load }: { load: Promise<EvidenceSection> }) {
   );
 }
 
-async function Players({ q }: { q: ReportQuery }) {
-  let res;
-  try {
-    res = await marketPlayers(q);
-  } catch (e) {
-    return <MarketError error={e} />;
-  }
+function Players({ res, sector, region }: { res: PlayersSection; sector: string; region: string }) {
   if (!res.companies.length) {
     return <EmptyState compact icon={Building2} title="No leading companies with a Cala profile" description="Try a broader market description or region." />;
   }
@@ -384,7 +420,7 @@ async function Players({ q }: { q: ReportQuery }) {
       description={`${res.unresolved ? `${res.unresolved} more were named by Cala without a company record, so they are not shown.` : "Resolved to Cala company records."}${fetched(res.fetchedAt)}`}
       bodyClassName="pt-3"
     >
-      <CompaniesTable data={{ query: { sector: q.sector, region: q.region }, definition: res.definition, companies: res.companies, outsideRegion: [] }} currency={null} />
+      <CompaniesTable data={{ query: { sector, region }, definition: res.definition, companies: res.companies, outsideRegion: [] }} currency={null} />
     </Panel>
   );
 }
@@ -394,7 +430,7 @@ function SectionLoading({ label }: { label: string }) {
     <div className="rounded-xl border bg-card p-5">
       <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin text-primary" />
-        {label}… a new question takes Cala about a minute; repeats are instant.
+        {label}… a new question takes Cala about a minute.
       </div>
       <div className="space-y-2">
         <Skeleton className="h-4 w-3/4" />
@@ -403,11 +439,6 @@ function SectionLoading({ label }: { label: string }) {
       </div>
     </div>
   );
-}
-
-/** Request time; this page renders per request (after connection()), so reading the clock is intended. */
-function currentTime() {
-  return Date.now();
 }
 
 /** "just now", "12 min ago", "3 h ago", "2 days ago". */

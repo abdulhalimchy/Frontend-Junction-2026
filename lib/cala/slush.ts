@@ -1,7 +1,7 @@
 import "server-only";
 import type { Source } from "@/lib/types";
 import { cite, type CitedSource } from "./citations";
-import { CalaError, TTL, assertCalaKey, knowledgeSearch, memoCala, retrieveEntity, searchEntities, toSources } from "./client";
+import { CalaError, TTL, knowledgeSearch, memoCala, retrieveEntity, searchEntities, toSources } from "./client";
 import { normaliseName } from "@/lib/names";
 
 // Slush 2026 from Cala's event graph. The event is an `Event` entity; attendees are its incoming
@@ -39,7 +39,6 @@ export type SlushEvent = {
 
 /** The event and every attendee. Refreshed daily: a few large calls, cached for 24 hours. */
 export async function fetchSlush(): Promise<SlushEvent> {
-  assertCalaKey();
   const [event, attendees] = await Promise.all([
     retrieveEntity(SLUSH_2026_CALA_ID, { properties: ["name", "event_date", "location", "description"] }, TTL.knowledge),
     loadAttendees(),
@@ -144,7 +143,6 @@ async function describe(id: string): Promise<ResolvedAttendee | null> {
  * knowledge_search: every sentence is tied to the facts it rests on. ~60s uncached, then cached for 24h.
  */
 export async function fetchSlushInvestors(): Promise<{ answer: string; sources: CitedSource[] }> {
-  assertCalaKey();
   const res = await knowledgeSearch("Which venture capital firms and investors are attending or speaking at Slush 2026 in Helsinki?");
   return cite(res.content, res.context ?? [], "Slush 2026 Helsinki");
 }
