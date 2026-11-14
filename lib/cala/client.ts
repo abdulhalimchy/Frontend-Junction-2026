@@ -14,7 +14,7 @@ export class CalaError extends Error {
   constructor(
     message: string,
     readonly status: number,
-    readonly kind: "missing_key" | "rate_limited" | "invalid_request" | "upstream",
+    readonly kind: "missing_key" | "rate_limited" | "invalid_request" | "no_credit" | "upstream",
   ) {
     super(message);
   }
@@ -25,6 +25,7 @@ export function calaErrorKind(e: unknown): CalaError["kind"] {
   if (e instanceof CalaError) return e.kind;
   const m = e instanceof Error ? e.message : String(e);
   if (/CALA_API_KEY|rejected the API key/.test(m)) return "missing_key";
+  if (/credit balance|Insufficient balance|returned 402/i.test(m)) return "no_credit";
   if (/rate limit/i.test(m)) return "rate_limited";
   if (/rejected the request/.test(m)) return "invalid_request";
   return "upstream";
@@ -84,12 +85,20 @@ function endpointName(path: string, method: string) {
   return method === "POST" ? "entity_retrieval" : "other";
 }
 
+// After Cala reports an empty credit balance (402), stop calling for a while instead of failing every
+// request one by one. Cached results keep working. Shared process-wide like the cache.
+const CREDIT_PAUSE_MS = 10 * 60 * 1000;
+const gb = globalThis as unknown as { __calaNoCreditUntil?: number };
+
 async function calaFetch<T>(
   path: string,
   init: { method: "GET" | "POST"; body?: unknown; query?: Record<string, string | string[] | number>; unlimited?: boolean /* true = knowledge lane */ },
 ): Promise<T> {
   const key = process.env.CALA_API_KEY;
   if (!key) throw new CalaError("CALA_API_KEY is not set", 401, "missing_key");
+  if ((gb.__calaNoCreditUntil ?? 0) > performance.timeOrigin + performance.now()) {
+    throw new CalaError("Cala credit balance is empty (paused new calls for 10 minutes)", 402, "no_credit");
+  }
 
   const url = new URL(path, BASE);
   for (const [k, v] of Object.entries(init.query ?? {})) {
@@ -130,6 +139,10 @@ async function calaFetch<T>(
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     if (res.status === 429) throw new CalaError("Cala rate limit exceeded", 429, "rate_limited");
+    if (res.status === 402) {
+      gb.__calaNoCreditUntil = performance.timeOrigin + performance.now() + CREDIT_PAUSE_MS;
+      throw new CalaError("Cala credit balance is empty", 402, "no_credit");
+    }
     if (res.status === 401 || res.status === 403) throw new CalaError("Cala rejected the API key", res.status, "missing_key");
     if (res.status === 422) throw new CalaError(`Cala rejected the request: ${text.slice(0, 300)}`, 422, "invalid_request");
     throw new CalaError(`Cala returned ${res.status}: ${text.slice(0, 300)}`, res.status, "upstream");

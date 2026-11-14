@@ -4,7 +4,7 @@ import { lastEquityRound } from "@/lib/market";
 import { formatFuzzyDate, formatMoney } from "@/lib/format";
 import type { Money, Source } from "@/lib/types";
 import { memoCala } from "./client";
-import { marketDeals, marketFunding, marketPlayers, marketSize, marketTrends, type EvidenceSection, type ReportQuery } from "./report";
+import { marketDeals, marketPlayers, marketSize, marketTrends, type EvidenceSection, type ReportQuery } from "./report";
 
 // Executive summary for a market report: Gemini writes only from numbered Cala facts, then code checks every
 // claim against the facts it cites. Anything that does not check out is dropped and counted, never shown.
@@ -37,18 +37,12 @@ export type ReportSummary = {
 };
 
 export function reportSummary(q: ReportQuery): Promise<ReportSummary> {
-  return memoCala(`summary:v3:${LLM_MODEL}:${q.sector}|${q.region}|${q.year}`, () => build(q));
+  return memoCala(`summary:v4:${LLM_MODEL}:${q.sector}|${q.region}|${q.year}`, () => build(q));
 }
 
 async function build(q: ReportQuery): Promise<ReportSummary> {
   // The same Cala calls as the sections below (memoised), so the summary costs no extra Cala requests.
-  const [size, funding, trends, deals, players] = await Promise.allSettled([
-    marketSize(q),
-    marketFunding(q),
-    marketTrends(q),
-    marketDeals(q),
-    marketPlayers(q),
-  ]);
+  const [size, deals, trends, players] = await Promise.allSettled([marketSize(q), marketDeals(q), marketTrends(q), marketPlayers(q)]);
 
   const facts: Fact[] = [];
   const add = (prefix: string, s: PromiseSettledResult<EvidenceSection>, max: number) => {
@@ -56,9 +50,8 @@ async function build(q: ReportQuery): Promise<ReportSummary> {
     s.value.evidence.slice(0, max).forEach((e, i) => facts.push({ id: `${prefix}${i + 1}`, text: e.text.slice(0, 1500), sources: e.sources }));
   };
   add("S", size, 15);
-  add("F", funding, 12);
+  add("D", deals, 18);
   add("T", trends, 15);
-  add("D", deals, 12);
   if (players.status === "fulfilled") {
     players.value.companies.slice(0, 10).forEach((c, i) => {
       const last = lastEquityRound(c);
@@ -89,7 +82,7 @@ function prompt(q: ReportQuery, facts: Fact[]) {
 Region: ${q.region}
 Current year: ${q.year}
 
-Facts (S = market size, F = funding, T = trends, D = deals, P = companies):
+Facts (S = market size, D = funding rounds and deals, T = trends, P = companies):
 ${facts.map((f) => `[${f.id}] ${f.text.replace(/\s+/g, " ")}`).join("\n")}
 
 Write:

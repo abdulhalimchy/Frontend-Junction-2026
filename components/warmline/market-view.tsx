@@ -254,6 +254,11 @@ export function MarketError({ error }: { error: unknown }) {
       description: "Add CALA_API_KEY to .env.local and restart the dev server, or set USE_MOCKS=true to use fixture data.",
     },
     rate_limited: { icon: AlertCircle, title: "Cala rate limit reached", description: "Wait a minute and reload. Results are cached once they load." },
+    no_credit: {
+      icon: KeyRound,
+      title: "Cala credit balance is empty",
+      description: "Top up at console.cala.ai. Results already loaded stay available. New questions are paused for 10 minutes after Cala reports the empty balance, then tried again.",
+    },
     invalid_request: { icon: AlertCircle, title: "Cala could not run this query", description: "Try describing the market in different words." },
     upstream: { icon: AlertCircle, title: "Could not reach Cala", description: error instanceof Error ? error.message : "Unknown error." },
   }[kind];

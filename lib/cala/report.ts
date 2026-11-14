@@ -1,9 +1,9 @@
 import "server-only";
-import type { MarketCompany, MarketData, Source } from "@/lib/types";
+import type { MarketCompany, Source } from "@/lib/types";
 import { assertCalaKey, knowledgeQuery, knowledgeSearch, type KnowBit } from "./client";
-import { fetchMarket, loadCandidates, regionOf } from "./market";
+import { loadCandidates, regionOf } from "./market";
 
-// Market report: each section is gathered from Cala independently so the page can stream them as they
+// Market report: four Cala calls (size, trends, funding and deals, leading players), each gathered independently so the page can stream them as they
 // arrive. Text answers come from knowledge_search together with the facts (KnowBits) behind them;
 // companies and funding come from sourced entities, as in the market view.
 
@@ -52,15 +52,13 @@ export function marketTrends(q: ReportQuery) {
   return ask(`What are the key trends, growth drivers and challenges in the ${q.sector} market${where(q.region)} in ${q.year - 1} and ${q.year}?`);
 }
 
-export function marketFunding(q: ReportQuery) {
-  return ask(
-    `What notable funding rounds did ${q.sector} startups${where(q.region)} raise in ${q.year - 1} and ${q.year}? ` +
-      `For each, give the company, amount with currency, round type, date and lead investors.`,
-  );
-}
-
+/** Funding rounds and deals in one question: one Cala call instead of two. */
 export function marketDeals(q: ReportQuery) {
-  return ask(`What notable acquisitions, mergers, IPOs and exits happened in the ${q.sector} market${where(q.region)} since ${q.year - 2}?`);
+  return ask(
+    `What notable funding rounds, acquisitions, mergers, IPOs and exits happened in the ${q.sector} market${where(q.region)} ` +
+      `in ${q.year - 1} and ${q.year}? For funding rounds give the company, amount with currency, round type, date and lead investors. ` +
+      `For deals give the buyer, the target, the value if disclosed, and the date.`,
+  );
 }
 
 /** Leading companies of any size and age, public or private, resolved to sourced Cala entities. */
@@ -70,9 +68,4 @@ export async function marketPlayers(q: ReportQuery): Promise<{ definition: strin
   const res = await knowledgeQuery(definition);
   const { companies, unresolved } = await loadCandidates(res, q.region);
   return { definition, companies, unresolved };
-}
-
-/** Startups that raised recently: the funding analysis from the market view. */
-export function marketCapital(q: ReportQuery): Promise<MarketData> {
-  return fetchMarket({ sector: q.sector, region: q.region, since: q.year - 1 });
 }

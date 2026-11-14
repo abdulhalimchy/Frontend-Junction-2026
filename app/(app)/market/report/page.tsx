@@ -1,4 +1,4 @@
-import { ArrowLeft, Building2, Coins, FileText, Handshake, Loader2, Scale, Search, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowLeft, Building2, FileText, Handshake, Loader2, Scale, Search, Sparkles, TrendingUp } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, PageHeader, Panel } from "@/components/warmline/blocks";
 import { Markdown } from "@/components/warmline/markdown";
-import { CompaniesTable, MarketError, MarketView } from "@/components/warmline/market-view";
+import { CompaniesTable, MarketError } from "@/components/warmline/market-view";
 import { SourceChip } from "@/components/warmline/source-chip";
 import { mocksEnabled } from "@/lib/cala/client";
 import { reportSummary, type ReportSummary } from "@/lib/cala/report-summary";
@@ -17,9 +17,7 @@ import { formatMoney } from "@/lib/format";
 import { Pill } from "@/components/warmline/badges";
 import { REGIONS, normaliseSector, regionOf } from "@/lib/cala/market";
 import {
-  marketCapital,
   marketDeals,
-  marketFunding,
   marketPlayers,
   marketSize,
   marketTrends,
@@ -42,9 +40,8 @@ const SECTIONS = [
   { id: "summary", label: "Summary", icon: Sparkles },
   { id: "size", label: "Market size", icon: Scale },
   { id: "players", label: "Leading players", icon: Building2 },
-  { id: "capital", label: "Capital flows", icon: Coins },
+  { id: "deals", label: "Funding and deals", icon: Handshake },
   { id: "trends", label: "Trends", icon: TrendingUp },
-  { id: "deals", label: "M&A and exits", icon: Handshake },
 ];
 
 async function Report({ searchParams }: PageProps<"/market/report">) {
@@ -70,7 +67,7 @@ async function Report({ searchParams }: PageProps<"/market/report">) {
             Market report: <span className="capitalize">{sector}</span>
           </span>
         }
-        description={`${place}. Every section is built from Cala: written answers come with the facts behind them, and every number links to its source. Sections appear as Cala answers; a new market takes about a minute.`}
+        description={`${place}. Every section is built from Cala: written answers come with the facts behind them, and every number links to its source. Sections appear as Cala answers; a new market takes about a minute and four Cala questions.`}
       />
 
       <form action="/market/report" className="mb-4 flex items-center gap-2 rounded-xl border bg-card p-3">
@@ -127,24 +124,14 @@ async function Report({ searchParams }: PageProps<"/market/report">) {
               <Players q={q} />
             </Suspense>
           </Section>
-          <Section id="capital" title="Capital flows" description={`Notable rounds since ${q.year - 1} as reported, then the rounds on record in Cala's company data.`}>
-            <Suspense fallback={<SectionLoading label="Asking Cala about recent funding" />}>
-              <EvidenceView load={marketFunding(q)} />
+          <Section id="deals" title="Funding and deals" description={`Notable rounds, acquisitions, IPOs and exits in ${q.year - 1} and ${q.year}, as reported.`}>
+            <Suspense fallback={<SectionLoading label="Asking Cala about funding and deals" />}>
+              <EvidenceView load={marketDeals(q)} />
             </Suspense>
-            <div className="mt-6">
-              <Suspense fallback={<SectionLoading label="Collecting rounds from company records" />}>
-                <Capital q={q} />
-              </Suspense>
-            </div>
           </Section>
           <Section id="trends" title="Trends, drivers and challenges">
             <Suspense fallback={<SectionLoading label="Asking Cala about trends" />}>
               <EvidenceView load={marketTrends(q)} />
-            </Suspense>
-          </Section>
-          <Section id="deals" title="M&A, IPOs and exits" description={`Since ${q.year - 2}.`}>
-            <Suspense fallback={<SectionLoading label="Asking Cala about deals" />}>
-              <EvidenceView load={marketDeals(q)} />
             </Suspense>
           </Section>
         </div>
@@ -374,31 +361,6 @@ async function Players({ q }: { q: ReportQuery }) {
       <CompaniesTable data={{ query: { sector: q.sector, region: q.region }, definition: res.definition, companies: res.companies, outsideRegion: [] }} currency={null} />
     </Panel>
   );
-}
-
-async function Capital({ q }: { q: ReportQuery }) {
-  let data;
-  try {
-    data = await marketCapital(q);
-  } catch (e) {
-    return <MarketError error={e} />;
-  }
-  const withRounds = data.companies.filter((c) => c.rounds.length);
-  if (!withRounds.length) {
-    return (
-      <EmptyState
-        compact
-        icon={Coins}
-        title="No structured round data yet"
-        description={
-          data.companies.length
-            ? `Cala named ${data.companies.length} recently funded startups (${data.companies.map((c) => c.name).join(", ")}), but their company records have no rounds yet. The reported rounds above are the evidence.`
-            : `No startups on record that raised since ${q.year - 1}.`
-        }
-      />
-    );
-  }
-  return <MarketView data={data} title={`Startups that raised since ${q.year - 1}`} />;
 }
 
 function SectionLoading({ label }: { label: string }) {
