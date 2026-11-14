@@ -5,6 +5,7 @@ import {
   COMPANY_PROPS,
   COMPANY_RELATIONSHIPS,
   companyCountries,
+  enrichInvestors,
   labelise,
   loadCandidates,
   normaliseName,
@@ -47,6 +48,7 @@ export async function fetchCompanyProfile(id: string): Promise<CompanyProfile> {
     },
   });
   const base = await toMarketCompany(e);
+  await enrichInvestors([base]);
   const stage = sourced<string>(e, "funding_stage");
   const status = sourced<string>(e, "operational_status") ?? sourced<string>(e, "company_ownership_status");
 

@@ -8,6 +8,7 @@ import { SourceChip } from "@/components/warmline/source-chip";
 import { fetchCompanyProfile, fetchCompetitorMarket } from "@/lib/cala/company";
 import { regionOf } from "@/lib/cala/market";
 import { formatFuzzyDate, formatMoney, formatTotals, totalsByCurrency } from "@/lib/format";
+import { groupInvestors, type InvestorGroup } from "@/lib/names";
 import type { CompanyProfile, FundingRound, Source } from "@/lib/types";
 
 /** One company from Cala: sourced profile, funding and investors, then the market of its competitors. */
@@ -28,7 +29,7 @@ export async function CompanyAnalysis({ id, region }: { id: string; region: stri
           <RoundsTable rounds={profile.rounds} />
         </Panel>
         <Panel title="Investors" description="Organisations and people with a sourced investment.">
-          <InvestorList investors={mergeByName(profile.investors)} />
+          <InvestorList investors={groupInvestors(profile.investors)} />
         </Panel>
       </div>
 
@@ -221,14 +222,21 @@ function RoundsTable({ rounds }: { rounds: FundingRound[] }) {
   );
 }
 
-function InvestorList({ investors }: { investors: CompanyProfile["investors"] }) {
+function InvestorList({ investors }: { investors: InvestorGroup[] }) {
   if (!investors.length) return <p className="text-sm text-muted-foreground">No investors on record.</p>;
   return (
     <ul className="max-h-80 space-y-2.5 overflow-auto">
       {investors.map((i) => (
         <li key={i.id} className="flex items-center gap-2.5">
           <EntityAvatar name={i.name} kind="investor" size="sm" />
-          <span className="min-w-0 flex-1 truncate text-sm">{i.name}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm">{i.name}</span>
+            {i.alsoKnownAs.length > 0 && (
+              <span className="block truncate text-xs text-muted-foreground" title={i.alsoKnownAs.join(", ")}>
+                Also recorded as {i.alsoKnownAs.join(", ")}
+              </span>
+            )}
+          </span>
           <SourceChip sources={i.sources} />
         </li>
       ))}
@@ -238,15 +246,4 @@ function InvestorList({ investors }: { investors: CompanyProfile["investors"] })
 
 function dedupe(sources: Source[]) {
   return sources.filter((s, i, arr) => arr.findIndex((x) => x.name === s.name && x.document === s.document) === i);
-}
-
-/** Cala can hold several entities with the same name; show one row per name with merged sources. */
-function mergeByName(list: CompanyProfile["investors"]) {
-  const map = new Map<string, CompanyProfile["investors"][number]>();
-  for (const i of list) {
-    const key = i.name.trim().toLowerCase();
-    const e = map.get(key);
-    map.set(key, e ? { ...e, sources: dedupe([...e.sources, ...i.sources]) } : i);
-  }
-  return [...map.values()];
 }

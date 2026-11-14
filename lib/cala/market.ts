@@ -1,4 +1,5 @@
 import "server-only";
+import { normaliseName } from "@/lib/names";
 import type { FundingRound, FuzzyDate, MarketCompany, MarketData, MarketQuery, Sourced } from "@/lib/types";
 import {
   assertCalaKey,
@@ -48,23 +49,7 @@ const ISO: Record<string, string> = {
 };
 const COUNTRY_TYPES = new Set(["Country", "DependentTerritory"]);
 
-const LEGAL_SUFFIXES = new Set([
-  "as", "asa", "ab", "oy", "oyj", "aps", "a/s", "ltd", "limited", "inc", "incorporated", "corp", "corporation", "co",
-  "llc", "plc", "gmbh", "ag", "se", "sa", "sas", "bv", "nv", "spa", "srl", "kk", "pte", "pty",
-]);
-
-/** "GE HealthCare Inc." → "ge healthcare", "Koninklijke Philips N.V. (Philips Healthcare)" → "koninklijke philips". */
-export function normaliseName(name: string) {
-  const words = name
-    .toLowerCase()
-    .replace(/\([^)]*\)/g, " ")
-    .replace(/[.'’]/g, "")
-    .replace(/[,&]/g, " ")
-    .split(/\s+/)
-    .filter(Boolean);
-  while (words.length > 1 && LEGAL_SUFFIXES.has(words[words.length - 1])) words.pop();
-  return words.join(" ");
-}
+export { normaliseName };
 
 const MAX_COMPANIES = 12;
 const MAX_ROUNDS_PER_COMPANY = 12;
@@ -120,6 +105,7 @@ export async function loadCandidates(res: QueryResponse, regionKey: string, excl
   }
 
   const fetched = await mapLimit(ids, CONCURRENCY, (id) => fetchMarketCompany(id));
+  await enrichInvestors(fetched.map((f) => f.company));
 
   // Cala's query does not strictly enforce location. Drop companies whose location on record is outside
   // the region; keep those with no location on record.
@@ -131,6 +117,32 @@ export async function loadCandidates(res: QueryResponse, regionKey: string, excl
     else outsideRegion.push({ name: company.name, country: countries[0] });
   }
   return { companies, outsideRegion, unresolved };
+}
+
+const MAX_INVESTORS_ENRICHED = 40;
+
+/**
+ * Adds each investor's Cala aliases and website (one cached lookup per investor), so the same firm recorded
+ * as several entities ("a16z", "Andreessen Horowitz", "INDEX VENTURES (UK) LLP" / "Index Ventures Limited")
+ * can be merged. A failed lookup just leaves that investor to be matched by name.
+ */
+export async function enrichInvestors(companies: MarketCompany[]) {
+  const ids = [...new Set(companies.flatMap((c) => c.investors.map((i) => i.id)))].slice(0, MAX_INVESTORS_ENRICHED);
+  const info = new Map<string, { aliases: string[]; website: string | null }>();
+  await mapLimit(ids, CONCURRENCY, async (id) => {
+    try {
+      const e = await retrieveEntity(id, { properties: ["aliases", "website"] });
+      const aliases = prop(e, "aliases")?.value;
+      const website = prop(e, "website")?.value;
+      info.set(id, {
+        aliases: Array.isArray(aliases) ? aliases.filter((a): a is string => typeof a === "string") : [],
+        website: typeof website === "string" ? website : null,
+      });
+    } catch {
+      // Name matching still applies.
+    }
+  });
+  for (const c of companies) for (const i of c.investors) Object.assign(i, info.get(i.id) ?? {});
 }
 
 /**

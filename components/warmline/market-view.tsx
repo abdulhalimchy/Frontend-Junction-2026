@@ -206,7 +206,14 @@ function InvestorsTable({ s }: { s: MarketSummary }) {
         display: (
           <div className="flex items-center gap-2.5">
             <EntityAvatar name={i.name} kind="investor" size="sm" />
-            <span className="font-medium">{i.name}</span>
+            <div className="min-w-0">
+              <div className="font-medium">{i.name}</div>
+              {i.alsoKnownAs.length > 0 && (
+                <div className="truncate text-xs text-muted-foreground" title={i.alsoKnownAs.join(", ")}>
+                  Also recorded as {i.alsoKnownAs.join(", ")}
+                </div>
+              )}
+            </div>
           </div>
         ),
         sort: i.name,

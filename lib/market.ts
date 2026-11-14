@@ -1,3 +1,4 @@
+import { groupInvestors } from "@/lib/names";
 import type { FundingRound, MarketCompany, MarketData, Money, Source, Sourced } from "@/lib/types";
 
 // Pure aggregation over MarketData. Rules:
@@ -19,7 +20,7 @@ export type MarketSummary = {
   byYear: YearPoint[];
   yearSources: Source[];
   excluded: { otherCurrency: number; otherCurrencies: string[]; undisclosed: number; undated: number; otherInstrument: number };
-  investors: { id: string; name: string; companies: string[]; sources: Source[] }[];
+  investors: { id: string; name: string; alsoKnownAs: string[]; companies: string[]; sources: Source[] }[];
 };
 
 export function summariseMarket(data: MarketData): MarketSummary {
@@ -50,18 +51,16 @@ export function summariseMarket(data: MarketData): MarketSummary {
 
   const otherCurrencyRounds = money.filter((r) => r.amount!.currency !== currency);
 
-  // Investors that appear across the market, most companies first. Cala can hold several entities with the
-  // same name, so investors are grouped by name and their sources merged.
-  const inv = new Map<string, { id: string; name: string; companies: string[]; sources: Source[] }>();
-  for (const c of data.companies) {
-    for (const i of c.investors) {
-      const key = i.name.trim().toLowerCase();
-      const e = inv.get(key) ?? { id: i.id, name: i.name, companies: [], sources: [] };
-      if (!e.companies.includes(c.name)) e.companies.push(c.name);
-      e.sources = dedupe([...e.sources, ...i.sources]);
-      inv.set(key, e);
-    }
-  }
+  // Investors across the market, most companies first. One firm can be several Cala entities
+  // (legal entities, aliases, typos), so records are grouped first; see groupInvestors.
+  const refs = data.companies.flatMap((c) => c.investors.map((i) => ({ ...i, company: c.name })));
+  const investors = groupInvestors(refs).map((g) => ({
+    id: g.id,
+    name: g.name,
+    alsoKnownAs: g.alsoKnownAs,
+    sources: g.sources,
+    companies: [...new Set(g.members.map((m) => (m as (typeof refs)[number]).company))],
+  }));
 
   return {
     currency,
@@ -80,7 +79,7 @@ export function summariseMarket(data: MarketData): MarketSummary {
       undated: inCurrency.filter((r) => !r.date).length,
       otherInstrument: rounds.filter((r) => r.kind === "other").length,
     },
-    investors: [...inv.values()].sort((a, b) => b.companies.length - a.companies.length || a.name.localeCompare(b.name)),
+    investors: investors.sort((a, b) => b.companies.length - a.companies.length || a.name.localeCompare(b.name)),
   };
 }
 

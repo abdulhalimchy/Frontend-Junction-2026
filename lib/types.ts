@@ -147,7 +147,8 @@ export type MarketCompany = {
   hq: Sourced<string> | null;
   founded: Sourced<FuzzyDate> | null;
   rounds: FundingRound[];
-  investors: { id: string; name: string; sources: Source[] }[];
+  /** aliases and website come from Cala and are used to merge records of the same investor. */
+  investors: { id: string; name: string; sources: Source[]; aliases?: string[]; website?: string | null }[];
 };
 
 export type MarketQuery = { sector: string; region: string };
