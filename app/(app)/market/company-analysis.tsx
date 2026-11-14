@@ -6,7 +6,7 @@ import { DataTable, type Row } from "@/components/warmline/data-table";
 import { MarketError, MarketView, ResultsLoading } from "@/components/warmline/market-view";
 import { SourceChip } from "@/components/warmline/source-chip";
 import { fetchCompanyProfile, fetchCompetitorMarket } from "@/lib/cala/company";
-import { regionOf } from "@/lib/cala/market";
+import { FILING_LABEL, regionOf } from "@/lib/cala/market";
 import { formatFuzzyDate, formatMoney, formatTotals, totalsByCurrency } from "@/lib/format";
 import { groupInvestors, type InvestorGroup } from "@/lib/names";
 import type { CompanyProfile, FundingRound, Source } from "@/lib/types";
@@ -25,7 +25,11 @@ export async function CompanyAnalysis({ id, region }: { id: string; region: stri
       <Header p={profile} />
       <FundingStats p={profile} />
       <div className="mb-6 grid grid-cols-3 gap-6">
-        <Panel className="col-span-2" title="Funding rounds" description="Every round Cala has a source for. Equity, grants and debt are labelled separately.">
+        <Panel
+          className="col-span-2"
+          title="Funding rounds"
+          description="Every round Cala has a source for. Only equity and grants are summed; filings that match a round by month and amount are merged into it."
+        >
           <RoundsTable rounds={profile.rounds} />
         </Panel>
         <Panel title="Investors" description="Organisations and people with a sourced investment.">
@@ -200,7 +204,11 @@ function RoundsTable({ rounds }: { rounds: FundingRound[] }) {
       date: { display: <span className="whitespace-nowrap text-[13px] tabular">{formatFuzzyDate(r.date)}</span>, sort: r.date?.date ?? null },
       round: { display: <span className="text-[13px] font-medium">{r.stage}</span>, sort: r.stage },
       kind: {
-        display: <Pill tone={r.kind === "equity" ? "teal" : r.kind === "grant" ? "success" : "neutral"}>{KIND_LABEL[r.kind]}</Pill>,
+        display: (
+          <Pill tone={r.kind === "equity" ? "teal" : r.kind === "grant" ? "success" : "neutral"}>
+            {r.stage === FILING_LABEL ? "Filing, unclassified" : KIND_LABEL[r.kind]}
+          </Pill>
+        ),
         sort: r.kind,
       },
       amount: { display: <span className="whitespace-nowrap text-[13px] tabular">{formatMoney(r.amount)}</span>, sort: r.amount?.amount ?? null },

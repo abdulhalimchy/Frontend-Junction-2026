@@ -94,7 +94,7 @@ function Exclusions({ s }: { s: MarketSummary }) {
     s.excluded.otherCurrency && `${s.excluded.otherCurrency} in ${s.excluded.otherCurrencies.join(", ")} (not converted)`,
     s.excluded.undisclosed && `${s.excluded.undisclosed} with no amount on record`,
     s.excluded.undated && `${s.excluded.undated} with no date`,
-    s.excluded.otherInstrument && `${s.excluded.otherInstrument} debt or other instruments`,
+    s.excluded.otherInstrument && `${s.excluded.otherInstrument} debt, unclassified filings or other instruments`,
   ].filter(Boolean);
   if (!parts.length) return null;
   return (

@@ -37,6 +37,28 @@ export function mocksEnabled() {
   return process.env.USE_MOCKS === "true";
 }
 
+const MAX_IN_FLIGHT = 4;
+let inFlight = 0;
+const waiting: (() => void)[] = [];
+
+function acquire(): Promise<void> {
+  if (inFlight < MAX_IN_FLIGHT) {
+    inFlight++;
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => waiting.push(resolve)); // slot handed over by release()
+}
+
+function release() {
+  const next = waiting.shift();
+  if (next) next();
+  else inFlight--;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function calaFetch<T>(path: string, init: { method: "GET" | "POST"; body?: unknown; query?: Record<string, string | string[] | number> }): Promise<T> {
   const key = process.env.CALA_API_KEY;
   if (!key) throw new CalaError("CALA_API_KEY is not set", 401, "missing_key");
@@ -46,11 +68,25 @@ async function calaFetch<T>(path: string, init: { method: "GET" | "POST"; body?:
     for (const item of Array.isArray(v) ? v : [v]) url.searchParams.append(k, String(item));
   }
 
-  const res = await fetch(url, {
-    method: init.method,
-    headers: { "X-API-KEY": key, "Content-Type": "application/json" },
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
+  // At most MAX_IN_FLIGHT requests at once across the whole app, and up to 3 retries on 429 with
+  // growing waits, so a page that needs many lookups slows down instead of failing.
+  let res: Response;
+  for (let attempt = 0; ; attempt++) {
+    await acquire();
+    try {
+      res = await fetch(url, {
+        method: init.method,
+        headers: { "X-API-KEY": key, "Content-Type": "application/json" },
+        body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      });
+    } finally {
+      release();
+    }
+    if (res.status !== 429 || attempt >= 3) break;
+    await res.body?.cancel();
+    const retryAfter = Number(res.headers.get("retry-after"));
+    await sleep(retryAfter > 0 ? Math.min(retryAfter, 10) * 1000 : 1000 * 2 ** attempt);
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");

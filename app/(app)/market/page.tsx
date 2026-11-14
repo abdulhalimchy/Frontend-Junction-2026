@@ -1,6 +1,7 @@
 import { ArrowRight, Building2, LineChart, Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +21,8 @@ const PRESETS = ["maritime robotics", "industrial robotics", "climate tech", "he
 const COMPANY_PRESETS = ["GE HealthCare", "Wheel.me", "Hyperion Robotics", "Aiven"];
 
 type Mode = "market" | "company";
-type Params = { mode: Mode; text: string; region: string; companyId: string | null };
+type Period = "recent" | "any";
+type Params = { mode: Mode; text: string; region: string; companyId: string | null; period: Period; since: number | null };
 
 export default function MarketPage(props: PageProps<"/market">) {
   return (
@@ -45,7 +47,11 @@ async function MarketContent({ searchParams }: PageProps<"/market">) {
   const text = str("sector") || (mode === "market" ? PRESETS[0] : "");
   // Markets default to the Nordics; competitors of a company default to anywhere.
   const region = REGIONS[str("region")] ? str("region") : mode === "company" ? "anywhere" : "nordics";
-  const p: Params = { mode, text, region, companyId };
+  // Default to companies that raised recently; "any time" mostly surfaces well-known, older companies.
+  const period: Period = str("period") === "any" ? "any" : "recent";
+  await connection();
+  const since = period === "recent" ? new Date().getFullYear() - 1 : null;
+  const p: Params = { mode, text, region, companyId, period, since };
 
   return (
     <>
@@ -71,8 +77,8 @@ async function MarketContent({ searchParams }: PageProps<"/market">) {
               <CompanyHint text={text} region={region} />
             </Suspense>
           )}
-          <Suspense key={`${text}|${region}`} fallback={<ResultsLoading />}>
-            <MarketResults sector={text} region={region} />
+          <Suspense key={`${text}|${region}|${since}`} fallback={<ResultsLoading />}>
+            <MarketResults sector={text} region={region} since={since} />
           </Suspense>
         </>
       )}
@@ -134,6 +140,17 @@ function Filters({ p }: { p: Params }) {
             </option>
           ))}
         </select>
+        {p.mode === "market" && (
+          <select
+            name="period"
+            defaultValue={p.period}
+            aria-label="Funding period"
+            className="h-9 rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            <option value="recent">Raised in last 2 years</option>
+            <option value="any">Any time</option>
+          </select>
+        )}
         <Button type="submit" className="h-9">
           {p.mode === "market" ? "Analyse market" : p.companyId ? "Search or update" : "Find company"}
         </Button>
@@ -143,7 +160,11 @@ function Filters({ p }: { p: Params }) {
         {presets.map((t) => (
           <Link
             key={t}
-            href={p.mode === "market" ? href({ sector: t, region: p.region }) : href({ mode: "company", sector: t })}
+            href={
+              p.mode === "market"
+                ? href({ sector: t, region: p.region, ...(p.period === "any" ? { period: "any" } : {}) })
+                : href({ mode: "company", sector: t })
+            }
             className={cn(
               "rounded-full border px-2.5 py-0.5 text-xs",
               t === p.text && !p.companyId ? "border-primary/30 bg-teal-soft text-accent-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -231,10 +252,10 @@ async function CompanyPicker({ text, region }: { text: string; region: string })
   );
 }
 
-async function MarketResults({ sector, region }: { sector: string; region: string }) {
+async function MarketResults({ sector, region, since }: { sector: string; region: string; since: number | null }) {
   let data: MarketData;
   try {
-    data = await getMarket({ sector, region });
+    data = await getMarket({ sector, region, since });
   } catch (e) {
     return <MarketError error={e} />;
   }
@@ -242,10 +263,15 @@ async function MarketResults({ sector, region }: { sector: string; region: strin
     return (
       <EmptyState
         icon={Search}
-        title={`No companies on record for “${sector}” in ${regionOf(region).label}`}
-        description="Describe what the companies do in other words, pick a wider region, or switch to Company to look up a company by name."
+        title={`No companies on record for “${sector}” in ${regionOf(region).label}${since ? ` that raised since ${since}` : ""}`}
+        description={`Describe what the companies do in other words, pick a wider region${since ? ", set Funding to Any time" : ""}, or switch to Company to look up a company by name.`}
       />
     );
   }
-  return <MarketView data={data} title={`Companies in ${sector}, ${regionOf(region).label}`} />;
+  return (
+    <MarketView
+      data={data}
+      title={`Companies in ${sector}, ${regionOf(region).label}${since ? `, raised since ${since}` : ""}`}
+    />
+  );
 }

@@ -151,7 +151,8 @@ export type MarketCompany = {
   investors: { id: string; name: string; sources: Source[]; aliases?: string[]; website?: string | null }[];
 };
 
-export type MarketQuery = { sector: string; region: string };
+/** since: only companies that raised in this year or later (null = any time). */
+export type MarketQuery = { sector: string; region: string; since?: number | null };
 
 /** A company entity found by name in Cala. */
 export type CompanyMatch = { id: string; name: string; entityType: string; description: string | null };
