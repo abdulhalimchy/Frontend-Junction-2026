@@ -28,7 +28,7 @@ import {
 } from "@/lib/cala/report";
 import type { Source } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Market report" };
+export const metadata: Metadata = { title: "Market analysis" };
 
 export default function ReportPage(props: PageProps<"/market/report">) {
   return (
@@ -63,13 +63,13 @@ async function Report({ searchParams }: PageProps<"/market/report">) {
     <>
       <PageHeader
         eyebrow={
-          <Link href={`/market?${new URLSearchParams({ sector, region })}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="size-3" /> Market analysis
+          <Link href="/market" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="size-3" /> Choose analysis
           </Link>
         }
         title={
           <span>
-            Market report: <span className="capitalize">{sector}</span>
+            Market analysis: <span className="capitalize">{sector}</span>
           </span>
         }
         description={`${place}. Every section is built from Cala: written answers come with the facts behind them, and every number links to its source. Sections appear as Cala answers; a new market takes about a minute and four Cala questions.`}
@@ -93,7 +93,7 @@ async function Report({ searchParams }: PageProps<"/market/report">) {
           ))}
         </select>
         <Button type="submit" className="h-9">
-          Build report
+          Analyse market
         </Button>
       </form>
 

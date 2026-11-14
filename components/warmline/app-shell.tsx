@@ -16,7 +16,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   // ⌘K palette: pages plus known entities. Phase 3 adds live Cala search as you type.
   const palette: PaletteItem[] = [
     { type: "page", label: "Slush 2026", hint: "Event space", href: "/events/slush-2026/overview" },
-    { type: "page", label: "Market analysis", hint: "Page", href: "/market" },
+    { type: "page", label: "Market or company analysis", hint: "Page", href: "/market" },
     { type: "page", label: "Alerts", hint: "Page", href: "/alerts" },
     ...(profile.role === "founder"
       ? [{ type: "page" as const, label: "My startup", hint: "Page", href: "/startup/overview" }]
