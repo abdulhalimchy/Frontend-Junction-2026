@@ -46,9 +46,11 @@ function navFor(role: Role, unread: number): Item[] {
 }
 
 const LIVE_ITEMS: Item[] = [
+  { href: "/search", match: "/search", label: "Search", icon: Search },
   { href: "/market", match: "/market", label: "Market", icon: LineChart },
   { href: "/deck-check", match: "/deck-check", label: "Deck check", icon: FileSearch },
   { href: "/watchlist", match: "/watchlist", label: "Watch list", icon: Bookmark },
+  { href: "/events/slush-2026/overview", match: "/events", label: "Slush 2026", icon: CalendarDays, slush: true },
 ];
 
 export function Sidebar(

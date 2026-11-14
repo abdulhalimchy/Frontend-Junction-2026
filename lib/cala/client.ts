@@ -302,11 +302,11 @@ export function searchEntities(name: string, entityTypes: string[] = [], limit =
 }
 
 /** POST /v1/entities/{id}: properties and relationships, each with sources. */
-export function retrieveEntity(id: string, query?: EntityQuery): Promise<GetEntityResponse> {
+export function retrieveEntity(id: string, query?: EntityQuery, ttl = TTL.entity): Promise<GetEntityResponse> {
   return memoCala(
     `entity:${id}|${JSON.stringify(query ?? {})}`,
     () => calaFetch<GetEntityResponse>(`/v1/entities/${encodeURIComponent(id)}`, { method: "POST", body: query ?? {} }),
-    TTL.entity,
+    ttl,
   );
 }
 

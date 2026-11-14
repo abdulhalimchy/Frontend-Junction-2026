@@ -12,6 +12,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
     const palette: PaletteItem[] = [
       { type: "page", label: "Analyse a market", hint: "Market analysis", href: "/market" },
       { type: "page", label: "Analyse a company", hint: "Company analysis", href: "/market?mode=company" },
+      { type: "page", label: "Slush 2026", hint: "Event space", href: "/events/slush-2026/overview" },
     ];
     return (
       <div className="flex min-h-screen">

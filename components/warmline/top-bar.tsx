@@ -15,7 +15,40 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 
-export type PaletteItem = { type: "company" | "investor" | "person" | "page"; label: string; hint: string; href: string };
+export type PaletteItem = { type: "company" | "investor" | "person" | "page"; label: string; hint: string; href: string; remote?: boolean };
+
+type Hit = { type: "company" | "investor" | "person"; id: string; name: string; subtitle: string; href?: string };
+
+/** Live Cala entity search for the palette, debounced; stale responses are dropped. */
+function useCalaSuggestions(q: string): PaletteItem[] {
+  const [state, setState] = useState<{ q: string; items: PaletteItem[] }>({ q: "", items: [] });
+  const text = q.trim();
+  useEffect(() => {
+    if (text.length < 2) return;
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(text)}`, { signal: ctrl.signal });
+        const { hits = [] } = (await res.json()) as { hits?: Hit[] };
+        const items = hits.map((h) => ({
+          type: h.type,
+          label: h.name,
+          hint: h.subtitle,
+          href: h.href ?? (h.type === "investor" ? `/investor/${h.id}` : `/company/${h.id}`),
+          remote: true,
+        }));
+        setState({ q: text, items });
+      } catch {
+        // aborted or offline: keep the local palette only
+      }
+    }, 250);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [text]);
+  return state.q === text ? state.items : [];
+}
 
 const ICONS = { company: Building2, investor: Landmark, person: UserRound, page: Search };
 
@@ -23,6 +56,7 @@ export function TopBar({ items, unread, live }: { items: PaletteItem[]; unread: 
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
+  const remote = useCalaSuggestions(open ? q : "");
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -87,14 +121,16 @@ export function TopBar({ items, unread, live }: { items: PaletteItem[]; unread: 
             </CommandGroup>
           )}
           {groups.map((g) => {
-            const list = items.filter((i) => i.type === g.key);
+            const local = items.filter((i) => i.type === g.key);
+            const seen = new Set(local.map((i) => i.href));
+            const list = [...local, ...remote.filter((i) => i.type === g.key && !seen.has(i.href))];
             if (!list.length) return null;
             return (
               <CommandGroup key={g.key} heading={g.label}>
                 {list.map((it) => {
                   const Icon = ICONS[it.type];
                   return (
-                    <CommandItem key={it.href + it.label} value={`${it.label} ${it.hint}`} onSelect={() => go(it.href)}>
+                    <CommandItem key={it.href + it.label} value={`${it.remote ? q : ""} ${it.label} ${it.hint}`} onSelect={() => go(it.href)}>
                       <Icon />
                       <span>{it.label}</span>
                       <span className="ml-auto truncate text-xs text-muted-foreground">{it.hint}</span>

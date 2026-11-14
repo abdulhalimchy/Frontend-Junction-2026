@@ -1,27 +1,38 @@
 import { Suspense } from "react";
 import Loading from "@/app/(app)/loading";
 import { Building2, CalendarDays, Landmark, MapPin, Sparkles } from "lucide-react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { SlushTag } from "@/components/warmline/badges";
 import { FactGrid, PageHeader, Panel, StatCard, TabNav } from "@/components/warmline/blocks";
 import { SourceChip } from "@/components/warmline/source-chip";
 import { CompanyTable, InvestorTable } from "@/components/warmline/tables";
 import { getEventAttendees, getInvestor } from "@/lib/cala";
+import { mocksEnabled } from "@/lib/cala/client";
 import { formatDay } from "@/lib/format";
 import { SLUSH_EVENT_ID } from "@/lib/mocks/misc";
 import { getProfile } from "@/lib/session";
+import { LIVE_TABS, LiveSlush, type LiveTab } from "./live-slush";
 
 const TABS = ["overview", "new", "investors"] as const;
 type Tab = (typeof TABS)[number];
 
 export function generateStaticParams() {
-  return TABS.map((tab) => ({ tab }));
+  return [...new Set([...TABS, ...LIVE_TABS])].map((tab) => ({ tab }));
 }
 
 export const metadata = { title: "Slush 2026" };
 
-async function SlushPageContent({ params }: PageProps<"/events/slush-2026/[tab]">) {
+async function SlushPageContent({ params, searchParams }: PageProps<"/events/slush-2026/[tab]">) {
   const { tab } = (await params) as { tab: Tab };
+  // Live from Cala unless USE_MOCKS=true (same switch as Market). The mock page below is the demo persona view.
+  if (!mocksEnabled()) {
+    if (tab === "new") redirect("/events/slush-2026/attendees");
+    if (!LIVE_TABS.includes(tab as LiveTab)) notFound();
+    const sp = await searchParams;
+    const q = typeof sp.q === "string" ? sp.q.slice(0, 100) : "";
+    const page = Number(typeof sp.page === "string" ? sp.page : 1) || 1;
+    return <LiveSlush tab={tab as LiveTab} q={q} page={page} />;
+  }
   if (!TABS.includes(tab)) notFound();
   const [{ event: e, companies, investors }, profile] = await Promise.all([getEventAttendees(SLUSH_EVENT_ID), getProfile()]);
   const newest = [...companies].sort((a, b) => (b.slushJoined ?? "").localeCompare(a.slushJoined ?? ""));
