@@ -103,7 +103,6 @@ export function StartupNav({
                     <button type="button" onClick={() => open(s.id)} className="flex h-full min-w-0 flex-1 items-center gap-1.5 px-2 text-left">
                       <span className={cn("size-1.5 shrink-0 rounded-full", active ? "bg-primary" : "bg-border")} />
                       <span className="truncate">{s.name}</span>
-                      {s.demo && <span className="shrink-0 rounded bg-muted px-1 text-[9.5px] font-medium text-subtle uppercase">Demo</span>}
                     </button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -185,14 +184,13 @@ function MenuItems({
       <Item onSelect={onOpen}>
         <Rocket /> Open
       </Item>
-      <Item disabled={s.demo} onSelect={onRename}>
+      <Item onSelect={onRename}>
         <Pencil /> Rename
       </Item>
       <Separator />
-      <Item variant="destructive" disabled={s.demo} onSelect={onDelete}>
+      <Item variant="destructive" onSelect={onDelete}>
         <Trash2 /> Delete
       </Item>
-      {s.demo && <p className="px-1.5 pt-1 pb-0.5 text-[11px] text-subtle">Demo data can&apos;t be changed.</p>}
     </>
   );
 }
