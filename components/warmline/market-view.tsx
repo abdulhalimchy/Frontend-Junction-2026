@@ -65,11 +65,11 @@ export function MarketView({ data, title, note }: { data: MarketData; title: str
         </Panel>
       </div>
 
-      <Panel className="mb-6" title={title} description="Sorted by equity raised. Each value opens its sources.">
+      <Panel className="mb-6" title={title} description="Sorted by equity raised. Click a company for its overview; each value opens its sources.">
         <CompaniesTable data={data} currency={s.currency} />
       </Panel>
 
-      <Panel className="mb-6" title="Investors in this market" description="Investors with a sourced investment in at least one of these companies.">
+      <Panel className="mb-6" title="Investors in this market" description="Investors with a sourced investment in at least one of these companies. Click one for its portfolio.">
         <InvestorsTable s={s} />
       </Panel>
 
@@ -130,6 +130,7 @@ export function CompaniesTable({ data, currency }: { data: MarketData; currency:
     const grants = totalsByCurrency(c.rounds, "grant");
     return {
       id: c.id,
+      href: `/company/${c.id}`,
       cells: {
         name: {
           display: (
@@ -201,6 +202,7 @@ function InvestorsTable({ s }: { s: MarketSummary }) {
   if (!s.investors.length) return <EmptyState compact title="No investors on record for these companies" />;
   const rows: Row[] = s.investors.slice(0, 15).map((i) => ({
     id: i.id,
+    href: `/investor/${i.id}`,
     cells: {
       name: {
         display: (

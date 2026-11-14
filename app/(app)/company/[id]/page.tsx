@@ -10,14 +10,25 @@ import { CompanyOverview } from "@/components/warmline/company-overview";
 import { CompanyTable } from "@/components/warmline/tables";
 import { getCompany, getSimilarCompanies } from "@/lib/cala";
 import { getRole } from "@/lib/session";
+import { fetchCompanyProfile } from "@/lib/cala/company";
+import { LiveCompany } from "./live-company";
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function generateMetadata({ params }: PageProps<"/company/[id]">) {
-  const c = await getCompany((await params).id);
+  const { id } = await params;
+  if (UUID.test(id)) {
+    const p = await fetchCompanyProfile(id).catch(() => null);
+    return { title: p?.name ?? "Company" };
+  }
+  const c = await getCompany(id);
   return { title: c?.name ?? "Company" };
 }
 
 async function CompanyPageContent({ params }: PageProps<"/company/[id]">) {
   const { id } = await params;
+  // Cala entity IDs show the live overview; the demo personas (e.g. northlight-robotics) keep their mock page.
+  if (UUID.test(id)) return <LiveCompany id={id} />;
   const [c, similar, role] = await Promise.all([getCompany(id), getSimilarCompanies(id), getRole()]);
   if (!c) notFound();
 

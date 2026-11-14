@@ -1,6 +1,14 @@
 import "server-only";
-import type { CompanyMatch, CompanyProfile, MarketData, Money, Sourced } from "@/lib/types";
-import { assertCalaKey, knowledgeQuery, retrieveEntity, searchEntities, toSources, type GetEntityResponse } from "./client";
+import type { CompanyMatch, CompanyProfile, MarketData, Money, Source, Sourced } from "@/lib/types";
+import {
+  assertCalaKey,
+  knowledgeQuery,
+  retrieveEntity,
+  searchEntities,
+  toSources,
+  type GetEntityResponse,
+  type RelationshipEdge,
+} from "./client";
 import {
   COMPANY_PROPS,
   COMPANY_RELATIONSHIPS,
@@ -56,6 +64,86 @@ export async function fetchCompanyProfile(id: string): Promise<CompanyProfile> {
       sources: toSources(i.properties.sources),
     })),
     countries: companyCountries(e),
+    deals: corporateDeals(e),
+  };
+}
+
+const DEAL_EVENTS: Record<string, string> = {
+  MNA_COMPLETED: "Acquisition completed",
+  MNA_ANNOUNCED: "Acquisition announced",
+  MATERIAL_AGREEMENT_ANNOUNCED: "Agreement announced",
+  MATERIAL_AGREEMENT_TERMINATED: "Agreement terminated",
+  IPO: "IPO",
+};
+
+/** Acquisitions and similar deals from the corporate events already in the company request (no extra call). */
+function corporateDeals(e: GetEntityResponse): CompanyProfile["deals"] {
+  return (e.relationships.outgoing.PARTICIPATES_IN_CORPORATE_EVENT ?? [])
+    .filter((r) => r.entity_type === "CorporateEvent" && DEAL_EVENTS[r.name])
+    .map((r) => ({
+      id: r.id,
+      kind: DEAL_EVENTS[r.name],
+      role: typeof r.properties.role === "string" ? labelise(r.properties.role) : null,
+      date: typeof r.properties.event_date === "string" ? r.properties.event_date.slice(0, 10) : null,
+      sources: toSources(r.properties.sources),
+    }))
+    .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
+}
+
+export type PersonLink = { id: string; name: string; role: string; since: string | null; until: string | null; sources: Source[] };
+export type CompanyPeople = {
+  founders: PersonLink[];
+  leadership: PersonLink[];
+  board: PersonLink[];
+  team: PersonLink[];
+  events: { id: string; name: string; role: string | null; sources: Source[] }[];
+};
+
+const PEOPLE_QUERY = {
+  properties: ["name"],
+  relationships: {
+    incoming: {
+      FOUNDED: { limit: 10 },
+      IS_CEO_OF: { limit: 5 },
+      IS_CTO_OF: { limit: 5 },
+      IS_VICEPRESIDENT_OF: { limit: 10 },
+      IS_BOARD_MEMBER_OF: { limit: 15 },
+      WORKS_AT: { limit: 25 },
+    },
+    outgoing: { PARTICIPATES_IN_EVENT: { limit: 10 } },
+  },
+};
+
+/** People and events for a company page: one extra Cala call per company, cached for 7 days. */
+export async function fetchCompanyPeople(id: string): Promise<CompanyPeople> {
+  assertCalaKey();
+  const e = await retrieveEntity(id, PEOPLE_QUERY);
+  const inc = e.relationships.incoming;
+  const person = (r: RelationshipEdge, role: string): PersonLink => ({
+    id: r.id,
+    name: r.name,
+    role: typeof r.properties.role === "string" && r.properties.role ? r.properties.role : role,
+    since: typeof r.properties.valid_since === "string" ? r.properties.valid_since.slice(0, 10) : null,
+    until: typeof r.properties.valid_until === "string" ? r.properties.valid_until.slice(0, 10) : null,
+    sources: toSources(r.properties.sources),
+  });
+  const leadership = [
+    ...(inc.IS_CEO_OF ?? []).map((r) => person(r, "CEO")),
+    ...(inc.IS_CTO_OF ?? []).map((r) => person(r, "CTO")),
+    ...(inc.IS_VICEPRESIDENT_OF ?? []).map((r) => person(r, "Vice President")),
+  ];
+  const shown = new Set(leadership.map((p) => `${p.id}|${p.role}`));
+  return {
+    founders: (inc.FOUNDED ?? []).map((r) => person(r, "Founder")),
+    leadership,
+    board: (inc.IS_BOARD_MEMBER_OF ?? []).map((r) => person(r, "Board member")),
+    team: (inc.WORKS_AT ?? []).map((r) => person(r, "Team member")).filter((p) => !shown.has(`${p.id}|${p.role}`)),
+    events: (e.relationships.outgoing.PARTICIPATES_IN_EVENT ?? []).map((r) => ({
+      id: r.id,
+      name: r.name,
+      role: typeof r.properties.role === "string" ? labelise(r.properties.role) : null,
+      sources: toSources(r.properties.sources),
+    })),
   };
 }
 

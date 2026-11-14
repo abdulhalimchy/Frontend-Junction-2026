@@ -1,4 +1,5 @@
 import { Banknote, Building2, Coins, Globe, Landmark, MapPin, Users } from "lucide-react";
+import Link from "next/link";
 import { Suspense } from "react";
 import { Pill } from "@/components/warmline/badges";
 import { EmptyState, EntityAvatar, Panel, StatCard } from "@/components/warmline/blocks";
@@ -81,7 +82,7 @@ async function Competitors({ profile, region }: { profile: CompanyProfile; regio
   );
 }
 
-function Header({ p }: { p: CompanyProfile }) {
+export function Header({ p }: { p: CompanyProfile }) {
   const facts: { icon: typeof MapPin; label: string; value: string; sources: Source[] }[] = [];
   if (p.hq) facts.push({ icon: MapPin, label: "Headquarters", value: p.hq.value, sources: p.hq.sources });
   if (p.founded) facts.push({ icon: Building2, label: "Founded", value: formatFuzzyDate(p.founded.value), sources: p.founded.sources });
@@ -153,7 +154,7 @@ function Header({ p }: { p: CompanyProfile }) {
   );
 }
 
-function FundingStats({ p }: { p: CompanyProfile }) {
+export function FundingStats({ p }: { p: CompanyProfile }) {
   const equity = totalsByCurrency(p.rounds, "equity");
   const grants = totalsByCurrency(p.rounds, "grant");
   const equityRounds = p.rounds.filter((r) => r.kind === "equity");
@@ -194,7 +195,7 @@ function FundingStats({ p }: { p: CompanyProfile }) {
 
 const KIND_LABEL = { equity: "Equity", grant: "Grant", other: "Debt or other" } as const;
 
-function RoundsTable({ rounds }: { rounds: FundingRound[] }) {
+export function RoundsTable({ rounds }: { rounds: FundingRound[] }) {
   if (!rounds.length) {
     return <EmptyState compact icon={Banknote} title="No funding on record" description="Normal for bootstrapped and young companies." />;
   }
@@ -230,7 +231,7 @@ function RoundsTable({ rounds }: { rounds: FundingRound[] }) {
   );
 }
 
-function InvestorList({ investors }: { investors: InvestorGroup[] }) {
+export function InvestorList({ investors }: { investors: InvestorGroup[] }) {
   if (!investors.length) return <p className="text-sm text-muted-foreground">No investors on record.</p>;
   return (
     <ul className="max-h-80 space-y-2.5 overflow-auto">
@@ -238,7 +239,9 @@ function InvestorList({ investors }: { investors: InvestorGroup[] }) {
         <li key={i.id} className="flex items-center gap-2.5">
           <EntityAvatar name={i.name} kind="investor" size="sm" />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm">{i.name}</span>
+            <Link href={`/investor/${i.id}`} className="block truncate text-sm hover:text-primary hover:underline">
+              {i.name}
+            </Link>
             {i.alsoKnownAs.length > 0 && (
               <span className="block truncate text-xs text-muted-foreground" title={i.alsoKnownAs.join(", ")}>
                 Also recorded as {i.alsoKnownAs.join(", ")}

@@ -169,6 +169,8 @@ export type CompanyProfile = MarketCompany & {
   totalFundingExDebt: Sourced<Money> | null;
   industries: { name: string; label: string | null; sources: Source[] }[];
   countries: string[];
+  /** Acquisitions and similar corporate deals the company took part in. */
+  deals: { id: string; kind: string; role: string | null; date: string | null; sources: Source[] }[];
 };
 
 /** Raw market data. Totals and charts are derived in lib/market.ts so mocks and Cala share one code path. */
