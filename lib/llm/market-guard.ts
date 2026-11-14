@@ -11,17 +11,36 @@ export type GuardVerdict = {
   reason: string;
   /** Short market descriptions the user may have meant (empty when the text is a market). */
   suggestions: string[];
+  /**
+   * For markets: the standard name to analyse and cache under ("mobile apps" → "mobile applications"),
+   * or an already analysed market that means exactly the same thing. Empty when unknown.
+   */
+  canonical?: string;
 };
 
 const PASS: GuardVerdict = { kind: "market", reason: "", suggestions: [] };
 
-export async function checkMarketText(text: string): Promise<GuardVerdict> {
+/**
+ * `known` lists markets already analysed; when the text means exactly one of them, the canonical name is that
+ * market, so different wordings share one cached report. Cached per text (24h).
+ */
+export async function checkMarketText(text: string, known: string[] = []): Promise<GuardVerdict> {
   if (!llmConfigured()) return PASS;
   const key = text.trim().replace(/\s+/g, " ").toLowerCase();
   try {
-    return await memoCala(`guard:v1:${key}`, async () => {
-      const { data } = await generateJson<GuardVerdict>({ system: SYSTEM, prompt: `Text: ${JSON.stringify(text.slice(0, 120))}`, schema: SCHEMA });
-      return { kind: data.kind, reason: data.reason ?? "", suggestions: (data.suggestions ?? []).slice(0, 3) };
+    return await memoCala(`guard:v3:${key}`, async () => {
+      const { data } = await generateJson<GuardVerdict>({
+        system: SYSTEM,
+        prompt: `Known markets: ${JSON.stringify(known.slice(-120))}\nText: ${JSON.stringify(text.slice(0, 120))}`,
+        schema: SCHEMA,
+      });
+      const canonical = (data.canonical ?? "").trim().replace(/\s+/g, " ").toLowerCase().slice(0, 80);
+      return {
+        kind: data.kind,
+        reason: data.reason ?? "",
+        suggestions: (data.suggestions ?? []).slice(0, 3),
+        canonical: data.kind === "market" ? canonical : "",
+      };
     });
   } catch {
     return PASS;
@@ -36,7 +55,13 @@ const SYSTEM = `You classify text typed into a market-analysis search box, befor
   generic words that name no market ("help", "test", "money").
 Be generous: niche or emerging markets are markets. Only say not_market when no reasonable market is described.
 reason: one short sentence for the user. suggestions: when the kind is not "market", up to 3 short market
-descriptions the user may have meant (none if nothing sensible); when it is "market", an empty list.`;
+descriptions the user may have meant (none if nothing sensible); when it is "market", an empty list.
+canonical (only for "market"): the same market as a short, lowercase, standard name, used to share cached
+analyses between wordings. Fix spelling and expand obvious abbreviations ("mobile apps" -> "mobile applications",
+"ed tech" -> "edtech"). If one of the known markets means exactly the same market, return that name exactly.
+Never broaden or narrow the market and keep every meaningful qualifier: "mobile games" is not "mobile applications",
+"B2B payments" is not "payments", "EV charging" is not "electric vehicles". If unsure, keep the user's wording.
+Leave place names out of canonical; the region is chosen separately.`;
 
 const SCHEMA = {
   type: "object",
@@ -44,6 +69,7 @@ const SCHEMA = {
     kind: { type: "string", enum: ["market", "company", "not_market"] },
     reason: { type: "string" },
     suggestions: { type: "array", items: { type: "string" } },
+    canonical: { type: "string" },
   },
-  required: ["kind", "reason", "suggestions"],
+  required: ["kind", "reason", "suggestions", "canonical"],
 };

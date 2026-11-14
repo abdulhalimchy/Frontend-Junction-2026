@@ -12,6 +12,7 @@ import { CompaniesTable, MarketError } from "@/components/warmline/market-view";
 import { SourceChip } from "@/components/warmline/source-chip";
 import { mocksEnabled } from "@/lib/cala/client";
 import { checkMarketText, type GuardVerdict } from "@/lib/llm/market-guard";
+import { knownMarkets, rememberMarket } from "@/lib/cala/known-markets";
 import { MarketGuardNotice } from "@/components/warmline/market-guard";
 import { RefreshButton } from "@/components/warmline/refresh-button";
 import { reportSummary, type ReportSummary } from "@/lib/cala/report-summary";
@@ -53,17 +54,20 @@ async function Report({ searchParams }: PageProps<"/market/report">) {
   const sector = (typeof sp.sector === "string" && sp.sector.trim().slice(0, 80)) || "mobile applications";
   const region = typeof sp.region === "string" && REGIONS[sp.region] ? sp.region : "europe";
   await connection();
-  // Cache keys and Cala questions use a normalised sector, so "Mobile Applications" and "mobile  applications"
-  // share one cached report; the page title keeps what the user typed.
   const now = currentTime();
   // A refresh token is the click time; only a recent one counts, so reloads never re-spend credit.
   const token = Number(typeof sp.refresh === "string" ? sp.refresh : NaN);
   const refresh = Number.isFinite(token) && token <= now + 5_000 && now - token < REFRESH_WINDOW_MS;
-  const q: ReportQuery = { sector: normaliseSector(sector), region, year: new Date(now).getFullYear(), refresh };
   const place = regionOf(region).label;
-  // Check the text is a market before spending Cala credit; "Run anyway" (force=1) skips the check.
+  const typed = normaliseSector(sector);
+  // Before spending Cala credit: is this a market, and what is its standard name? Matching known markets lets
+  // different wordings ("mobile apps", "mobile applications") share one cached analysis. "Run anyway" and the
+  // exact-wording link (force=1) skip the check and use the text as typed.
   const verdict: GuardVerdict =
-    sp.force === "1" || mocksEnabled() ? { kind: "market", reason: "", suggestions: [] } : await checkMarketText(sector);
+    sp.force === "1" || mocksEnabled() ? { kind: "market", reason: "", suggestions: [] } : await checkMarketText(sector, await knownMarkets());
+  const name = verdict.kind === "market" && verdict.canonical ? verdict.canonical : typed;
+  const q: ReportQuery = { sector: name, region, year: new Date(now).getFullYear(), refresh };
+  if (verdict.kind === "market" && !mocksEnabled()) await rememberMarket(name);
 
   return (
     <>
@@ -75,7 +79,7 @@ async function Report({ searchParams }: PageProps<"/market/report">) {
         }
         title={
           <span>
-            Market analysis: <span className="capitalize">{sector}</span>
+            Market analysis: <span className="capitalize">{name}</span>
           </span>
         }
         description={`${place}. Every section is built from Cala: written answers come with the facts behind them, and every number links to its source. Sections appear as Cala answers; a new market takes about a minute and four Cala questions.`}
@@ -102,10 +106,19 @@ async function Report({ searchParams }: PageProps<"/market/report">) {
           Analyse market
         </Button>
       </form>
+      {name !== typed && verdict.kind === "market" && (
+        <p className="-mt-1 mb-2 text-sm text-muted-foreground">
+          Showing <span className="font-medium text-foreground">“{name}”</span> (you typed “{sector}”), so analyses of the same market are shared.{" "}
+          <Link href={`/market/report?${new URLSearchParams({ sector, region, force: "1" })}`} className="text-primary hover:underline">
+            Search “{sector}” exactly
+          </Link>{" "}
+          <span className="text-xs">(may use Cala credit)</span>
+        </p>
+      )}
       {verdict.kind === "market" && !mocksEnabled() && (
         <div className="-mt-1 mb-4 flex items-center justify-end gap-3 text-xs text-muted-foreground">
           {refresh ? "Fetching fresh answers from Cala…" : "Answers are cached for 24 hours."}
-          <RefreshButton href={`/market/report?${new URLSearchParams({ sector, region, force: "1" })}`} />
+          <RefreshButton href={`/market/report?${new URLSearchParams({ sector: name, region, force: "1" })}`} />
         </div>
       )}
 
