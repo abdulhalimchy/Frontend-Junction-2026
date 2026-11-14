@@ -1,7 +1,7 @@
 import { companies } from "@/lib/mocks/companies";
 import { investors, people } from "@/lib/mocks/investors";
 import { getActiveStartupId, getProfile, getStartups, getUnread } from "@/lib/session";
-import { DEMO_STARTUP_ID, startupHref } from "@/lib/startup-cookie";
+import { startupHref } from "@/lib/startup-cookie";
 import { getCompany, getInvestor } from "@/lib/cala";
 import { demoDataEnabled } from "@/lib/demo";
 import { Sidebar } from "./sidebar";
@@ -46,7 +46,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
     { type: "page", label: "Warm intros", hint: "Who can introduce you", href: "/intros" },
     { type: "page", label: "Alerts", hint: "Page", href: "/alerts" },
     ...(profile.role === "founder"
-      ? [{ type: "page" as const, label: "My startup", hint: "Page", href: startupHref(activeId ?? DEMO_STARTUP_ID) }]
+      ? [{ type: "page" as const, label: "My startup", hint: "Page", href: startupHref(activeId) }]
       : [
           { type: "page" as const, label: "Portfolio", hint: "Page", href: "/portfolio" },
           { type: "page" as const, label: "Deck check", hint: "Page", href: "/deck-check" },
@@ -67,7 +67,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
         role={profile.role}
         unread={unread}
         user={{ name: profile.name, org: org ?? "" }}
-        startups={startups && activeId ? { ...startups, activeId } : undefined}
+        startups={startups ? { ...startups, activeId: activeId ?? "" } : undefined}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar items={palette} unread={unread} />

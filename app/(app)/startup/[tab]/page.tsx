@@ -1,22 +1,21 @@
 import { Suspense } from "react";
 import Loading from "@/app/(app)/loading";
-import { CircleAlert, ExternalLink } from "lucide-react";
+import { CircleAlert, ExternalLink, Rocket } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { SlushTag } from "@/components/warmline/badges";
-import { EmptyState, PageHeader, Panel, TabNav } from "@/components/warmline/blocks";
+import { EmptyState, PageHeader, TabNav } from "@/components/warmline/blocks";
 import { EditStartupButton } from "@/components/warmline/edit-startup-button";
-import { StartupProfile } from "@/components/warmline/startup-profile";
+import { AddedStartupOverview } from "@/components/warmline/added-startup-overview";
+import { AddStartupButton } from "@/components/warmline/add-startup-button";
 import { AnalysisTab } from "@/components/warmline/analysis-tab";
 import { StartupGaps } from "@/components/warmline/startup-gaps";
 import { getAnalysis, getStartup } from "@/lib/backend/startups";
 import type { CompetitorsAnalysis, InvestorsAnalysis } from "@/lib/types";
-import { DEMO_STARTUP_ID, startupHref } from "@/lib/startup-cookie";
-import { CompanyOverview } from "@/components/warmline/company-overview";
+import { startupHref } from "@/lib/startup-cookie";
+import { Skeleton } from "@/components/ui/skeleton";
+import { CompanyRecord } from "@/app/(app)/company/[id]/live-company";
 import { DeckCheck } from "@/components/warmline/deck-check";
-import { CompanyTable, InvestorTable } from "@/components/warmline/tables";
-import { getCompany, getInvestorsForCompany, getSimilarCompanies } from "@/lib/cala";
 import { getActiveStartupId, getDeckCheck, getProfile, getStartups } from "@/lib/session";
 
 const TABS = ["overview", "competitors", "investors", "deck"] as const;
@@ -35,69 +34,26 @@ async function StartupPageContent({ params, searchParams }: PageProps<"/startup/
   const profile = await getProfile();
   if (profile.role !== "founder") redirect("/home");
 
-  // The startup comes from the URL (?s=); without one, the last startup chosen (cookie), else the demo.
-  const { items } = await getStartups();
+  // The startup comes from the URL (?s=); without one, the last startup chosen (cookie), else the first one.
+  const { items, error } = await getStartups();
   const wanted = typeof requested === "string" && items.some((s) => s.id === requested) ? requested : null;
-  if (!wanted) redirect(startupHref(await getActiveStartupId(items), tab));
-  if (wanted !== DEMO_STARTUP_ID) return <AddedStartup id={wanted} tab={tab} />;
-  const sid = DEMO_STARTUP_ID;
-
-  const companyId = profile.companyId!;
-  const [company, competitors, investors] = await Promise.all([
-    getCompany(companyId),
-    getSimilarCompanies(companyId),
-    getInvestorsForCompany(companyId),
-  ]);
-  if (!company) notFound();
+  if (wanted) return <AddedStartup id={wanted} tab={tab} />;
+  const fallback = await getActiveStartupId(items);
+  if (fallback) redirect(startupHref(fallback, tab));
 
   return (
     <>
-      <PageHeader
-        title={company.name}
-        description="How Cala sees your company. If something is wrong, fix it at the source; we show what the sources say."
-        eyebrow={company.attendsSlush ? <SlushTag label="Attending Slush 2026" /> : undefined}
-        actions={
-          <Button variant="outline" className="bg-card" asChild>
-            <Link href={`/company/${company.id}`}>
-              <ExternalLink /> Public brief
-            </Link>
-          </Button>
-        }
-      />
-      <TabNav
-        active={tab}
-        tabs={[
-          { key: "overview", label: "Overview", href: startupHref(sid, "overview") },
-          { key: "competitors", label: "Competitors", href: startupHref(sid, "competitors"), count: competitors.length },
-          { key: "investors", label: "Find investors", href: startupHref(sid, "investors"), count: investors.length },
-          { key: "deck", label: "Deck check", href: startupHref(sid, "deck") },
-        ]}
-      />
-      {tab === "overview" && <CompanyOverview company={company} />}
-      {tab === "competitors" && (
-        <Panel title="Competitors" description="Matched on description. Industry codes are only a rough first filter, so each match shows why.">
-          <CompanyTable
-            companies={competitors.map((c) => c.company)}
-            reasons={Object.fromEntries(competitors.map((c) => [c.id, c.reason]))}
-            extra={{
-              key: "overlap",
-              label: "Overlap",
-              cells: Object.fromEntries(
-                competitors.map((c) => [c.id, <span key={c.id} className="text-[13px] capitalize">{c.overlap}</span>]),
-              ),
-            }}
-          />
-        </Panel>
+      <PageHeader title="My startup" description="See your startup as investors see it: its record in Cala, competitors, investors to talk to, and a check of your deck." />
+      {error ? (
+        <EmptyState icon={CircleAlert} title="Could not load your startups" description={error} />
+      ) : (
+        <EmptyState
+          icon={Rocket}
+          title="Add your startup"
+          description="Enter its website. We look it up in Cala and fill in what is on record, with sources; you check and complete the rest."
+          action={<AddStartupButton />}
+        />
       )}
-      {tab === "investors" && (
-        <Panel title="Investors for your next round" description="Each one checked: still active, leads or follows, and whether they back a competitor.">
-          <InvestorTable
-            rows={investors}
-            competitorNames={Object.fromEntries(competitors.map((c) => [c.id, c.company.name]))}
-          />
-        </Panel>
-      )}
-      {tab === "deck" && <DeckTab companyName={company.name} startupId={null} />}
     </>
   );
 }
@@ -144,7 +100,21 @@ async function AddedStartup({ id, tab }: { id: string; tab: Tab }) {
           { key: "deck", label: "Deck check", href: startupHref(id, "deck") },
         ]}
       />
-      {tab === "overview" && <StartupProfile key={id} startup={startup} />}
+      {tab === "overview" && (
+        <AddedStartupOverview startup={startup} competitors={comp} investors={inv} deck={(await getDeckCheck(id)).result}>
+          {startup.calaCompanyId && (
+            <section className="pt-4">
+              <h2 className="text-base font-semibold">On record in Cala</h2>
+              <p className="mt-1 mb-4 max-w-2xl text-sm text-muted-foreground">
+                What Cala holds on the company this startup is matched to: funding, people, investors and deals, each with its sources.
+              </p>
+              <Suspense fallback={<Skeleton className="h-96 rounded-xl" />}>
+                <CompanyRecord id={startup.calaCompanyId} />
+              </Suspense>
+            </section>
+          )}
+        </AddedStartupOverview>
+      )}
       {tab === "competitors" && (
         <div className="grid grid-cols-3 gap-6">
           <div className="col-span-2 min-w-0">
@@ -166,15 +136,15 @@ async function AddedStartup({ id, tab }: { id: string; tab: Tab }) {
   );
 }
 
-/** Deck check for one startup: only decks uploaded for it (startupId null = the demo company). */
-async function DeckTab({ companyName, startupId }: { companyName: string; startupId: string | null }) {
+/** Deck check for one startup: only decks uploaded for it. */
+async function DeckTab({ companyName, startupId }: { companyName: string; startupId: string }) {
   const { result, error } = await getDeckCheck(startupId);
   return (
     <>
       <p className="mb-4 max-w-2xl text-sm text-muted-foreground">
         Check your own deck before investors do. Each claim is matched against Cala; anything without a source is marked “Can&apos;t verify”.
       </p>
-      <DeckCheck initial={result} companyName={companyName} loadError={error} startupId={startupId} />
+      <DeckCheck initial={result} companyName={companyName} loadError={error} startupId={startupId} founder />
     </>
   );
 }
