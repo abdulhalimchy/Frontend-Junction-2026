@@ -1,6 +1,7 @@
 import { ArrowRight, Bell, Building2, FileSearch, Landmark, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DEMO_STARTUP_ID, startupHref } from "@/lib/startup-cookie";
 import { Button } from "@/components/ui/button";
 import { SlushTag } from "@/components/warmline/badges";
 import { EntityAvatar, PageHeader, Panel, StatCard } from "@/components/warmline/blocks";
@@ -56,7 +57,7 @@ async function FounderHome({ companyId, alerts, card, slush }: { companyId: stri
           description="Attending, active in your space, and checked against your competitors."
           action={
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/startup/investors">
+              <Link href={startupHref(DEMO_STARTUP_ID, "investors")}>
                 All investors <ArrowRight />
               </Link>
             </Button>
