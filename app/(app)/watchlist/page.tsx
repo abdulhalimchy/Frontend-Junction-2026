@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { EmptyState, PageHeader, Panel } from "@/components/warmline/blocks";
 import { getAlertSchedule } from "@/lib/backend/alerts";
 import { listWatchItems } from "@/lib/backend/watchlist";
-import { demoDataEnabled } from "@/lib/demo";
 import { formatMoment, zoneCity } from "@/lib/format";
 import { getRole } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -45,7 +44,7 @@ async function WatchlistContent({ searchParams }: PageProps<"/watchlist">) {
   const filters = [...BASE_FILTERS, ...TAG_FILTERS.filter((f) => items.some(f.match))];
   const active = filters.find((f) => f.key === show) ?? filters[0];
   const shown = items.filter(active.match);
-  const browse = demoDataEnabled() ? { href: "/search", label: "Search companies" } : { href: "/market", label: "Open Market" };
+  const browse = { href: "/market", label: "Open Market" };
 
   return (
     <>

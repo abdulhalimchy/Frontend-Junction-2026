@@ -10,7 +10,6 @@ import {
   House,
   LineChart,
   Route,
-  Search,
   UserRound,
 } from "lucide-react";
 import Link from "next/link";
@@ -27,7 +26,6 @@ type Item = { href: string; match: string; label: string; icon: typeof House; ba
 function navFor(role: Role, unread: number): Item[] {
   const top: Item[] = [
     { href: "/home", match: "/home", label: "Home", icon: House },
-    { href: "/search", match: "/search", label: "Search", icon: Search },
     { href: "/market", match: "/market", label: "Market", icon: LineChart },
     { href: "/intros", match: "/intros", label: "Warm intros", icon: Route },
   ];
@@ -49,7 +47,6 @@ function navFor(role: Role, unread: number): Item[] {
 }
 
 const liveItems = (unread: number): Item[] => [
-  { href: "/search", match: "/search", label: "Search", icon: Search },
   { href: "/market", match: "/market", label: "Market", icon: LineChart },
   { href: "/intros", match: "/intros", label: "Warm intros", icon: Route },
   { href: "/deck-check", match: "/deck-check", label: "Deck check", icon: FileSearch },

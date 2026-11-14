@@ -56,8 +56,8 @@ async function InvestorPageContent({ params, searchParams }: PageProps<"/investo
     <>
       <PageHeader
         eyebrow={
-          <Link href="/search?type=investor" className="text-xs text-muted-foreground hover:text-foreground">
-            ← Investors
+          <Link href="/market" className="text-xs text-muted-foreground hover:text-foreground">
+            ← Market
           </Link>
         }
         title={
