@@ -65,11 +65,11 @@ export function MarketView({ data, title, note }: { data: MarketData; title: str
         </Panel>
       </div>
 
-      <Panel className="mb-6" title={title} description="Sorted by equity raised. Each value opens its sources.">
+      <Panel className="mb-6" title={title} description="Sorted by equity raised. Click a company for its overview; each value opens its sources.">
         <CompaniesTable data={data} currency={s.currency} />
       </Panel>
 
-      <Panel className="mb-6" title="Investors in this market" description="Investors with a sourced investment in at least one of these companies.">
+      <Panel className="mb-6" title="Investors in this market" description="Investors with a sourced investment in at least one of these companies. Click one for its portfolio.">
         <InvestorsTable s={s} />
       </Panel>
 
@@ -94,7 +94,7 @@ function Exclusions({ s }: { s: MarketSummary }) {
     s.excluded.otherCurrency && `${s.excluded.otherCurrency} in ${s.excluded.otherCurrencies.join(", ")} (not converted)`,
     s.excluded.undisclosed && `${s.excluded.undisclosed} with no amount on record`,
     s.excluded.undated && `${s.excluded.undated} with no date`,
-    s.excluded.otherInstrument && `${s.excluded.otherInstrument} debt or other instruments`,
+    s.excluded.otherInstrument && `${s.excluded.otherInstrument} debt, unclassified filings or other instruments`,
   ].filter(Boolean);
   if (!parts.length) return null;
   return (
@@ -123,13 +123,14 @@ function RoundsPerYear({ s }: { s: MarketSummary }) {
   );
 }
 
-function CompaniesTable({ data, currency }: { data: MarketData; currency: string | null }) {
+export function CompaniesTable({ data, currency }: { data: MarketData; currency: string | null }) {
   const rows: Row[] = data.companies.map((c) => {
     const last = lastEquityRound(c);
     const equity = totalsByCurrency(c.rounds, "equity");
     const grants = totalsByCurrency(c.rounds, "grant");
     return {
       id: c.id,
+      href: `/company/${c.id}`,
       cells: {
         name: {
           display: (
@@ -201,12 +202,20 @@ function InvestorsTable({ s }: { s: MarketSummary }) {
   if (!s.investors.length) return <EmptyState compact title="No investors on record for these companies" />;
   const rows: Row[] = s.investors.slice(0, 15).map((i) => ({
     id: i.id,
+    href: `/investor/${i.id}`,
     cells: {
       name: {
         display: (
           <div className="flex items-center gap-2.5">
             <EntityAvatar name={i.name} kind="investor" size="sm" />
-            <span className="font-medium">{i.name}</span>
+            <div className="min-w-0">
+              <div className="font-medium">{i.name}</div>
+              {i.alsoKnownAs.length > 0 && (
+                <div className="truncate text-xs text-muted-foreground" title={i.alsoKnownAs.join(", ")}>
+                  Also recorded as {i.alsoKnownAs.join(", ")}
+                </div>
+              )}
+            </div>
           </div>
         ),
         sort: i.name,
@@ -247,6 +256,11 @@ export function MarketError({ error }: { error: unknown }) {
       description: "Add CALA_API_KEY to .env.local and restart the dev server, or set USE_MOCKS=true to use fixture data.",
     },
     rate_limited: { icon: AlertCircle, title: "Cala rate limit reached", description: "Wait a minute and reload. Results are cached once they load." },
+    no_credit: {
+      icon: KeyRound,
+      title: "Cala credit balance is empty",
+      description: "Top up at console.cala.ai. Results already loaded stay available. New questions are paused for 10 minutes after Cala reports the empty balance, then tried again.",
+    },
     invalid_request: { icon: AlertCircle, title: "Cala could not run this query", description: "Try describing the market in different words." },
     upstream: { icon: AlertCircle, title: "Could not reach Cala", description: error instanceof Error ? error.message : "Unknown error." },
   }[kind];

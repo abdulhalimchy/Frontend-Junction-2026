@@ -11,16 +11,27 @@ import { CompanyTable } from "@/components/warmline/tables";
 import { getCompanies, getInvestor, getPeople, getSimilarCompanies } from "@/lib/cala";
 import { formatFuzzyDate, formatMoney } from "@/lib/format";
 import { getProfile } from "@/lib/session";
+import { fetchInvestorProfile } from "@/lib/cala/investor";
+import { LiveInvestor } from "./live-investor";
 import type { Source } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function generateMetadata({ params }: PageProps<"/investor/[id]">) {
-  const d = await getInvestor((await params).id);
+  const { id } = await params;
+  if (UUID.test(id)) {
+    const p = await fetchInvestorProfile(id).catch(() => null);
+    return { title: p?.name ?? "Investor" };
+  }
+  const d = await getInvestor(id);
   return { title: d?.investor.name ?? "Investor" };
 }
 
 async function InvestorPageContent({ params }: PageProps<"/investor/[id]">) {
   const { id } = await params;
+  // Cala entity IDs show the live overview; the demo persona (fjord-ventures) keeps its mock page.
+  if (UUID.test(id)) return <LiveInvestor id={id} />;
   const data = await getInvestor(id);
   if (!data) notFound();
   const { investor: i, check } = data;

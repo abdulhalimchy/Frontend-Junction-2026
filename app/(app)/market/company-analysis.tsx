@@ -1,4 +1,5 @@
 import { Banknote, Building2, Coins, Globe, Landmark, MapPin, Users } from "lucide-react";
+import Link from "next/link";
 import { Suspense } from "react";
 import { Pill } from "@/components/warmline/badges";
 import { EmptyState, EntityAvatar, Panel, StatCard } from "@/components/warmline/blocks";
@@ -6,8 +7,9 @@ import { DataTable, type Row } from "@/components/warmline/data-table";
 import { MarketError, MarketView, ResultsLoading } from "@/components/warmline/market-view";
 import { SourceChip } from "@/components/warmline/source-chip";
 import { fetchCompanyProfile, fetchCompetitorMarket } from "@/lib/cala/company";
-import { regionOf } from "@/lib/cala/market";
+import { FILING_LABEL, regionOf } from "@/lib/cala/market";
 import { formatFuzzyDate, formatMoney, formatTotals, totalsByCurrency } from "@/lib/format";
+import { groupInvestors, type InvestorGroup } from "@/lib/names";
 import type { CompanyProfile, FundingRound, Source } from "@/lib/types";
 
 /** One company from Cala: sourced profile, funding and investors, then the market of its competitors. */
@@ -24,11 +26,15 @@ export async function CompanyAnalysis({ id, region }: { id: string; region: stri
       <Header p={profile} />
       <FundingStats p={profile} />
       <div className="mb-6 grid grid-cols-3 gap-6">
-        <Panel className="col-span-2" title="Funding rounds" description="Every round Cala has a source for. Equity, grants and debt are labelled separately.">
+        <Panel
+          className="col-span-2"
+          title="Funding rounds"
+          description="Every round Cala has a source for. Only equity and grants are summed; filings that match a round by month and amount are merged into it."
+        >
           <RoundsTable rounds={profile.rounds} />
         </Panel>
         <Panel title="Investors" description="Organisations and people with a sourced investment.">
-          <InvestorList investors={mergeByName(profile.investors)} />
+          <InvestorList investors={groupInvestors(profile.investors)} />
         </Panel>
       </div>
 
@@ -76,7 +82,7 @@ async function Competitors({ profile, region }: { profile: CompanyProfile; regio
   );
 }
 
-function Header({ p }: { p: CompanyProfile }) {
+export function Header({ p }: { p: CompanyProfile }) {
   const facts: { icon: typeof MapPin; label: string; value: string; sources: Source[] }[] = [];
   if (p.hq) facts.push({ icon: MapPin, label: "Headquarters", value: p.hq.value, sources: p.hq.sources });
   if (p.founded) facts.push({ icon: Building2, label: "Founded", value: formatFuzzyDate(p.founded.value), sources: p.founded.sources });
@@ -148,7 +154,7 @@ function Header({ p }: { p: CompanyProfile }) {
   );
 }
 
-function FundingStats({ p }: { p: CompanyProfile }) {
+export function FundingStats({ p }: { p: CompanyProfile }) {
   const equity = totalsByCurrency(p.rounds, "equity");
   const grants = totalsByCurrency(p.rounds, "grant");
   const equityRounds = p.rounds.filter((r) => r.kind === "equity");
@@ -189,7 +195,7 @@ function FundingStats({ p }: { p: CompanyProfile }) {
 
 const KIND_LABEL = { equity: "Equity", grant: "Grant", other: "Debt or other" } as const;
 
-function RoundsTable({ rounds }: { rounds: FundingRound[] }) {
+export function RoundsTable({ rounds }: { rounds: FundingRound[] }) {
   if (!rounds.length) {
     return <EmptyState compact icon={Banknote} title="No funding on record" description="Normal for bootstrapped and young companies." />;
   }
@@ -199,7 +205,11 @@ function RoundsTable({ rounds }: { rounds: FundingRound[] }) {
       date: { display: <span className="whitespace-nowrap text-[13px] tabular">{formatFuzzyDate(r.date)}</span>, sort: r.date?.date ?? null },
       round: { display: <span className="text-[13px] font-medium">{r.stage}</span>, sort: r.stage },
       kind: {
-        display: <Pill tone={r.kind === "equity" ? "teal" : r.kind === "grant" ? "success" : "neutral"}>{KIND_LABEL[r.kind]}</Pill>,
+        display: (
+          <Pill tone={r.kind === "equity" ? "teal" : r.kind === "grant" ? "success" : "neutral"}>
+            {r.stage === FILING_LABEL ? "Filing, unclassified" : KIND_LABEL[r.kind]}
+          </Pill>
+        ),
         sort: r.kind,
       },
       amount: { display: <span className="whitespace-nowrap text-[13px] tabular">{formatMoney(r.amount)}</span>, sort: r.amount?.amount ?? null },
@@ -221,14 +231,23 @@ function RoundsTable({ rounds }: { rounds: FundingRound[] }) {
   );
 }
 
-function InvestorList({ investors }: { investors: CompanyProfile["investors"] }) {
+export function InvestorList({ investors }: { investors: InvestorGroup[] }) {
   if (!investors.length) return <p className="text-sm text-muted-foreground">No investors on record.</p>;
   return (
     <ul className="max-h-80 space-y-2.5 overflow-auto">
       {investors.map((i) => (
         <li key={i.id} className="flex items-center gap-2.5">
           <EntityAvatar name={i.name} kind="investor" size="sm" />
-          <span className="min-w-0 flex-1 truncate text-sm">{i.name}</span>
+          <span className="min-w-0 flex-1">
+            <Link href={`/investor/${i.id}`} className="block truncate text-sm hover:text-primary hover:underline">
+              {i.name}
+            </Link>
+            {i.alsoKnownAs.length > 0 && (
+              <span className="block truncate text-xs text-muted-foreground" title={i.alsoKnownAs.join(", ")}>
+                Also recorded as {i.alsoKnownAs.join(", ")}
+              </span>
+            )}
+          </span>
           <SourceChip sources={i.sources} />
         </li>
       ))}
@@ -238,15 +257,4 @@ function InvestorList({ investors }: { investors: CompanyProfile["investors"] })
 
 function dedupe(sources: Source[]) {
   return sources.filter((s, i, arr) => arr.findIndex((x) => x.name === s.name && x.document === s.document) === i);
-}
-
-/** Cala can hold several entities with the same name; show one row per name with merged sources. */
-function mergeByName(list: CompanyProfile["investors"]) {
-  const map = new Map<string, CompanyProfile["investors"][number]>();
-  for (const i of list) {
-    const key = i.name.trim().toLowerCase();
-    const e = map.get(key);
-    map.set(key, e ? { ...e, sources: dedupe([...e.sources, ...i.sources]) } : i);
-  }
-  return [...map.values()];
 }

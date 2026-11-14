@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local cache of Cala answers (see lib/cala/client.ts)
+/.cache

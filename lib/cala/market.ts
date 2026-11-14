@@ -1,4 +1,5 @@
 import "server-only";
+import { normaliseName } from "@/lib/names";
 import type { FundingRound, FuzzyDate, MarketCompany, MarketData, MarketQuery, Sourced } from "@/lib/types";
 import {
   assertCalaKey,
@@ -10,6 +11,7 @@ import {
   type CalaProp,
   type GetEntityResponse,
   type QueryResponse,
+  type RelationshipEdge,
 } from "./client";
 
 // Market data from Cala, in three steps:
@@ -48,28 +50,21 @@ const ISO: Record<string, string> = {
 };
 const COUNTRY_TYPES = new Set(["Country", "DependentTerritory"]);
 
-const LEGAL_SUFFIXES = new Set([
-  "as", "asa", "ab", "oy", "oyj", "aps", "a/s", "ltd", "limited", "inc", "incorporated", "corp", "corporation", "co",
-  "llc", "plc", "gmbh", "ag", "se", "sa", "sas", "bv", "nv", "spa", "srl", "kk", "pte", "pty",
-]);
-
-/** "GE HealthCare Inc." → "ge healthcare", "Koninklijke Philips N.V. (Philips Healthcare)" → "koninklijke philips". */
-export function normaliseName(name: string) {
-  const words = name
-    .toLowerCase()
-    .replace(/\([^)]*\)/g, " ")
-    .replace(/[.'’]/g, "")
-    .replace(/[,&]/g, " ")
-    .split(/\s+/)
-    .filter(Boolean);
-  while (words.length > 1 && LEGAL_SUFFIXES.has(words[words.length - 1])) words.pop();
-  return words.join(" ");
-}
+export { normaliseName };
 
 const MAX_COMPANIES = 12;
 const MAX_ROUNDS_PER_COMPANY = 12;
+// Corporate events mix funding with results updates, board changes, M&A… in no date order, so read
+// more of them and keep only the financings.
+const MAX_CORPORATE_EVENTS = 50;
+const MAX_FINANCING_EVENTS = 10;
 const CONCURRENCY = 4;
 const COMPANY_TYPES = new Set(["Company", "Organization"]);
+
+/** "  Mobile   Applications " → "mobile applications": one cache entry per market however it is typed. */
+export function normaliseSector(text: string) {
+  return text.trim().replace(/\s+/g, " ").toLowerCase();
+}
 
 export function regionOf(key: string) {
   return REGIONS[key] ?? REGIONS.nordics;
@@ -77,13 +72,30 @@ export function regionOf(key: string) {
 
 export function marketDefinition(q: MarketQuery) {
   const countries = regionOf(q.region).countries;
+  const many = countries.length > 6;
+  if (q.since) {
+    // Recency filters in dot-notation (e.g. last_funding_date>=…) return nothing, while a plain question
+    // with a year steers Cala to recently funded companies instead of the best-known names.
+    const where = !countries.length ? "" : many ? " in Europe" : ` in ${countries.join(", ")}`;
+    return `${q.sector} startups${where} that raised a funding round in ${q.since} or later`;
+  }
   // Dot-notation as documented at docs.cala.ai: filter on description and location, project identity fields.
-  const location = countries.length && countries.length <= 6 ? `.location=${countries.join(" OR ")}` : countries.length ? ".location=Europe" : "";
+  const location = !countries.length ? "" : many ? ".location=Europe" : `.location=${countries.join(" OR ")}`;
   return `startups.description=${q.sector}${location}.return(name, country, founded_year)`;
 }
 
-export async function fetchMarket(q: MarketQuery): Promise<MarketData> {
+/** Rows name the company under different keys depending on the question ("name", "company", "startup", …). */
+function rowName(r: Record<string, unknown>) {
+  for (const k of ["name", "company", "startup", "company_name", "organization"]) {
+    if (typeof r[k] === "string" && r[k]) return (r[k] as string).trim();
+  }
+  const first = Object.values(r).find((v) => typeof v === "string" && v.trim());
+  return typeof first === "string" ? first.trim() : "";
+}
+
+export async function fetchMarket(input: MarketQuery): Promise<MarketData> {
   assertCalaKey();
+  const q = { ...input, sector: normaliseSector(input.sector) };
   const definition = marketDefinition(q);
   const res = await knowledgeQuery(definition);
   const { companies, outsideRegion } = await loadCandidates(res, q.region);
@@ -96,7 +108,7 @@ export async function fetchMarket(q: MarketQuery): Promise<MarketData> {
  * returned separately so the page can list them.
  */
 export async function loadCandidates(res: QueryResponse, regionKey: string, excludeIds: string[] = []) {
-  const rows = [...new Set(res.results.map((r) => String(r.name ?? r.company ?? "").trim()).filter(Boolean))];
+  const rows = [...new Set(res.results.map(rowName).filter(Boolean))];
   const seen = new Set<string>(excludeIds);
   const ids: string[] = [];
   let unresolved = 0;
@@ -120,6 +132,7 @@ export async function loadCandidates(res: QueryResponse, regionKey: string, excl
   }
 
   const fetched = await mapLimit(ids, CONCURRENCY, (id) => fetchMarketCompany(id));
+  await enrichInvestors(fetched.map((f) => f.company));
 
   // Cala's query does not strictly enforce location. Drop companies whose location on record is outside
   // the region; keep those with no location on record.
@@ -131,6 +144,32 @@ export async function loadCandidates(res: QueryResponse, regionKey: string, excl
     else outsideRegion.push({ name: company.name, country: countries[0] });
   }
   return { companies, outsideRegion, unresolved };
+}
+
+const MAX_INVESTORS_ENRICHED = 25;
+
+/**
+ * Adds each investor's Cala aliases and website (one cached lookup per investor), so the same firm recorded
+ * as several entities ("a16z", "Andreessen Horowitz", "INDEX VENTURES (UK) LLP" / "Index Ventures Limited")
+ * can be merged. A failed lookup just leaves that investor to be matched by name.
+ */
+export async function enrichInvestors(companies: MarketCompany[]) {
+  const ids = [...new Set(companies.flatMap((c) => c.investors.map((i) => i.id)))].slice(0, MAX_INVESTORS_ENRICHED);
+  const info = new Map<string, { aliases: string[]; website: string | null }>();
+  await mapLimit(ids, CONCURRENCY, async (id) => {
+    try {
+      const e = await retrieveEntity(id, { properties: ["aliases", "website"] });
+      const aliases = prop(e, "aliases")?.value;
+      const website = prop(e, "website")?.value;
+      info.set(id, {
+        aliases: Array.isArray(aliases) ? aliases.filter((a): a is string => typeof a === "string") : [],
+        website: typeof website === "string" ? website : null,
+      });
+    } catch {
+      // Name matching still applies.
+    }
+  });
+  for (const c of companies) for (const i of c.investors) Object.assign(i, info.get(i.id) ?? {});
 }
 
 /**
@@ -151,16 +190,25 @@ export function companyCountries(e: GetEntityResponse): string[] {
 }
 
 /** Relationships every company view needs: rounds (both models), location, investors. */
+/**
+ * One request shape for every company view (market rows, players, competitors, company analysis), so each
+ * company costs one cached Cala call however many pages show it.
+ */
 export const COMPANY_RELATIONSHIPS = {
   outgoing: {
     PARTICIPATES_IN_FUNDING_ROUND: { limit: MAX_ROUNDS_PER_COMPANY },
-    PARTICIPATES_IN_CORPORATE_EVENT: { limit: MAX_ROUNDS_PER_COMPANY },
+    PARTICIPATES_IN_CORPORATE_EVENT: { limit: MAX_CORPORATE_EVENTS },
     HAS_HEADQUARTERS_IN: { limit: 3 },
     IS_REGISTERED_IN: { limit: 3 },
+    OPERATES_IN_INDUSTRY: { limit: 5 },
   },
   incoming: { INVESTED_IN: { limit: 25 } },
 };
-export const COMPANY_PROPS = ["name", "description", "founding_date", "founding_date__precision", "headquarters_address"];
+export const COMPANY_PROPS = [
+  "name", "description", "founding_date", "founding_date__precision", "headquarters_address",
+  "legal_name", "website", "employee_count_range", "operational_status", "company_ownership_status", "funding_stage",
+  "total_funding", "total_funding_units", "total_funding_excluding_debt", "total_funding_excluding_debt_units",
+];
 
 async function fetchMarketCompany(id: string): Promise<{ company: MarketCompany; countries: string[] }> {
   const e = await retrieveEntity(id, { properties: COMPANY_PROPS, relationships: COMPANY_RELATIONSHIPS });
@@ -169,14 +217,19 @@ async function fetchMarketCompany(id: string): Promise<{ company: MarketCompany;
 
 /** Builds a sourced MarketCompany from a retrieved company entity, loading each of its rounds. */
 export async function toMarketCompany(e: GetEntityResponse): Promise<MarketCompany> {
-  // Cala models funding two ways: FundingRound entities (PARTICIPATES_IN_FUNDING_ROUND) and
-  // PrivateCompanyFundingRound corporate events (PARTICIPATES_IN_CORPORATE_EVENT). Read both,
-  // keeping only rounds where this company raised money (role ISSUER).
+  // Cala models funding as FundingRound entities (PARTICIPATES_IN_FUNDING_ROUND) and as financing events
+  // (PARTICIPATES_IN_CORPORATE_EVENT): PrivateCompanyFundingRound, or a CorporateEvent named
+  // FINANCING_RAISED_OR_FACILITY_ENTERED from filings such as SEC Form D. Read all of them, keeping only
+  // rounds where this company raised money (role ISSUER).
   const out = e.relationships.outgoing;
-  const roundEdges = [
-    ...(out.PARTICIPATES_IN_FUNDING_ROUND ?? []),
-    ...(out.PARTICIPATES_IN_CORPORATE_EVENT ?? []).filter((r) => ROUND_TYPES.has(r.entity_type)),
-  ].filter((r) => (r.properties.role ?? "ISSUER") === "ISSUER");
+  const issuer = (r: RelationshipEdge) => (r.properties.role ?? "ISSUER") === "ISSUER";
+  // Each round is one more Cala call, so financing events are capped to the most recent few; the edge
+  // already carries event_date, so this costs nothing to decide.
+  const events = (out.PARTICIPATES_IN_CORPORATE_EVENT ?? [])
+    .filter((r) => issuer(r) && (ROUND_TYPES.has(r.entity_type) || r.name === FINANCING_EVENT))
+    .sort((a, b) => String(b.properties.event_date ?? "").localeCompare(String(a.properties.event_date ?? "")))
+    .slice(0, MAX_FINANCING_EVENTS);
+  const roundEdges = [...(out.PARTICIPATES_IN_FUNDING_ROUND ?? []).filter(issuer), ...events];
 
   const rounds = dedupeRounds(
     (await mapLimit(roundEdges, CONCURRENCY, (r) => fetchRound(r.id, r.name))).filter((r): r is FundingRound => r !== null),
@@ -198,6 +251,9 @@ export async function toMarketCompany(e: GetEntityResponse): Promise<MarketCompa
 }
 
 const ROUND_TYPES = new Set(["FundingRound", "PrivateCompanyFundingRound"]);
+const FINANCING_EVENT = "FINANCING_RAISED_OR_FACILITY_ENTERED";
+/** Label for financing filings with no round type: we cannot tell equity from debt, so they are never counted. */
+export const FILING_LABEL = "Financing (filing)";
 const ROUND_PROPS = [
   "round_label", "round_type", "instrument", "transaction_value", "transaction_value_units",
   "announcement_date", "announcement_date__precision", "event_date", "event_date__precision",
@@ -212,7 +268,8 @@ async function fetchRound(id: string, fallbackName: string): Promise<FundingRoun
   // FundingRound uses round_label ("SERIES_A"); PrivateCompanyFundingRound uses round_type ("Series A").
   const label = prop(r, "round_label")?.value;
   const type = prop(r, "round_type")?.value;
-  const stage = typeof label === "string" ? labelise(label) : typeof type === "string" ? type : fallbackName;
+  const stage =
+    typeof label === "string" ? labelise(label) : typeof type === "string" ? type : fallbackName === FINANCING_EVENT ? FILING_LABEL : fallbackName;
 
   // Every source that backs this round, deduplicated by document.
   const all = ROUND_PROPS.flatMap((k) => toSources(prop(r, k)?.sources)).filter(
@@ -248,16 +305,20 @@ function classify(instrument: string, stage: string): FundingRound["kind"] {
 }
 
 /**
- * The same round can exist in both models. Treat two rounds as one when kind, month, amount and currency match,
- * keeping the first (FundingRound edges come first) and merging their sources.
+ * One financing can be recorded several times: as a FundingRound (announcements) and as a financing event
+ * (filings). Per Cala's guide, match them by date and amount: same amount, currency and month count as one
+ * round. A classified round wins over an unclassified filing; sources are merged.
  */
 function dedupeRounds(rounds: FundingRound[]): FundingRound[] {
+  const isFiling = (r: FundingRound) => r.stage === FILING_LABEL;
+  // Classified rounds first, so filings merge into them rather than the other way round.
+  const ordered = [...rounds].sort((a, b) => Number(isFiling(a)) - Number(isFiling(b)));
   const out: FundingRound[] = [];
-  for (const r of rounds) {
+  for (const r of ordered) {
     const twin = r.amount
       ? out.find(
           (o) =>
-            o.kind === r.kind &&
+            (o.kind === r.kind || isFiling(r)) &&
             o.amount?.amount === r.amount!.amount &&
             o.amount?.currency === r.amount!.currency &&
             o.date?.date.slice(0, 7) === r.date?.date.slice(0, 7),

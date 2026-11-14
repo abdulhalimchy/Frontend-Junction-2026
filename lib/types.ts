@@ -147,10 +147,12 @@ export type MarketCompany = {
   hq: Sourced<string> | null;
   founded: Sourced<FuzzyDate> | null;
   rounds: FundingRound[];
-  investors: { id: string; name: string; sources: Source[] }[];
+  /** aliases and website come from Cala and are used to merge records of the same investor. */
+  investors: { id: string; name: string; sources: Source[]; aliases?: string[]; website?: string | null }[];
 };
 
-export type MarketQuery = { sector: string; region: string };
+/** since: only companies that raised in this year or later (null = any time). */
+export type MarketQuery = { sector: string; region: string; since?: number | null };
 
 /** A company entity found by name in Cala. */
 export type CompanyMatch = { id: string; name: string; entityType: string; description: string | null };
@@ -167,6 +169,8 @@ export type CompanyProfile = MarketCompany & {
   totalFundingExDebt: Sourced<Money> | null;
   industries: { name: string; label: string | null; sources: Source[] }[];
   countries: string[];
+  /** Acquisitions and similar corporate deals the company took part in. */
+  deals: { id: string; kind: string; role: string | null; date: string | null; sources: Source[] }[];
 };
 
 /** Raw market data. Totals and charts are derived in lib/market.ts so mocks and Cala share one code path. */
