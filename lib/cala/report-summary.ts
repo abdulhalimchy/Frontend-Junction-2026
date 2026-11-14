@@ -1,5 +1,5 @@
 import "server-only";
-import { LLM_MODEL, generateJson } from "@/lib/llm/gemini";
+import { LLM_MODEL, generateJson, type TokenUsage } from "@/lib/llm/gemini";
 import { lastEquityRound } from "@/lib/market";
 import { formatFuzzyDate, formatMoney } from "@/lib/format";
 import type { Money, Source } from "@/lib/types";
@@ -32,6 +32,8 @@ export type ReportSummary = {
   sizes: SizeFigure[];
   insights: Insight[];
   factCount: number;
+  /** Gemini tokens this summary used (absent on summaries cached before tracking began). */
+  tokens?: TokenUsage;
   checked: number;
   dropped: { what: string; reason: string }[];
 };
@@ -65,8 +67,8 @@ async function build(q: ReportQuery): Promise<ReportSummary> {
   }
   if (!facts.length) throw new Error("Cala returned no facts for this market, so there is nothing to summarise.");
 
-  const raw = await generateJson<RawSummary>({ system: SYSTEM, prompt: prompt(q, facts), schema: SCHEMA });
-  return check(raw, facts);
+  const { data, usage } = await generateJson<RawSummary>({ system: SYSTEM, prompt: prompt(q, facts), schema: SCHEMA });
+  return { ...check(data, facts), tokens: usage };
 }
 
 const SYSTEM = `You are a market analyst writing for founders and investors.

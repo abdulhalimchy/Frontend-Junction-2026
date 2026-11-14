@@ -280,7 +280,8 @@ async function ExecutiveSummary({ q }: { q: ReportQuery }) {
       )}
 
       <div className="text-xs text-muted-foreground">
-        Written by {s.model} from {s.factCount} Cala facts. {s.checked} claims checked
+        Written by {s.model} from {s.factCount} Cala facts
+        {s.tokens ? ` (${s.tokens.total.toLocaleString("en")} tokens: ${s.tokens.input.toLocaleString("en")} in, ${s.tokens.output.toLocaleString("en")} out, ${s.tokens.thinking.toLocaleString("en")} reasoning)` : ""}. {s.checked} claims checked
         {s.dropped.length ? `, ${s.dropped.length} left out because they did not match their sources.` : ", all matched their sources."}
         {s.dropped.length > 0 && (
           <details className="mt-2">
