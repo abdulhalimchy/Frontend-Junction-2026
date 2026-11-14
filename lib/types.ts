@@ -114,6 +114,8 @@ export type Alert = {
   date: string;
   read: boolean;
   href: string;
+  /** The watched company or investor this is about (Cala id); empty for older alerts. */
+  calaId?: string;
   /** Mock fixtures only: which demo persona sees it. */
   roles?: Role[];
   slush?: boolean;

@@ -12,6 +12,9 @@ type ApiWatchItem = {
   note: string;
   origin: WatchItem["origin"];
   created_at: string;
+  unread_alerts: number;
+  last_checked_at: string | null;
+  in_cala: boolean;
 };
 
 const toItem = (w: ApiWatchItem): WatchItem => ({
@@ -23,6 +26,9 @@ const toItem = (w: ApiWatchItem): WatchItem => ({
   note: w.note,
   origin: w.origin,
   createdAt: w.created_at,
+  unreadAlerts: w.unread_alerts ?? 0,
+  lastCheckedAt: w.last_checked_at ?? null,
+  inCala: w.in_cala ?? true,
 });
 
 async function json<T>(res: Response): Promise<T> {

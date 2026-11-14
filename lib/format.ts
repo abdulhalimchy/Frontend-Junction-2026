@@ -95,3 +95,18 @@ export function shortPlace(address: string): string {
 export function isoDaysAgo(days: number): string {
   return new Date(Date.now() - days * 864e5).toISOString().slice(0, 10);
 }
+
+/** A moment as "15 Nov, 02:00" in `timeZone` (the alert schedule's zone), with "today"/"tomorrow" when close. */
+export function formatMoment(iso: string, timeZone: string): string {
+  const d = new Date(iso);
+  const day = (x: Date) => x.toLocaleDateString("en-CA", { timeZone });
+  const time = d.toLocaleTimeString("en-GB", { timeZone, hour: "2-digit", minute: "2-digit" });
+  const now = new Date();
+  if (day(d) === day(now)) return `today ${time}`;
+  if (day(d) === day(new Date(now.getTime() + 864e5))) return `tomorrow ${time}`;
+  if (day(d) === day(new Date(now.getTime() - 864e5))) return `yesterday ${time}`;
+  return `${d.toLocaleDateString("en-GB", { timeZone, day: "numeric", month: "short" })}, ${time}`;
+}
+
+/** "Europe/Helsinki" -> "Helsinki". */
+export const zoneCity = (tz: string) => tz.split("/").pop()!.replace(/_/g, " ");

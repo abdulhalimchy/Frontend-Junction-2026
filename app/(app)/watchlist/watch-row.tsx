@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, StickyNote, X } from "lucide-react";
+import { Bell, Loader2, StickyNote, X } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -11,13 +11,14 @@ import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, Sele
 import { Textarea } from "@/components/ui/textarea";
 import { formatDay } from "@/lib/format";
 import type { Role } from "@/lib/types";
-import { WATCH_TAGS, tagLabel, watchHref, type WatchItem, type WatchTag } from "@/lib/watchlist";
+import { WATCH_TAGS, alertsHref, tagLabel, watchHref, type WatchItem, type WatchTag } from "@/lib/watchlist";
 import { unwatchAction, updateWatchAction } from "./actions";
 
 const NO_TAG = "none";
 const TYPE_LABEL = { company: "Company", investor: "Investor", person: "Person" } as const;
 
-export function WatchRow({ item, role }: { item: WatchItem; role: Role }) {
+/** `checked`: when the alert scan last checked this entity, formatted on the server ("today 02:00"). */
+export function WatchRow({ item, role, checked }: { item: WatchItem; role: Role; checked: string | null }) {
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
   const [note, setNote] = useState(item.note);
@@ -46,9 +47,34 @@ export function WatchRow({ item, role }: { item: WatchItem; role: Role }) {
             <span className="text-sm font-medium">{item.name || item.calaId}</span>
           )}
           {item.origin === "suggested" && <Pill tone="teal">Suggested</Pill>}
+          {item.unreadAlerts > 0 && (
+            <Link
+              href={alertsHref(item)}
+              className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90"
+            >
+              <Bell className="size-3" />
+              {item.unreadAlerts} new {item.unreadAlerts === 1 ? "alert" : "alerts"}
+            </Link>
+          )}
         </div>
-        <div className="mt-0.5 text-xs text-subtle">
-          {TYPE_LABEL[item.entityType]} · Watching since {formatDay(item.createdAt)}
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-1 text-xs text-subtle">
+          <span>
+            {TYPE_LABEL[item.entityType]} · Watching since {formatDay(item.createdAt)}
+          </span>
+          <span>·</span>
+          {!item.inCala ? (
+            <span title="Demo entries are not in Cala, so the nightly check skips them.">Demo entry, no alerts</span>
+          ) : checked ? (
+            <>
+              <span>Checked {checked}</span>
+              <span>·</span>
+              <Link href={alertsHref(item)} className="hover:text-primary">
+                Alerts
+              </Link>
+            </>
+          ) : (
+            <span>First check in progress</span>
+          )}
         </div>
 
         {editing ? (

@@ -1,4 +1,4 @@
-import { Banknote, Bell, CalendarDays, CloudOff, Eye, Landmark, Lightbulb, UserRound, Users } from "lucide-react";
+import { Banknote, Bell, CalendarDays, CloudOff, Eye, Landmark, Lightbulb, MoonStar, UserRound, Users, X } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -8,7 +8,9 @@ import { SlushTag } from "@/components/warmline/badges";
 import { EmptyState, PageHeader, Panel } from "@/components/warmline/blocks";
 import { SourceChip } from "@/components/warmline/source-chip";
 import { WatchingPanel } from "@/components/warmline/watching-panel";
-import { formatDay, isoDaysAgo } from "@/lib/format";
+import { getAlertSchedule, type AlertSchedule } from "@/lib/backend/alerts";
+import { listWatchItems } from "@/lib/backend/watchlist";
+import { formatDay, formatMoment, isoDaysAgo, zoneCity } from "@/lib/format";
 import { getAlerts } from "@/lib/session";
 import type { Alert, AlertKind } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -35,11 +37,24 @@ const FILTERS: { key: string; label: string; kinds?: AlertKind[] }[] = [
 ];
 
 async function AlertsContent({ searchParams }: PageProps<"/alerts">) {
-  const { show } = await searchParams;
-  const { alerts, error } = await getAlerts();
+  const { show, entity: entityParam } = await searchParams;
+  const entity = typeof entityParam === "string" ? entityParam : undefined;
+  const [{ alerts: all, error }, schedule, watched] = await Promise.all([
+    getAlerts(),
+    getAlertSchedule().catch(() => null),
+    entity ? listWatchItems({ calaId: entity }).then((items) => items[0] ?? null, () => null) : null,
+  ]);
+  // ?entity=<cala id>: only the alerts about one watched company or investor (linked from the watch list).
+  const alerts = entity ? all.filter((a) => a.calaId === entity) : all;
   const unread = alerts.filter((a) => !a.read).length;
   const active = FILTERS.find((f) => f.key === show) ?? FILTERS[0];
   const shown = active.kinds ? alerts.filter((a) => active.kinds!.includes(a.kind)) : alerts;
+  const filterHref = (key: string) => {
+    const params = new URLSearchParams();
+    if (key !== "all") params.set("show", key);
+    if (entity) params.set("entity", entity);
+    return params.size ? `/alerts?${params}` : "/alerts";
+  };
 
   // Group by the date of the underlying fact: the last 7 days, then everything before.
   const weekAgo = isoDaysAgo(7);
@@ -52,7 +67,11 @@ async function AlertsContent({ searchParams }: PageProps<"/alerts">) {
     <>
       <PageHeader
         title="Alerts"
-        description="Changes Cala has on record for the companies and investors you watch. Every alert links to its sources."
+        description={
+          schedule
+            ? `Changes Cala has on record for the companies and investors you watch, checked every night at ${schedule.time} (${zoneCity(schedule.timezone)} time). Every alert links to its sources.`
+            : "Changes Cala has on record for the companies and investors you watch. Every alert links to its sources."
+        }
         actions={
           <>
             <MarkAllReadButton disabled={!unread} />
@@ -67,6 +86,16 @@ async function AlertsContent({ searchParams }: PageProps<"/alerts">) {
         </Panel>
       ) : (
         <>
+          {schedule && <ScheduleStrip schedule={schedule} />}
+          {entity && (
+            <div className="mb-4 flex items-center gap-2 text-[13px]">
+              <span className="text-muted-foreground">Showing alerts about</span>
+              <span className="font-medium">{watched?.name || "one watched entity"}</span>
+              <Link href={show ? `/alerts?show=${show}` : "/alerts"} className="inline-flex items-center gap-1 rounded-full border bg-card px-2.5 py-0.5 text-xs hover:bg-muted">
+                <X className="size-3" /> Show all
+              </Link>
+            </div>
+          )}
           <nav className="mb-6 flex flex-wrap gap-2" aria-label="Filter alerts">
             {FILTERS.map((f) => {
               const on = f.key === active.key;
@@ -74,7 +103,7 @@ async function AlertsContent({ searchParams }: PageProps<"/alerts">) {
               return (
                 <Link
                   key={f.key}
-                  href={f.key === "all" ? "/alerts" : `/alerts?show=${f.key}`}
+                  href={filterHref(f.key)}
                   scroll={false}
                   aria-current={on ? "page" : undefined}
                   className={cn(
@@ -111,11 +140,13 @@ async function AlertsContent({ searchParams }: PageProps<"/alerts">) {
                 <Panel>
                   <EmptyState
                     icon={Bell}
-                    title={alerts.length ? `No “${active.label}” alerts` : "No alerts yet"}
+                    title={alerts.length ? `No “${active.label}” alerts` : entity ? "No alerts about it yet" : "No alerts yet"}
                     description={
                       alerts.length
                         ? undefined
-                        : "Watch companies and investors, then check for changes. New rounds from the last 60 days, investor moves, Slush attendance and team changes show up here."
+                        : entity
+                          ? "Nothing new on record for it in the last 60 days. Cala checks it again tonight."
+                          : "Watch companies and investors and Cala checks them every night. New rounds from the last 60 days, investor moves, Slush attendance and team changes show up here."
                     }
                     action={alerts.length ? undefined : <ScanButton variant="outline" />}
                   />
@@ -129,6 +160,30 @@ async function AlertsContent({ searchParams }: PageProps<"/alerts">) {
         </>
       )}
     </>
+  );
+}
+
+/** When the watch list was last checked, and when it will be next. */
+function ScheduleStrip({ schedule: s }: { schedule: AlertSchedule }) {
+  const last = [s.lastNightly, s.lastManual].filter((r) => r !== null).sort((a, b) => b.at.localeCompare(a.at))[0];
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border bg-card px-4 py-2.5 text-[13px] text-muted-foreground">
+      <MoonStar className="size-3.5 text-primary" />
+      {last ? (
+        <span>
+          Last checked <span className="font-medium text-foreground">{formatMoment(last.at, s.timezone)}</span>
+          {last.status === "failed"
+            ? ": Cala could not be reached; retrying soon"
+            : `: ${last.entities} ${last.entities === 1 ? "entity" : "entities"}, ${last.alertsCreated ? `${last.alertsCreated} new ${last.alertsCreated === 1 ? "alert" : "alerts"}` : "nothing new"}`}
+        </span>
+      ) : (
+        <span>Not checked yet</span>
+      )}
+      <span>·</span>
+      <span>
+        Next nightly check <span className="font-medium text-foreground">{formatMoment(s.nextRunAt, s.timezone)}</span>
+      </span>
+    </div>
   );
 }
 
