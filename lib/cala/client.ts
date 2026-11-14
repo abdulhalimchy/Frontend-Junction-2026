@@ -37,29 +37,39 @@ export function mocksEnabled() {
   return process.env.USE_MOCKS === "true";
 }
 
-const MAX_IN_FLIGHT = 4;
-let inFlight = 0;
-const waiting: (() => void)[] = [];
-
-function acquire(): Promise<void> {
-  if (inFlight < MAX_IN_FLIGHT) {
-    inFlight++;
-    return Promise.resolve();
-  }
-  return new Promise((resolve) => waiting.push(resolve)); // slot handed over by release()
+/** A tiny semaphore: at most `max` callers hold a slot at once. */
+function limiter(max: number) {
+  let inFlight = 0;
+  const waiting: (() => void)[] = [];
+  return {
+    acquire(): Promise<void> {
+      if (inFlight < max) {
+        inFlight++;
+        return Promise.resolve();
+      }
+      return new Promise((resolve) => waiting.push(resolve)); // slot handed over by release()
+    },
+    release() {
+      const next = waiting.shift();
+      if (next) next();
+      else inFlight--;
+    },
+  };
 }
 
-function release() {
-  const next = waiting.shift();
-  if (next) next();
-  else inFlight--;
-}
+// Entity calls are fast and numerous; knowledge calls are slow (~45–60s) and few. Separate limits keep a
+// report's long questions from blocking its entity lookups while staying under Cala's rate limit.
+const entityLimit = limiter(4);
+const knowledgeLimit = limiter(3);
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function calaFetch<T>(path: string, init: { method: "GET" | "POST"; body?: unknown; query?: Record<string, string | string[] | number> }): Promise<T> {
+async function calaFetch<T>(
+  path: string,
+  init: { method: "GET" | "POST"; body?: unknown; query?: Record<string, string | string[] | number>; unlimited?: boolean /* true = knowledge lane */ },
+): Promise<T> {
   const key = process.env.CALA_API_KEY;
   if (!key) throw new CalaError("CALA_API_KEY is not set", 401, "missing_key");
 
@@ -72,7 +82,8 @@ async function calaFetch<T>(path: string, init: { method: "GET" | "POST"; body?:
   // growing waits, so a page that needs many lookups slows down instead of failing.
   let res: Response;
   for (let attempt = 0; ; attempt++) {
-    await acquire();
+    const lane = init.unlimited ? knowledgeLimit : entityLimit;
+    await lane.acquire();
     try {
       res = await fetch(url, {
         method: init.method,
@@ -80,7 +91,7 @@ async function calaFetch<T>(path: string, init: { method: "GET" | "POST"; body?:
         body: init.body === undefined ? undefined : JSON.stringify(init.body),
       });
     } finally {
-      release();
+      lane.release();
     }
     if (res.status !== 429 || attempt >= 3) break;
     await res.body?.cancel();
@@ -141,23 +152,46 @@ export type EntityQuery = {
 // ---- Endpoints ----
 
 /**
- * POST /v1/knowledge/query: structured rows plus matched entities. Rows carry no sources.
- *
- * Not in "use cache": a query Cala has not seen before takes ~45–50s, which hits Next's 50s limit for
- * cached functions. Instead we keep an in-process cache (6h) that also merges concurrent identical
- * requests. Phase 2 moves this to Supabase so it survives restarts and is shared between instances.
+ * In-process cache for the slow knowledge endpoints. A question Cala has not seen before takes ~45–60s,
+ * beyond Next's 50s limit for "use cache" functions, so these are memoised here instead (6h). Concurrent
+ * identical requests share one call; failures are never cached. Phase 2 moves this to Supabase.
  */
-const QUERY_TTL_MS = 6 * 60 * 60 * 1000;
-const queryCache = new Map<string, { at: number; promise: Promise<QueryResponse> }>();
+const KNOWLEDGE_TTL_MS = 6 * 60 * 60 * 1000;
+const knowledgeCache = new Map<string, { at: number; promise: Promise<unknown> }>();
 
-export function knowledgeQuery(input: string): Promise<QueryResponse> {
+export function memoKnowledge<T>(key: string, load: () => Promise<T>): Promise<T> {
   const now = performance.timeOrigin + performance.now();
-  const hit = queryCache.get(input);
-  if (hit && now - hit.at < QUERY_TTL_MS) return hit.promise;
-  const promise = calaFetch<QueryResponse>("/v1/knowledge/query", { method: "POST", body: { input, return_entities: true } });
-  queryCache.set(input, { at: now, promise });
-  promise.catch(() => queryCache.delete(input)); // never cache failures
+  const hit = knowledgeCache.get(key);
+  if (hit && now - hit.at < KNOWLEDGE_TTL_MS) return hit.promise as Promise<T>;
+  const promise = load();
+  knowledgeCache.set(key, { at: now, promise });
+  promise.catch(() => knowledgeCache.delete(key));
   return promise;
+}
+
+/** POST /v1/knowledge/query: structured rows plus matched entities. Rows carry no sources. */
+export function knowledgeQuery(input: string): Promise<QueryResponse> {
+  return memoKnowledge(`query:${input}`, () =>
+    calaFetch<QueryResponse>("/v1/knowledge/query", { method: "POST", body: { input, return_entities: true }, unlimited: true }),
+  );
+}
+
+export type KnowBit = {
+  id: string;
+  content: string;
+  origins: { source: { name: string; url: string }; document: { name: string; url: string } }[];
+};
+export type SearchAnswer = { content: string; context: KnowBit[]; entities: EntityMention[] | null };
+
+/** POST /v1/knowledge/search: a markdown answer plus the facts (KnowBits) it rests on, each with its origin URLs. */
+export function knowledgeSearch(input: string): Promise<SearchAnswer> {
+  return memoKnowledge(`search:${input}`, () =>
+    calaFetch<SearchAnswer>("/v1/knowledge/search", {
+      method: "POST",
+      body: { input, explainability: false, return_entities: true },
+      unlimited: true,
+    }),
+  );
 }
 
 /** GET /v1/entities: fuzzy search by name. */

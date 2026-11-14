@@ -1,4 +1,4 @@
-import { ArrowRight, Building2, LineChart, Search } from "lucide-react";
+import { ArrowRight, Building2, FileText, LineChart, Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
@@ -99,11 +99,18 @@ function Filters({ p }: { p: Params }) {
           [
             { key: "market", label: "Market", icon: LineChart },
             { key: "company", label: "Company", icon: Building2 },
+            { key: "report", label: "Full report", icon: FileText },
           ] as const
         ).map((m) => (
           <Link
             key={m.key}
-            href={m.key === "market" ? href({ region: p.mode === "market" ? p.region : "nordics" }) : href({ mode: "company" })}
+            href={
+              m.key === "market"
+                ? href({ region: p.mode === "market" ? p.region : "nordics" })
+                : m.key === "company"
+                  ? href({ mode: "company" })
+                  : `/market/report?${new URLSearchParams({ sector: p.mode === "market" ? p.text : "", region: p.region }).toString().replace(/sector=&/, "")}`
+            }
             className={cn(
               "flex items-center gap-1.5 rounded-md px-3 py-1.5",
               p.mode === m.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",

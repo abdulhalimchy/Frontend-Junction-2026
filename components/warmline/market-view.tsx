@@ -123,7 +123,7 @@ function RoundsPerYear({ s }: { s: MarketSummary }) {
   );
 }
 
-function CompaniesTable({ data, currency }: { data: MarketData; currency: string | null }) {
+export function CompaniesTable({ data, currency }: { data: MarketData; currency: string | null }) {
   const rows: Row[] = data.companies.map((c) => {
     const last = lastEquityRound(c);
     const equity = totalsByCurrency(c.rounds, "equity");
