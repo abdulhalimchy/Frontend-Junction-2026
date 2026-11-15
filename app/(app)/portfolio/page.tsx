@@ -1,9 +1,12 @@
-import { Briefcase, Coins, Landmark, TrendingUp } from "lucide-react";
+import { ArrowUpRight, Briefcase, Coins, Landmark, Swords, TrendingUp } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
+import { cn } from "@/lib/utils";
 import { redirect } from "next/navigation";
 import { EmptyState, PageHeader, Panel, StatCard } from "@/components/warmline/blocks";
 import { AddCompanyButton, PortfolioTable, SuggestionsPanel } from "@/components/warmline/portfolio";
-import { CompetitorPanel, InsightsPoller, RefreshFundingButton, SlushPanel } from "@/components/warmline/portfolio-insights";
+import { CompetitorPanel, InsightsPoller, LeadInvestorsPanel, RefreshFundingButton } from "@/components/warmline/portfolio-insights";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { listAlerts } from "@/lib/backend/alerts";
 import { getPortfolioAnalysesStatus, getPortfolioSuggestions, listPortfolio, listPortfolioAnalyses } from "@/lib/backend/portfolio";
 import { normaliseName } from "@/lib/cala/market";
@@ -78,6 +81,12 @@ export default async function PortfolioPage() {
     ? status.loading + status.enriching > 0
     : analyses.some((a) => a.status === "loading") || companies.some((c) => c.enrichment.status === "pending" || c.enrichment.status === "processing");
   const inCala = companies.filter((c) => c.calaCompanyId).length;
+  // Tab badges: companies with a lead investor at Slush, and recent competitor rounds.
+  const going = new Set(attendingInvestors);
+  const withLeads = analyses.filter(
+    (a) => a.kind === "investors" && (a.data as unknown as Partial<InvestorsAnalysis>).investors?.some((i) => going.has(i.id)),
+  ).length;
+  const competitorAlerts = alerts.filter((a) => a.kind === "portfolio_competitor").length;
 
   return (
     <>
@@ -109,18 +118,36 @@ export default async function PortfolioPage() {
             />
           </div>
 
-          <SuggestionsPanel initial={suggestions.data} error={suggestions.error} />
+          <Tabs defaultValue="companies" className="gap-5">
+            <TabsList variant="line" className="h-auto w-full justify-start gap-1 border-b p-0">
+              <PortfolioTab value="companies" icon={Briefcase} label="Companies" count={companies.length} />
+              <PortfolioTab value="leads" icon={ArrowUpRight} label="Lead investors" count={withLeads || undefined} />
+              <PortfolioTab value="competitors" icon={Swords} label="Competitors" count={competitorAlerts || undefined} tone="warning" />
+            </TabsList>
 
-          <Panel className="mb-6" title="Companies" description="Edit a company to update your investment or fix its profile. Funding comes from verified records, with sources.">
-            <PortfolioTable companies={companies} analyses={index} />
-          </Panel>
+            <TabsContent value="companies" className="space-y-6">
+              <SuggestionsPanel initial={suggestions.data} error={suggestions.error} />
+              <Panel title="Companies" description="Edit a company to update your investment or fix its profile. Funding comes from verified records, with sources.">
+                <PortfolioTable companies={companies} analyses={index} />
+              </Panel>
+            </TabsContent>
 
-          {companies.length > 0 && (
-            <>
-              <SlushPanel companies={companies} analyses={index} attending={attending} attendingInvestors={attendingInvestors} slushError={slush.error} />
-              <CompetitorPanel companies={companies} analyses={index} alerts={alerts} />
-            </>
-          )}
+            <TabsContent value="leads">
+              {companies.length ? (
+                <LeadInvestorsPanel companies={companies} analyses={index} attending={attending} attendingInvestors={attendingInvestors} slushError={slush.error} />
+              ) : (
+                <EmptyState icon={ArrowUpRight} title="No companies yet" description="Add portfolio companies to find who could lead their next round." />
+              )}
+            </TabsContent>
+
+            <TabsContent value="competitors">
+              {companies.length ? (
+                <CompetitorPanel companies={companies} analyses={index} alerts={alerts} />
+              ) : (
+                <EmptyState icon={Swords} title="No companies yet" description="Add portfolio companies to monitor their competitors." />
+              )}
+            </TabsContent>
+          </Tabs>
         </>
       )}
     </>
@@ -129,3 +156,32 @@ export default async function PortfolioPage() {
 
 // Role-guarded: redirects when the role does not match, so skip instant-navigation validation.
 export const instant = false;
+
+function PortfolioTab({
+  value,
+  icon: Icon,
+  label,
+  count,
+  tone = "neutral",
+}: {
+  value: string;
+  icon: LucideIcon;
+  label: string;
+  count?: number;
+  tone?: "neutral" | "warning";
+}) {
+  return (
+    <TabsTrigger
+      value={value}
+      className="h-10 flex-none rounded-none px-3 text-[13px] after:bottom-[-1px] after:bg-primary data-active:text-primary"
+    >
+      <Icon />
+      {label}
+      {count !== undefined && (
+        <span className={cn("rounded-full px-1.5 text-[11px] tabular", tone === "warning" ? "bg-warning-soft text-warning" : "bg-muted text-muted-foreground")}>
+          {count}
+        </span>
+      )}
+    </TabsTrigger>
+  );
+}

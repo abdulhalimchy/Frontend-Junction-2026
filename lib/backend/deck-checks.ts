@@ -1,5 +1,5 @@
 import "server-only";
-import type { DeckCheckResult, DeckClaim } from "@/lib/types";
+import type { DeckCheckResult, DeckCheckSummary, DeckClaim } from "@/lib/types";
 import { backendError, backendFetch } from "./client";
 
 // Shapes returned by /api/v1/deck-checks/ (snake_case). Sources already match the frontend's Source type.
@@ -13,8 +13,13 @@ type ApiDeckCheck = {
   error: string;
   created_at: string;
   checked_at: string | null;
+  confirmed_count?: number;
+  differs_count?: number;
+  cant_verify_count?: number;
   claims?: ApiClaim[];
 };
+
+const HISTORY_SIZE = 50;
 
 export function toResult(d: ApiDeckCheck): DeckCheckResult {
   return {
@@ -27,6 +32,28 @@ export function toResult(d: ApiDeckCheck): DeckCheckResult {
     checkedAt: d.checked_at ?? d.created_at,
     claims: (d.claims ?? []).map(({ on_record, ...c }) => ({ ...c, onRecord: on_record || undefined })),
   };
+}
+
+function toSummary(d: ApiDeckCheck): DeckCheckSummary {
+  const result: Partial<DeckCheckResult> = toResult(d);
+  delete result.claims;
+  return { ...(result as Omit<DeckCheckResult, "claims">), counts: { confirmed: d.confirmed_count ?? 0, differs: d.differs_count ?? 0, cant_verify: d.cant_verify_count ?? 0 } };
+}
+
+/**
+ * Past deck checks, newest first, without their claims.
+ * startupId scopes it to one startup (null: decks with no startup); undefined: any deck.
+ */
+export async function listDeckChecks(startupId?: string | null): Promise<DeckCheckSummary[]> {
+  const scope = startupId === undefined ? "" : `&startup=${encodeURIComponent(startupId ?? "none")}`;
+  const res = await backendFetch(`/deck-checks/?page_size=${HISTORY_SIZE}${scope}`);
+  if (!res.ok) throw await backendError(res);
+  return ((await res.json()) as { results: ApiDeckCheck[] }).results.map(toSummary);
+}
+
+export async function deleteDeck(id: string): Promise<void> {
+  const res = await backendFetch(`/deck-checks/${encodeURIComponent(id)}/`, { method: "DELETE" });
+  if (!res.ok) throw await backendError(res);
 }
 
 export async function getDeckCheckById(id: string): Promise<DeckCheckResult> {

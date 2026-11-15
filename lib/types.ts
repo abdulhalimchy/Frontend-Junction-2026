@@ -129,6 +129,8 @@ export type DeckClaim = {
   status: ClaimStatus;
   onRecord?: string; // what Cala holds, when it differs or confirms
   sources: Source[];
+  /** Where a confirmed or differs verdict came from: the verified record or searched web sources. */
+  basis?: "record" | "web" | "";
 };
 
 export type DeckCheckStatus = "pending" | "processing" | "completed" | "failed";
@@ -143,6 +145,9 @@ export type DeckCheckResult = {
   checkedAt: string;
   claims: DeckClaim[];
 };
+
+/** One past check in the history list: the outcome without the claims themselves. */
+export type DeckCheckSummary = Omit<DeckCheckResult, "claims"> & { counts: Record<ClaimStatus, number> };
 
 /** A company in a market view, built only from sourced Cala properties. */
 export type MarketCompany = {
