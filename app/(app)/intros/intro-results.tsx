@@ -3,8 +3,10 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SlushTag } from "@/components/warmline/badges";
 import { EmptyState, EntityAvatar, Panel } from "@/components/warmline/blocks";
+import { IntroMap } from "@/components/warmline/connect-view";
 import { SourceChip } from "@/components/warmline/source-chip";
 import { calaErrorKind } from "@/lib/cala/client";
+import { eventLinksFor } from "@/lib/cala/connect";
 import { findIntroPaths, type IntroPath, type Node } from "@/lib/cala/intros";
 import { askReason, companyList, linkSentence, roundName, tieLabel, tieSentence } from "@/lib/intro-text";
 
@@ -26,9 +28,13 @@ export async function IntroResults({ fromId, toId }: { fromId: string; toId: str
   }
   const { from, to, direct, common, paths } = r;
   const bothAtSlush = from.atSlush && to.atSlush;
+  // Where the two can meet in person: Slush itself and the side events the target hosts or speaks at.
+  const events = await eventLinksFor(to.id, to.name).catch(() => []);
 
   return (
     <div className="space-y-4">
+      <IntroMap result={r} events={events} />
+
       {direct && (
         <Panel>
           <div className="flex items-start gap-3">
@@ -164,6 +170,7 @@ export function IntroResultsSkeleton() {
   return (
     <Panel title="Finding intro paths" description="Reading your investors and co-investors. The first search can take 10–20 seconds, then it is cached.">
       <div className="space-y-3">
+        <Skeleton className="hidden h-64 rounded-lg md:block" />
         {[0, 1, 2].map((i) => (
           <Skeleton key={i} className="h-24 rounded-lg" />
         ))}

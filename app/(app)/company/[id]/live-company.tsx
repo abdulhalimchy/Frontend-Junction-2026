@@ -49,7 +49,7 @@ export async function LiveCompany({ id, region }: { id: string; region: string }
           <WatchButton entityType="company" calaId={id} name={p.name} size="sm" />
           <Button variant="outline" size="sm" className="bg-card" asChild>
             <Link href={`/intros?${new URLSearchParams({ to: id, toName: p.name })}`}>
-              <Route /> Warm intro
+              <Route /> Connect
             </Link>
           </Button>
           <Button variant="outline" size="sm" className="bg-card" asChild>

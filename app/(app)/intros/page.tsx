@@ -10,7 +10,7 @@ import { mocksEnabled } from "@/lib/cala/client";
 import { getRole } from "@/lib/session";
 import { IntroResults, IntroResultsSkeleton } from "./intro-results";
 
-export const metadata: Metadata = { title: "Warm intros" };
+export const metadata: Metadata = { title: "Connect" };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -63,7 +63,7 @@ async function IntrosContent({ searchParams }: PageProps<"/intros">) {
   return (
     <>
       <PageHeader
-        title="Warm intros"
+        title="Connect"
         description="Who can introduce you, from verified investment records: your investors, your portfolio and your co-investors, and how each is tied to the person you want to meet. Every link shows its sources."
       />
       <Panel className="mb-6 overflow-visible">
@@ -71,7 +71,7 @@ async function IntrosContent({ searchParams }: PageProps<"/intros">) {
         <IntroForm key={`${from?.id}-${to?.id}`} from={from} to={to} mine={mine} />
       </Panel>
       {mocksEnabled() ? (
-        <p className="text-sm text-muted-foreground">Warm intros need live data (USE_MOCKS is on).</p>
+        <p className="text-sm text-muted-foreground">Connect needs live data (USE_MOCKS is on).</p>
       ) : from && to ? (
         from.id === to.id ? (
           <p className="text-sm text-muted-foreground">Pick two different companies.</p>

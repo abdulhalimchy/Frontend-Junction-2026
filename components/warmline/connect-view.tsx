@@ -4,7 +4,7 @@ import { ArrowRight, Building2, CalendarDays, ExternalLink, Globe, Handshake, La
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { ConnectData, EventLink, InvestorRoute } from "@/lib/cala/connect";
-import type { CompanyBridge, IntroPath, Node } from "@/lib/cala/intros";
+import type { CompanyBridge, IntroPath, IntroResult, Node } from "@/lib/cala/intros";
 import { askReason, companyList, linkSentence, roundName, tieSentence } from "@/lib/intro-text";
 import type { Source } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -12,7 +12,7 @@ import { SlushTag } from "./badges";
 import { EntityAvatar, Panel } from "./blocks";
 import { SourceChip } from "./source-chip";
 
-// Connect tab: who can connect the founder to each best-matched investor. Three kinds of connector:
+// Connect tab (and the map on the Connect page): who can connect the founder to each best-matched investor. Three kinds of connector:
 // investors (your investors and co-investors), companies (founders backed by one of your investors and by
 // the target) and events (Slush 2026 and side events). One graph, a compact list on phones, and one card per
 // investor. Hovering a node or a card highlights that investor's routes.
@@ -55,7 +55,6 @@ export function ConnectView({ data, you }: { data: ConnectData; you: Node }) {
     [data.routes],
   );
   const graph = useMemo(() => buildGraph(routes), [routes]);
-  const counts = (["investor", "company", "event"] as Kind[]).map((k) => ({ k, n: graph.connectors.filter((c) => c.kind === k).length }));
   const reachable = routes.filter((r) => r.status !== "cold").length;
 
   return (
@@ -65,24 +64,7 @@ export function ConnectView({ data, you }: { data: ConnectData; you: Node }) {
         description={`${reachable} of your ${routes.length} best-matched investors can be reached through someone you know or an event. Hover or tap to follow a route.`}
         bodyClassName="pt-2"
       >
-        <div className="mb-4 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
-          {counts.map(({ k, n }) => (
-            <span key={k} className="flex items-center gap-1.5">
-              <Marker kind={k} />
-              {KIND_LABEL[k]}
-              <span className="font-semibold text-foreground tabular">{n}</span>
-            </span>
-          ))}
-          {routes.some((r) => r.kinds.has("direct")) && (
-            <span className="flex items-center gap-1.5">
-              <span className="h-0.5 w-4 rounded bg-success" /> Already connected
-            </span>
-          )}
-        </div>
-        <div className="hidden md:block">
-          <NetworkGraph graph={graph} routes={routes} you={you} focus={focus} setFocus={setFocus} />
-        </div>
-        <CompactMap graph={graph} routes={routes} focus={focus} setFocus={setFocus} />
+        <MapBody graph={graph} routes={routes} you={you} focus={focus} setFocus={setFocus} />
       </Panel>
 
       <div>
@@ -98,6 +80,75 @@ export function ConnectView({ data, you }: { data: ConnectData; you: Node }) {
   );
 }
 
+/**
+ * The same map for the Connect page, where there is one target: you, everyone on record who can connect you,
+ * and who you want to meet.
+ */
+export function IntroMap({ result, events }: { result: IntroResult; events: EventLink[] }) {
+  const [focus, setFocus] = useState<string | null>(null);
+  const { from, to } = result;
+  const routes = useMemo(
+    () => [enrich({ investor: { id: to.id, name: to.name, country: null, why: "", website: null, sources: [], score: 0 }, result, events, error: null })],
+    [to.id, to.name, result, events],
+  );
+  // One target, so every connector the caps allow is drawn, not just the best two.
+  const graph = useMemo(() => buildGraph(routes, Infinity), [routes]);
+  const n = graph.connectors.length;
+  return (
+    <Panel
+      title="Your network map"
+      description={
+        n
+          ? `${n} ${n === 1 ? "connection" : "connections"} on record between ${from.name} and ${to.name}. Hover or tap to follow a route.`
+          : `How ${from.name} is tied to ${to.name} on record.`
+      }
+      bodyClassName="pt-2"
+    >
+      <MapBody graph={graph} routes={routes} you={from} focus={focus} setFocus={setFocus} targetHeading="Who you want to meet" showScore={false} />
+    </Panel>
+  );
+}
+
+type MapProps = {
+  graph: Graph;
+  routes: Route[];
+  you: Node;
+  focus: string | null;
+  setFocus: (id: string | null) => void;
+  /** Heading of the right-hand column. */
+  targetHeading?: string;
+  /** The match score beside each target; off where the target is not a matched investor. */
+  showScore?: boolean;
+};
+
+/** The legend, the graph (md and up) and the compact list (phones). */
+function MapBody(props: MapProps) {
+  const { graph, routes } = props;
+  const counts = (["investor", "company", "event"] as Kind[]).map((k) => ({ k, n: graph.connectors.filter((c) => c.kind === k).length }));
+  return (
+    <>
+      <div className="mb-4 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
+        {counts.map(({ k, n }) => (
+          <span key={k} className="flex items-center gap-1.5">
+            <Marker kind={k} />
+            {KIND_LABEL[k]}
+            <span className="font-semibold text-foreground tabular">{n}</span>
+          </span>
+        ))}
+        {routes.some((r) => r.kinds.has("direct")) && (
+          <span className="flex items-center gap-1.5">
+            <span className="h-0.5 w-4 rounded bg-success" /> Already connected
+          </span>
+        )}
+      </div>
+      <div className="hidden md:block">
+        <NetworkGraph {...props} />
+      </div>
+      <CompactMap {...props} />
+    </>
+  );
+}
+
 // ---- Connectors shared by the graph and the compact map ----
 
 type Connector = { id: string; name: string; kind: Kind; title: string; investors: Set<string> };
@@ -105,7 +156,7 @@ type Connector = { id: string; name: string; kind: Kind; title: string; investor
 const CAP: Record<Kind, number> = { investor: 5, company: 4, event: 3 };
 const PER_INVESTOR = 2;
 
-function buildGraph(routes: Route[]) {
+function buildGraph(routes: Route[], perInvestor = PER_INVESTOR) {
   const map = new Map<string, Connector>();
   const add = (id: string, name: string, kind: Kind, title: string, investor: string) => {
     const c = map.get(id);
@@ -115,9 +166,9 @@ function buildGraph(routes: Route[]) {
   };
   for (const r of routes) {
     const inv = r.investor.id;
-    for (const p of r.result?.paths.slice(0, PER_INVESTOR) ?? [])
+    for (const p of r.result?.paths.slice(0, perInvestor) ?? [])
       add(p.via.id, p.via.name, p.via.investor ? "investor" : "company", `${p.via.name} ${askReason(p.tie)}`, inv);
-    for (const b of r.result?.bridges.slice(0, PER_INVESTOR) ?? [])
+    for (const b of r.result?.bridges.slice(0, perInvestor) ?? [])
       add(b.company.id, b.company.name, "company", `${b.company.name}: backed by your investor ${b.via.name}`, inv);
     for (const e of r.events) add(e.id, e.name, "event", e.name, inv);
   }
@@ -156,19 +207,7 @@ const ROW = 44;
 const GAP = 18; // between connector groups
 const TOP = 34;
 
-function NetworkGraph({
-  graph,
-  routes,
-  you,
-  focus,
-  setFocus,
-}: {
-  graph: Graph;
-  routes: Route[];
-  you: Node;
-  focus: string | null;
-  setFocus: (id: string | null) => void;
-}) {
+function NetworkGraph({ graph, routes, you, focus, setFocus, targetHeading = "Investors to reach", showScore = true }: MapProps) {
   const layout = useMemo(() => {
     // Middle column: connectors in groups (investors, companies, events) with a small gap between groups.
     const midY = new Map<string, number>();
@@ -214,11 +253,11 @@ function NetworkGraph({
   const invLit = (id: string) => !focus || id === focus || !!graph.connectors.find((c) => c.id === focus)?.investors.has(id);
 
   return (
-    <svg viewBox={`0 0 ${W} ${layout.height}`} className="w-full" role="img" aria-label={`Network map from ${you.name} to its investors`}>
+    <svg viewBox={`0 0 ${W} ${layout.height}`} className="w-full" role="img" aria-label={showScore ? `Network map from ${you.name} to its investors` : `Network map from ${you.name} to ${routes[0]?.investor.name}`}>
       {[
         { x: COL.you, t: "You" },
         { x: COL.mid, t: "Who can connect you" },
-        { x: COL.inv, t: "Investors to reach" },
+        { x: COL.inv, t: targetHeading },
       ].map((h) => (
         <text key={h.t} x={h.x + 4} y={14} className="fill-muted-foreground text-[11px] font-medium tracking-wide uppercase">
           {h.t}
@@ -284,7 +323,7 @@ function NetworkGraph({
             opacity={invLit(r.investor.id) ? 1 : 0.35}
             className="transition-opacity duration-150"
           >
-            <title>{`${r.investor.name}: ${STATUS[r.status].label}, ${r.investor.score}% match`}</title>
+            <title>{`${r.investor.name}: ${STATUS[r.status].label}${showScore ? `, ${r.investor.score}% match` : ""}`}</title>
             <rect
               x={COL.inv}
               y={y - PILL_H / 2}
@@ -296,11 +335,13 @@ function NetworkGraph({
               strokeDasharray={cold ? "4 3" : undefined}
             />
             <text x={COL.inv + 12} y={y + 4.5} className={cn("text-[12.5px] font-medium", cold ? "fill-muted-foreground" : "fill-foreground")}>
-              {short(r.investor.name, 16)}
+              {short(r.investor.name, showScore ? 16 : 20)}
             </text>
-            <text x={COL.inv + PILL_W - 10} y={y + 4.5} textAnchor="end" className="fill-subtle text-[11px] tabular">
-              {r.investor.score}%
-            </text>
+            {showScore && (
+              <text x={COL.inv + PILL_W - 10} y={y + 4.5} textAnchor="end" className="fill-subtle text-[11px] tabular">
+                {r.investor.score}%
+              </text>
+            )}
           </g>
         );
       })}
@@ -310,7 +351,7 @@ function NetworkGraph({
 
 // ---- Compact map (phones): one row per investor with the connectors that reach it ----
 
-function CompactMap({ graph, routes, focus, setFocus }: { graph: Graph; routes: Route[]; focus: string | null; setFocus: (id: string | null) => void }) {
+function CompactMap({ graph, routes, focus, setFocus, showScore = true }: MapProps) {
   return (
     <ul className="divide-y rounded-lg border md:hidden">
       {routes.map((r) => {
@@ -325,7 +366,7 @@ function CompactMap({ graph, routes, focus, setFocus }: { graph: Graph; routes: 
             >
               <span className="flex items-center gap-2">
                 <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{r.investor.name}</span>
-                <span className="text-[11px] text-subtle tabular">{r.investor.score}%</span>
+                {showScore && <span className="text-[11px] text-subtle tabular">{r.investor.score}%</span>}
               </span>
               <span className="mt-1.5 flex flex-wrap gap-1.5">
                 {r.kinds.has("direct") && (

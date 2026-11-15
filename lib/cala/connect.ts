@@ -71,6 +71,14 @@ export async function findInvestorRoutes(fromId: string, investors: InvestorMatc
   return { routes, youAtSlush: routes.some((r) => r.result?.from.atSlush) };
 }
 
+/** The events where one company or investor can be met: for the Connect page, which has a single target. */
+export async function eventLinksFor(id: string, name: string): Promise<EventLink[]> {
+  const slush = await fetchSlush().catch(() => null);
+  const key = normaliseName(name);
+  const hit = slush?.attendees.find((a) => a.id === id || normaliseName(a.name) === key);
+  return eventsFor(name, hit?.sources ?? null);
+}
+
 /** Slush itself when the investor is on the attendee list, then side events where it hosts or speaks (exact name match). */
 function eventsFor(name: string, slushSrc: Source[] | null): EventLink[] {
   const key = normaliseName(name);

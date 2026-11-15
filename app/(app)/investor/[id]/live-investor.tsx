@@ -41,7 +41,7 @@ export async function LiveInvestor({ id, showDeals }: { id: string; showDeals: b
           <WatchButton entityType="investor" calaId={p.id} name={p.name} size="sm" />
           <Button variant="outline" size="sm" className="bg-card" asChild>
             <Link href={`/intros?${new URLSearchParams({ to: p.id, toName: p.name })}`}>
-              <Route /> Warm intro
+              <Route /> Connect
             </Link>
           </Button>
         </div>

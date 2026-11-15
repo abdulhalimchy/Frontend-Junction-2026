@@ -25,7 +25,7 @@ function navFor(role: Role): Item[] {
   const top: Item[] = [
     { href: "/home", match: "/home", label: "Home", icon: House },
     { href: "/market", match: "/market", label: "Market", icon: LineChart },
-    { href: "/intros", match: "/intros", label: "Warm intros", icon: Route },
+    { href: "/intros", match: "/intros", label: "Connect", icon: Route },
   ];
   const roleItems: Item[] =
     role === "founder"
@@ -43,7 +43,7 @@ function navFor(role: Role): Item[] {
 
 const LIVE_ITEMS: Item[] = [
   { href: "/market", match: "/market", label: "Market", icon: LineChart },
-  { href: "/intros", match: "/intros", label: "Warm intros", icon: Route },
+  { href: "/intros", match: "/intros", label: "Connect", icon: Route },
   { href: "/deck-check", match: "/deck-check", label: "Deck check", icon: FileSearch },
   { href: "/watchlist", match: "/watchlist", label: "Watch list", icon: Bookmark },
   { href: "/events/slush-2026/overview", match: "/events", label: "Slush 2026", icon: CalendarDays, slush: true },

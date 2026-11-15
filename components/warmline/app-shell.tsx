@@ -15,7 +15,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
       { type: "page", label: "Analyse a market", hint: "Market analysis", href: "/market" },
       { type: "page", label: "Analyse a company", hint: "Company analysis", href: "/market?mode=company" },
       { type: "page", label: "Slush 2026", hint: "Event space", href: "/events/slush-2026/overview" },
-      { type: "page", label: "Warm intros", hint: "Who can introduce you", href: "/intros" },
+      { type: "page", label: "Connect", hint: "Who can introduce you", href: "/intros" },
       { type: "page", label: "Watch list", hint: "What you follow, and what changed", href: "/watchlist" },
     ];
     return (
@@ -49,7 +49,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   const palette: PaletteItem[] = [
     { type: "page", label: "Slush 2026", hint: "Event space", href: "/events/slush-2026/overview" },
     { type: "page", label: "Market or company analysis", hint: "Page", href: "/market" },
-    { type: "page", label: "Warm intros", hint: "Who can introduce you", href: "/intros" },
+    { type: "page", label: "Connect", hint: "Who can introduce you", href: "/intros" },
     { type: "page", label: "Watch list", hint: "What you follow, and what changed", href: "/watchlist" },
     ...(profile.role === "founder"
       ? [{ type: "page" as const, label: "My startup", hint: "Page", href: startupHref(activeId) }]

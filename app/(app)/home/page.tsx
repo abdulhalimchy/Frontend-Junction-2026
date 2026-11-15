@@ -203,7 +203,7 @@ async function FounderHome({ startup, competitors, investors, slushIndex }: NonN
 
   const actions: QuickAction[] = [
     { href: startup ? startupHref(startup.id, "investors") : "/market", label: "Find investors", hint: "Who funds companies like yours", icon: Landmark },
-    { href: "/intros", label: "Warm intros", hint: "Who can introduce you", icon: Route },
+    { href: "/intros", label: "Connect", hint: "Who can introduce you", icon: Route },
     { href: "/market", label: "Market", hint: "Size up your space", icon: LineChart },
     { href: "/watchlist", label: "Watch list", hint: "What you follow", icon: Bookmark },
   ];
@@ -339,7 +339,7 @@ async function InvestorHome({ investorId, slush }: { investorId: string; slush: 
   const actions: QuickAction[] = [
     { href: "/portfolio", label: "Portfolio", hint: "Your companies", icon: Building2 },
     { href: "/deck-check", label: "Deck check", hint: "Verify a founder's claims", icon: FileSearch },
-    { href: "/intros", label: "Warm intros", hint: "Who can introduce you", icon: Route },
+    { href: "/intros", label: "Connect", hint: "Who can introduce you", icon: Route },
     { href: "/market", label: "Market", hint: "Analyse a market", icon: LineChart },
   ];
 

@@ -1,7 +1,7 @@
 import type { Link, Node, RoundRef, Tie } from "@/lib/cala/intros";
 import { formatDay } from "@/lib/format";
 
-// Plain-language wording for warm-intro ties and links. Shared by Warm intros and a startup's Connect tab.
+// Plain-language wording for warm-intro ties and links. Shared by the Connect page and a startup's Connect tab.
 
 export function askReason(t: Tie) {
   if (t.kind === "backs_you") return t.lead ? "(your lead investor)" : "(your investor)";

@@ -391,7 +391,7 @@ function Tools() {
     },
     {
       icon: Route,
-      title: "Warm intros",
+      title: "Connect",
       text: "Name who you want to meet. We trace who can introduce you through investment records: your investors, your portfolio, your co-investors.",
     },
   ];
