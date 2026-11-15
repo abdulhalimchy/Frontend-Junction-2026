@@ -26,7 +26,7 @@ import type { StartupSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AddStartupDialog, DeleteStartupDialog, RenameStartupDialog, setActiveStartup } from "./startup-dialogs";
 
-const TABS = ["overview", "competitors", "investors", "deck"] as const;
+const TABS = ["overview", "competitors", "investors", "connect", "deck"] as const;
 
 /**
  * "My startup" in the sidebar: the founder's startups, a + to add one, and a menu (or right-click) per startup.

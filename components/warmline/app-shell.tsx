@@ -4,6 +4,7 @@ import { getActiveStartupId, getProfile, getStartups } from "@/lib/session";
 import { startupHref } from "@/lib/startup-cookie";
 import { getCompany, getInvestor } from "@/lib/cala";
 import { demoDataEnabled } from "@/lib/demo";
+import { MobileNav } from "./mobile-nav";
 import { Sidebar } from "./sidebar";
 import { TopBar, type PaletteItem } from "./top-bar";
 
@@ -21,8 +22,15 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen">
         <Sidebar live />
         <div className="flex min-w-0 flex-1 flex-col">
-          <TopBar items={palette} />
-          <main className="mx-auto w-full max-w-[1160px] flex-1 px-8 py-8">{children}</main>
+          <TopBar
+            items={palette}
+            menu={
+              <MobileNav>
+                <Sidebar live inMenu />
+              </MobileNav>
+            }
+          />
+          <main className="mx-auto w-full max-w-[1160px] flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
         </div>
       </div>
     );
@@ -59,16 +67,24 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
     })),
   ];
 
+  const sidebar = {
+    role: profile.role,
+    user: { name: profile.name, org: org ?? "" },
+    startups: startups ? { ...startups, activeId: activeId ?? "" } : undefined,
+  };
   return (
     <div className="flex min-h-screen">
-      <Sidebar
-        role={profile.role}
-        user={{ name: profile.name, org: org ?? "" }}
-        startups={startups ? { ...startups, activeId: activeId ?? "" } : undefined}
-      />
+      <Sidebar {...sidebar} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar items={palette} />
-        <main className="mx-auto w-full max-w-[1160px] flex-1 px-8 py-8">{children}</main>
+        <TopBar
+          items={palette}
+          menu={
+            <MobileNav>
+              <Sidebar {...sidebar} inMenu />
+            </MobileNav>
+          }
+        />
+        <main className="mx-auto w-full max-w-[1160px] flex-1 px-4 py-6 md:px-8 md:py-8">{children}</main>
       </div>
     </div>
   );
@@ -77,7 +93,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
 export function AppShellSkeleton() {
   return (
     <div className="flex min-h-screen">
-      <aside className="h-screen w-60 shrink-0 border-r bg-card/60" />
+      <aside className="hidden h-screen w-60 shrink-0 border-r bg-card/60 md:block" />
       <div className="flex-1">
         <div className="h-14 border-b" />
       </div>

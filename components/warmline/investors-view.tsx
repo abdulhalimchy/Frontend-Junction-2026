@@ -10,6 +10,7 @@ import type { InvestorMatch, InvestorsAnalysis } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Pill } from "./badges";
 import { EmptyState, EntityAvatar, Panel } from "./blocks";
+import { SearchedFor } from "./searched-for";
 import { SourceChip } from "./source-chip";
 
 const PAGE = 10;
@@ -113,7 +114,7 @@ export function InvestorsView({ data, startupName }: { data: InvestorsAnalysis; 
         title="Investors who fund companies like yours"
         description={
           peers
-            ? `Investors in ${data.peers.length} companies matching your industry, ranked by match.`
+            ? `Investors in ${data.peers.length} companies like yours, ranked by match.`
             : `Investors in ${startupName}'s ${data.peers.length} competitors, ranked by match.`
         }
         action={
@@ -123,6 +124,11 @@ export function InvestorsView({ data, startupName }: { data: InvestorsAnalysis; 
         }
         bodyClassName="px-0 pb-3"
       >
+        {peers && (
+          <div className="px-5 pb-3">
+            <SearchedFor searches={data.searches} leftOut={data.left_out} />
+          </div>
+        )}
         {shown.length ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-sm">

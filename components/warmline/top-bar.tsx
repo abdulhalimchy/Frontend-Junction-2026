@@ -51,7 +51,7 @@ function useCalaSuggestions(q: string): PaletteItem[] {
 
 const ICONS = { company: Building2, investor: Landmark, person: UserRound, page: Search };
 
-export function TopBar({ items }: { items: PaletteItem[] }) {
+export function TopBar({ items, menu }: { items: PaletteItem[]; menu?: React.ReactNode }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -81,15 +81,16 @@ export function TopBar({ items }: { items: PaletteItem[] }) {
   ] as const;
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center gap-4 border-b bg-background/85 px-8 backdrop-blur">
+    <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b bg-background/85 px-4 backdrop-blur md:gap-4 md:px-8">
+      {menu}
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-9 w-[420px] items-center gap-2 rounded-lg border bg-card px-3 text-left text-sm text-muted-foreground transition-colors hover:border-primary/30"
+        className="flex h-9 w-full max-w-[420px] min-w-0 items-center gap-2 rounded-lg border bg-card px-3 text-left text-sm text-muted-foreground transition-colors hover:border-primary/30"
       >
-        <Search className="size-4" />
-        <span className="flex-1">Search companies, investors, people…</span>
-        <kbd className="rounded border bg-muted px-1.5 font-sans text-[11px] text-muted-foreground">⌘K</kbd>
+        <Search className="size-4 shrink-0" />
+        <span className="flex-1 truncate">Search companies, investors, people…</span>
+        <kbd className="hidden rounded border bg-muted px-1.5 font-sans text-[11px] text-muted-foreground sm:inline">⌘K</kbd>
       </button>
 
       <CommandDialog open={open} onOpenChange={setOpen} title="Search Warmline" description="Search companies, investors and people">

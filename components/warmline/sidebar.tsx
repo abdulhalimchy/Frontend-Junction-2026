@@ -52,7 +52,7 @@ const LIVE_ITEMS: Item[] = [
 type StartupsProp = { items: StartupSummary[]; activeId: string; error: string | null };
 
 export function Sidebar(
-  props:
+  props: { inMenu?: boolean } & (
     | { live: true }
     | {
         live?: false;
@@ -60,7 +60,8 @@ export function Sidebar(
         user: { name: string; org: string };
         /** Founder only: the startups listed under "My startup". */
         startups?: StartupsProp;
-      },
+      }
+  ),
 ) {
   const pathname = usePathname();
   const params = useSearchParams();
@@ -78,7 +79,12 @@ export function Sidebar(
       : props.user.org;
 
   return (
-    <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r bg-card/60 px-3 py-4">
+    <aside
+      className={cn(
+        "flex shrink-0 flex-col px-3 py-4",
+        props.inMenu ? "h-full w-full overflow-y-auto" : "sticky top-0 hidden h-screen w-60 border-r bg-card/60 md:flex",
+      )}
+    >
       <Logo className="px-2" />
       <nav className="mt-6 flex flex-col gap-0.5">
         {items.map((it) => {

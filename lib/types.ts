@@ -314,10 +314,16 @@ export type StandingRow = {
   investors: { id: string; name: string }[];
 };
 
-/** mode "competitors": Cala's competitors of the matched company. "peers": companies matching the industry. */
+/** One Cala search behind an analysis (planned by the LLM in "peers" mode), and how many companies it added. */
+export type AnalysisSearch = { label: string; query: string; found: number };
+
+/** mode "competitors": Cala's competitors of the matched company. "peers": companies found by the planned searches. */
 export type CompetitorsAnalysis = {
   mode: "competitors" | "peers" | "none";
   query: string;
+  searches?: AnalysisSearch[];
+  /** "peers" mode: companies the searches found that do not build a product like the startup's. */
+  left_out?: string[];
   unresolved: number;
   you: StandingRow;
   companies: StandingRow[];
@@ -355,6 +361,9 @@ export type InvestorMatch = {
 export type InvestorsAnalysis = {
   mode: "competitors" | "peers" | "none";
   query: string;
+  searches?: AnalysisSearch[];
+  /** "peers" mode: companies the searches found that do not build a product like the startup's. */
+  left_out?: string[];
   unresolved: number;
   peers: { id: string; name: string }[];
   your_stage: string | null;

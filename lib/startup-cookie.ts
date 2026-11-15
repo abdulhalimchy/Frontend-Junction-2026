@@ -5,6 +5,6 @@ export const STARTUP_COOKIE = "wl_startup";
  * Every My startup page names its startup in the URL, so pages of different startups never share a cache entry.
  * Without an id (no startup added yet) the page picks the founder's latest startup or offers to add one.
  */
-export function startupHref(id: string | null, tab: "overview" | "competitors" | "investors" | "deck" = "overview") {
+export function startupHref(id: string | null, tab: "overview" | "competitors" | "investors" | "connect" | "deck" = "overview") {
   return id ? `/startup/${tab}?s=${encodeURIComponent(id)}` : `/startup/${tab}`;
 }

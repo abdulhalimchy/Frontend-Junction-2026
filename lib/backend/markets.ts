@@ -1,6 +1,6 @@
 import "server-only";
 import { memoCala } from "@/lib/cala/client";
-import type { MarketCompany, Money, Source } from "@/lib/types";
+import type { CompanyProfile, MarketCompany, Money, Source } from "@/lib/types";
 import { backendError, backendFetch } from "./client";
 
 // Market analysis runs in the backend (/api/v1/markets/): it asks Cala, has the LLM write and check the
@@ -128,10 +128,13 @@ export type Evidence = { id: string; text: string; sources: Source[] };
 export type EvidenceSection = { question: string; summary: string; evidence: Evidence[]; fetchedAt?: number };
 export type PlayersSection = { definition: string; companies: MarketCompany[]; unresolved: number; fetchedAt?: number };
 export type SectionError = { message: string; kind: string };
-export type SectionName = "size" | "deals" | "trends" | "players" | "summary";
+export type SectionName = "size" | "deals" | "trends" | "players" | "summary" | "profile" | "competitors" | "news";
 
 export type MarketAnalysisRow = {
   id: string;
+  /** "company": one company (entityId) with its competitors; "market": a market and place. */
+  kind: "market" | "company";
+  entityId: string;
   sector: string;
   typed: string;
   region: string;
@@ -170,11 +173,17 @@ export type MarketAnalysis = MarketAnalysisRow & {
   trends?: EvidenceSection;
   players?: PlayersSection;
   summary?: ReportSummary & { fetchedAt?: number };
+  /** Company analyses: the company's own record, its competitors, and recent news with its facts. */
+  profile?: CompanyProfile & { fetchedAt?: number };
+  competitors?: PlayersSection;
+  news?: EvidenceSection;
   errors: Partial<Record<SectionName, SectionError>>;
 };
 
 type ApiRow = {
   id: string;
+  kind: "market" | "company";
+  entity_id: string;
   sector: string;
   typed: string;
   region: string;
@@ -200,6 +209,9 @@ type ApiAnalysis = ApiRow & {
     deals?: EvidenceSection & WithFetched;
     trends?: EvidenceSection & WithFetched;
     players?: PlayersSection & WithFetched;
+    profile?: CompanyProfile & WithFetched;
+    competitors?: PlayersSection & WithFetched;
+    news?: EvidenceSection & WithFetched;
     summary?: ApiSummary & WithFetched;
     errors?: MarketAnalysis["errors"];
   };
@@ -208,6 +220,8 @@ type ApiAnalysis = ApiRow & {
 function toRow(r: ApiRow): MarketAnalysisRow {
   return {
     id: r.id,
+    kind: r.kind ?? "market",
+    entityId: r.entity_id ?? "",
     sector: r.sector,
     typed: r.typed,
     region: r.region,
@@ -247,6 +261,9 @@ function toAnalysis(a: ApiAnalysis): MarketAnalysis {
     deals: section(d.deals),
     trends: section(d.trends),
     players: section(d.players),
+    profile: section(d.profile),
+    competitors: section(d.competitors),
+    news: section(d.news),
     summary,
     errors: d.errors ?? {},
   };
@@ -282,6 +299,28 @@ export async function listMarketAnalyses() {
 
 export async function refreshMarketAnalysis(id: string) {
   return toAnalysis(await call<ApiAnalysis>(`/markets/analyses/${encodeURIComponent(id)}/refresh/`, "POST"));
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Company analysis: free text is read by the backend's LLM, matched to company records, the user picks one.
+
+export type CompanyCandidate = { id: string; name: string; entity_type: string; description: string; exact: boolean };
+export type CompanyVerdict = {
+  kind: "company" | "market" | "not_company";
+  reason: string;
+  suggestions: string[];
+  name: string;
+  hint: string;
+  place: string;
+};
+
+export async function findCompany(input: { text: string; force?: boolean }) {
+  return call<{ verdict: CompanyVerdict; candidates: CompanyCandidate[] }>("/markets/companies/find/", "POST", input);
+}
+
+/** Opens (or starts) the stored analysis of a picked company. Without a name, the backend reads it from the record. */
+export async function openCompanyAnalysis(input: { entity_id: string; name?: string; description?: string; text?: string }) {
+  return toAnalysis(await call<ApiAnalysis>("/markets/companies/open/", "POST", input));
 }
 
 /** Stops a running analysis. It rolls back to the last finished result; a first run is deleted (deleted: true). */

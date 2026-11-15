@@ -13,7 +13,20 @@ import { cancelAnalysisAction, clearHistoryAction, deleteAnalysisAction, refresh
  * Free-text market search: any wording, with or without a place. The button is disabled (with a spinner)
  * from submit until the report opens, and while the current report is still being built (busy).
  */
-export function MarketSearch({ defaultValue = "", busy = false, size = "md", autoFocus }: { defaultValue?: string; busy?: boolean; size?: "md" | "lg"; autoFocus?: boolean }) {
+export function MarketSearch({
+  defaultValue = "",
+  busy = false,
+  size = "md",
+  autoFocus,
+  kind = "market",
+}: {
+  defaultValue?: string;
+  busy?: boolean;
+  size?: "md" | "lg";
+  autoFocus?: boolean;
+  /** "company" searches companies (/market/company), "market" analyses a market (/market/report). */
+  kind?: "market" | "company";
+}) {
   const router = useRouter();
   const [text, setText] = useState(defaultValue);
   const [pending, start] = useTransition();
@@ -26,7 +39,7 @@ export function MarketSearch({ defaultValue = "", busy = false, size = "md", aut
         e.preventDefault();
         const q = text.trim();
         if (!q || pending || busy) return;
-        start(() => router.push(`/market/report?${new URLSearchParams({ q })}`));
+        start(() => router.push(`/market/${kind === "company" ? "company" : "report"}?${new URLSearchParams({ q })}`));
       }}
     >
       <div className="relative flex-1">
@@ -41,8 +54,8 @@ export function MarketSearch({ defaultValue = "", busy = false, size = "md", aut
           maxLength={300}
           autoFocus={autoFocus}
           readOnly={pending}
-          placeholder="Describe any market, e.g. seed-stage fintech in Finland"
-          aria-label="Market to analyse"
+          placeholder={kind === "company" ? "Any company, e.g. Orange telecom or Wolt competitors in Europe" : "Describe any market, e.g. seed-stage fintech in Finland"}
+          aria-label={kind === "company" ? "Company to analyse" : "Market to analyse"}
           className={cn(h, "pl-9")}
         />
       </div>
@@ -57,7 +70,7 @@ export function MarketSearch({ defaultValue = "", busy = false, size = "md", aut
           </>
         ) : (
           <>
-            Analyse <ArrowRight />
+            {kind === "company" ? "Find company" : "Analyse"} <ArrowRight />
           </>
         )}
       </Button>
@@ -162,7 +175,7 @@ export function ClearHistoryButton({ count }: { count: number }) {
       className="bg-card text-destructive hover:text-destructive"
       disabled={pending || !count}
       onClick={() => {
-        if (!window.confirm(`Clear your whole market analysis history (${count} ${count === 1 ? "report" : "reports"})? They are deleted from the database and cannot be restored.`)) return;
+        if (!window.confirm(`Clear your whole analysis history (${count} ${count === 1 ? "report" : "reports"})? They are deleted from the database and cannot be restored.`)) return;
         start(async () => {
           const res = await clearHistoryAction();
           if (!res.ok) return void toast.error(res.error);
@@ -172,5 +185,39 @@ export function ClearHistoryButton({ count }: { count: number }) {
     >
       {pending ? <Loader2 className="animate-spin" /> : <Trash2 />} Clear history
     </Button>
+  );
+}
+
+/** The company records matching a search; picking one opens (or starts) its analysis, with a spinner meanwhile. */
+export function PickCompanyList({ candidates, text }: { candidates: { id: string; name: string; entity_type: string; description: string; exact: boolean }[]; text: string }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [picked, setPicked] = useState<string | null>(null);
+  return (
+    <ul className="divide-y">
+      {candidates.map((c) => (
+        <li key={c.id}>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => {
+              setPicked(c.id);
+              start(() => router.push(`/market/company?${new URLSearchParams({ entity: c.id, name: c.name, description: c.description.slice(0, 400), q: text })}`));
+            }}
+            className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-muted/40 disabled:cursor-wait disabled:opacity-70"
+          >
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-semibold">{c.name.slice(0, 2).toUpperCase()}</span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-2 text-sm font-medium">
+                {c.name}
+                {c.exact && <span className="rounded-full bg-teal-soft px-2 py-0.5 text-[11px] text-accent-foreground">Exact name</span>}
+              </span>
+              <span className="block truncate text-xs text-muted-foreground">{c.description || c.entity_type}</span>
+            </span>
+            {pending && picked === c.id ? <Loader2 className="size-4 animate-spin text-primary" /> : <ArrowRight className="size-4 text-muted-foreground" />}
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
