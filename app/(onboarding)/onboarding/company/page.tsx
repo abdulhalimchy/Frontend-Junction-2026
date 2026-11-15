@@ -9,7 +9,6 @@ export const metadata = { title: "Your company" };
 
 // Step 2 uses the app's own flows: a founder adds their startup (My startup), an investor links their fund
 // (Portfolio). Both are saved on the backend, so what is set up here is already there when the app opens.
-// Sign-in is mocked and the backend runs as one demo account, so startups or a fund added earlier show up too.
 // The role (cookie) and the backend are per request, so they are read inside Suspense, like Home.
 export default function CompanyPage() {
   return (

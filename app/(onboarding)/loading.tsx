@@ -1,5 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Loading() {
-  return <Skeleton className="h-80 w-full max-w-md rounded-2xl" />;
+  return <Skeleton className="loading-delay h-80 w-full max-w-md rounded-2xl" />;
 }

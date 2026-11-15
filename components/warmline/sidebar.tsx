@@ -1,16 +1,6 @@
 "use client";
 
-import {
-  Bookmark,
-  BriefcaseBusiness,
-  CalendarDays,
-  Database,
-  FileSearch,
-  House,
-  LineChart,
-  Route,
-  Settings,
-} from "lucide-react";
+import { Bookmark, BriefcaseBusiness, CalendarDays, Database, FileSearch, LineChart, Rocket, Route, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -21,84 +11,71 @@ import { RoleSwitch } from "./role-switch";
 import { SignOutButton } from "./sign-out-button";
 import { StartupNav } from "./startup-nav";
 
-type Item = { href: string; match: string; label: string; icon: typeof House; slush?: boolean; startups?: boolean };
+type Item = { href: string; match: string; label: string; icon: typeof LineChart; slush?: boolean; startups?: boolean };
 
-/** The page that explains the data source. Shown in both modes. */
-const CALA_ITEM: Item = { href: "/cala", match: "/cala", label: "Data by Cala", icon: Database };
-
+/** The menu for each side. Founders check their deck under My startup; investors check founders' decks. */
 function navFor(role: Role): Item[] {
-  const top: Item[] = [
-    { href: "/home", match: "/home", label: "Home", icon: House },
-    { href: "/market", match: "/market", label: "Market", icon: LineChart },
-    { href: "/intros", match: "/intros", label: "Connect", icon: Route },
-  ];
   const roleItems: Item[] =
     role === "founder"
-      ? [{ href: "/startup/overview", match: "/startup", label: "My startup", icon: House, startups: true }]
+      ? [{ href: "/startup/overview", match: "/startup", label: "My startup", icon: Rocket, startups: true }]
       : [
           { href: "/portfolio", match: "/portfolio", label: "Portfolio", icon: BriefcaseBusiness },
           { href: "/deck-check", match: "/deck-check", label: "Deck check", icon: FileSearch },
         ];
-  const rest: Item[] = [
+  return [
+    ...roleItems,
+    { href: "/market", match: "/market", label: "Market", icon: LineChart },
+    { href: "/intros", match: "/intros", label: "Connect", icon: Route },
     { href: "/watchlist", match: "/watchlist", label: "Watch list", icon: Bookmark },
-    { href: "/events/slush-2026/overview", match: "/events", label: "Events", icon: CalendarDays, slush: true },
-    CALA_ITEM,
+    { href: "/events/slush-2026/overview", match: "/events", label: "Slush 2026", icon: CalendarDays, slush: true },
+    { href: "/cala", match: "/cala", label: "Data by Cala", icon: Database },
   ];
-  return [...top, ...roleItems, ...rest];
 }
-
-const LIVE_ITEMS: Item[] = [
-  { href: "/market", match: "/market", label: "Market", icon: LineChart },
-  { href: "/intros", match: "/intros", label: "Connect", icon: Route },
-  { href: "/deck-check", match: "/deck-check", label: "Deck check", icon: FileSearch },
-  { href: "/watchlist", match: "/watchlist", label: "Watch list", icon: Bookmark },
-  { href: "/events/slush-2026/overview", match: "/events", label: "Slush 2026", icon: CalendarDays, slush: true },
-  CALA_ITEM,
-];
 
 type StartupsProp = { items: StartupSummary[]; activeId: string; error: string | null };
 
-export function Sidebar(
-  props: { inMenu?: boolean } & (
-    | { live: true }
-    | {
-        live?: false;
-        role: Role;
-        user: { name: string; org: string };
-        /** Founder only: the startups listed under "My startup". */
-        startups?: StartupsProp;
-      }
-  ),
-) {
+export function Sidebar({
+  role,
+  user,
+  startups,
+  inMenu,
+}: {
+  role: Role;
+  user: { name: string; email: string };
+  /** Founder only: the startups listed under "My startup". */
+  startups?: StartupsProp;
+  inMenu?: boolean;
+}) {
   const pathname = usePathname();
   const params = useSearchParams();
-  const startups = props.live ? undefined : props.startups;
-  // Live mode (DEMO_DATA=off): only the pages backed by real data (Cala, the backend).
-  const items: Item[] = props.live ? LIVE_ITEMS : navFor(props.role);
   // The startup on screen: the URL's on My startup pages, else the last one chosen.
   const [chosen, setChosen] = useState(startups?.activeId ?? "");
   const fromUrl = pathname.startsWith("/startup") ? params.get("s") : null;
   const current = startups?.items.some((s) => s.id === fromUrl) ? fromUrl! : chosen;
-  const org = props.live
-    ? ""
-    : startups
-      ? (startups.items.find((s) => s.id === current)?.name ?? props.user.org)
-      : props.user.org;
+  const initials = user.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   return (
     <aside
       className={cn(
         "flex shrink-0 flex-col px-3 py-4",
-        props.inMenu ? "h-full w-full overflow-y-auto" : "sticky top-0 hidden h-screen w-60 border-r bg-background/60 backdrop-blur-xl md:flex",
+        inMenu ? "h-full w-full overflow-y-auto" : "sticky top-0 hidden h-screen w-60 border-r bg-background/60 backdrop-blur-xl md:flex",
       )}
     >
       <Logo className="px-2" />
-      <nav className="mt-6 flex flex-col gap-0.5">
-        {items.map((it) => {
+      <div className="mt-5 px-1">
+        <div className="mb-1.5 text-[11px] font-medium text-subtle">View as</div>
+        <RoleSwitch role={role} />
+      </div>
+      <nav className="mt-4 flex flex-col gap-0.5">
+        {navFor(role).map((it) => {
           if (it.startups && startups)
-            return (
-              <StartupNav key={it.href} startups={startups.items} activeId={current} onChoose={setChosen} loadError={startups.error} />
-            );
+            return <StartupNav key={it.href} startups={startups.items} activeId={current} onChoose={setChosen} loadError={startups.error} />;
           const active = pathname.startsWith(it.match);
           return (
             <Link
@@ -119,52 +96,30 @@ export function Sidebar(
         })}
       </nav>
 
-      {props.live ? (
-        <div className="mt-auto rounded-lg border bg-card p-3 text-[11px] text-muted-foreground">
-          <div className="font-semibold text-foreground">Live data</div>
-          Verified, cited data from the Cala encyclopedia. Demo data is off.{" "}
-          <Link href="/cala" className="font-medium text-primary underline-offset-2 hover:underline">
-            How it works
+      <div className="mt-auto">
+        <div className="flex items-center gap-1 px-1 py-1">
+          {/* Name and email open the account settings (profile, export, delete account). */}
+          <Link
+            href="/me"
+            title="Account settings"
+            aria-label="Account settings"
+            className={cn(
+              "group -m-1 flex min-w-0 flex-1 items-center gap-2 rounded-lg p-1 transition-colors hover:bg-muted",
+              pathname.startsWith("/me") && "bg-brand-soft",
+            )}
+          >
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-soft text-[11px] font-semibold text-accent-foreground">
+              {initials || "?"}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13px] font-medium">{user.name}</span>
+              <span className="block truncate text-[11px] text-muted-foreground">{user.email}</span>
+            </span>
+            <Settings className="size-3.5 shrink-0 text-muted-foreground transition-transform group-hover:rotate-45 group-hover:text-foreground" />
           </Link>
+          <SignOutButton compact />
         </div>
-      ) : (
-        <div className="mt-auto space-y-3">
-          <div className="rounded-lg border border-slush/40 bg-slush-soft/50 p-3">
-            <div className="text-xs font-semibold text-slush-foreground">Slush 2026</div>
-            <div className="mt-0.5 text-[11px] text-slush-foreground/80">Helsinki · 18–19 Nov</div>
-          </div>
-          <div className="px-1">
-            <div className="mb-1.5 text-[11px] font-medium text-subtle">View as (demo)</div>
-            <RoleSwitch role={props.role} />
-          </div>
-          <div className="flex items-center gap-1 px-1 py-1">
-            {/* Name and org open the account settings (privacy, role, delete account). */}
-            <Link
-              href="/me"
-              title="Account settings"
-              aria-label="Account settings"
-              className={cn(
-                "group -m-1 flex min-w-0 flex-1 items-center gap-2 rounded-lg p-1 transition-colors hover:bg-muted",
-                pathname.startsWith("/me") && "bg-brand-soft",
-              )}
-            >
-              <span className="flex size-7 items-center justify-center rounded-full bg-brand-soft text-[11px] font-semibold text-accent-foreground">
-                {props.user.name
-                  .split(" ")
-                  .map((p) => p[0])
-                  .slice(0, 2)
-                  .join("")}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13px] font-medium">{props.user.name}</span>
-                <span className="block truncate text-[11px] text-muted-foreground">{org}</span>
-              </span>
-              <Settings className="size-3.5 shrink-0 text-muted-foreground transition-transform group-hover:rotate-45 group-hover:text-foreground" />
-            </Link>
-            <SignOutButton compact />
-          </div>
-        </div>
-      )}
+      </div>
     </aside>
   );
 }

@@ -21,6 +21,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ClaimBadge, SlushTag } from "@/components/warmline/badges";
+import { FocusLink } from "@/components/warmline/focus-link";
 import { Logo } from "@/components/warmline/logo";
 import { SourceLinks } from "@/components/warmline/source-links";
 import { ThemeToggle } from "@/components/warmline/theme-toggle";
@@ -74,12 +75,12 @@ function Nav() {
       <div className={cn(WRAP, "flex h-16 items-center gap-2 sm:gap-8")}>
         <Logo href="/" />
         <nav className="hidden items-center gap-6 text-[13px] font-medium text-muted-foreground md:flex">
-          <a href="#founders" className="transition-colors hover:text-foreground">
+          <FocusLink target="founders" className="transition-colors hover:text-foreground">
             For founders
-          </a>
-          <a href="#investors" className="transition-colors hover:text-foreground">
+          </FocusLink>
+          <FocusLink target="investors" className="transition-colors hover:text-foreground">
             For investors
-          </a>
+          </FocusLink>
           <a href="#data" className="transition-colors hover:text-foreground">
             How we treat data
           </a>

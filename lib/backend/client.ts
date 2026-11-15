@@ -1,15 +1,16 @@
 import "server-only";
+import { cookies } from "next/headers";
 import { connection } from "next/server";
+import { ACCESS_COOKIE, BACKEND_API } from "@/lib/auth";
 
-// Server-side client for the Django API (../Backend-Junction-2026). The browser never sees the JWT:
-// pages and route handlers call this, and the route handlers under app/api/ proxy what the UI needs.
+// Server-side client for the Django API (../Backend-Junction-2026). The browser never sees the JWT: pages and
+// route handlers call this, and the route handlers under app/api/ proxy what the UI needs.
 //
-// Phase 1 auth: the app has no real sign-in yet (the sign-in page is a demo), so every request runs as one
-// demo account, logged in (or registered on first use) from BACKEND_DEMO_EMAIL / BACKEND_DEMO_PASSWORD.
-// Replace `getToken` with the signed-in user's token when real auth lands.
+// Requests run as the signed-in user: their access token is in an httpOnly cookie (lib/auth.ts), kept fresh by
+// proxy.ts. Cala gateway calls are shared across users (lib/cala/client.ts caches them), so they carry the
+// server's CALA_GATEWAY_KEY instead of a user token.
 
-const BASE = (process.env.BACKEND_URL ?? "http://localhost:8000").replace(/\/$/, "");
-const API = `${BASE}/api/v1`;
+const API = BACKEND_API;
 
 export class BackendError extends Error {
   constructor(
@@ -20,71 +21,36 @@ export class BackendError extends Error {
   }
 }
 
-let token: { access: string; at: number } | null = null;
-// performance clock, not Date.now(): Cache Components forbids Date.now() during prerendering, and the Cala
-// gateway path below can run there.
-const now = () => performance.timeOrigin + performance.now();
-const TOKEN_TTL_MS = 10 * 60 * 1000; // backend access tokens last 15 minutes by default
-
-async function authenticate(): Promise<string> {
-  const email = process.env.BACKEND_DEMO_EMAIL;
-  const password = process.env.BACKEND_DEMO_PASSWORD;
-  if (!email || !password) throw new BackendError("BACKEND_DEMO_EMAIL and BACKEND_DEMO_PASSWORD are not set (see .env.example)", 500);
-
-  const post = (path: string, body: unknown) =>
-    fetch(`${API}${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), cache: "no-store" });
-
-  let res = await post("/accounts/auth/login/", { email, password }).catch(unreachable);
-  if (res.status === 401) res = await post("/accounts/auth/register/", { email, password, full_name: "Demo user", role: "founder" }).catch(unreachable);
-  if (!res.ok) throw new BackendError(`Backend sign-in failed (${res.status}). Check BACKEND_DEMO_EMAIL / BACKEND_DEMO_PASSWORD.`, res.status);
-  const { access } = (await res.json()) as { access: string };
-  token = { access, at: now() };
-  return access;
-}
-
 function unreachable(): never {
-  throw new BackendError(`Cannot reach the backend at ${BASE}. Is it running? (python manage.py runserver)`, 503);
+  throw new BackendError(`Cannot reach the backend at ${API}. Is it running? (python manage.py runserver)`, 503);
 }
 
-// One sign-in at a time: requests that need a token while one is being fetched wait for it.
-let signingIn: Promise<string> | null = null;
-
-async function getToken(force = false) {
-  if (!force && token && now() - token.at < TOKEN_TTL_MS) return token.access;
-  signingIn ??= authenticate().finally(() => {
-    signingIn = null;
-  });
-  return signingIn;
-}
-
-/** Authenticated fetch against /api/v1. Retries once with a fresh token on 401. */
+/** Authenticated fetch against /api/v1, as the signed-in user. */
 export async function backendFetch(path: string, init: RequestInit = {}): Promise<Response> {
   // Backend data is per user and per request: never prerender it.
   await connection();
-  return send(path, init);
+  const access = (await cookies()).get(ACCESS_COOKIE)?.value;
+  if (!access) throw new BackendError("You are signed out. Sign in again.", 401);
+  const res = await send(path, init, { Authorization: `Bearer ${access}` });
+  if (res.status === 401) throw new BackendError("Your session has ended. Sign in again.", 401);
+  return res;
 }
 
 /**
- * Like backendFetch, without marking the render dynamic. Only for the Cala gateway (lib/cala/client.ts):
- * its results are shared across renders by the Cala cache, so a request must not be tied to the render that
- * started it, just as a direct fetch to Cala was not.
+ * Fetch for the Cala gateway (lib/cala/client.ts), without marking the render dynamic or tying the request to
+ * one user: its results are shared across renders and users by the Cala cache.
  */
 export function backendFetchShared(path: string, init: RequestInit = {}): Promise<Response> {
-  return send(path, init);
+  const key = process.env.CALA_GATEWAY_KEY;
+  if (!key) throw new BackendError("CALA_GATEWAY_KEY is not set (see .env.example)", 500);
+  return send(path, init, { "X-Gateway-Key": key });
 }
 
-async function send(path: string, init: RequestInit): Promise<Response> {
-  const once = async (force: boolean) =>
-    fetch(`${API}${path}`, {
-      ...init,
-      cache: "no-store",
-      headers: { ...init.headers, Authorization: `Bearer ${await getToken(force)}` },
-    }).catch((e: unknown) => {
-      if (e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError")) throw e;
-      return unreachable();
-    });
-  const res = await once(false);
-  return res.status === 401 ? once(true) : res;
+function send(path: string, init: RequestInit, auth: Record<string, string>): Promise<Response> {
+  return fetch(`${API}${path}`, { ...init, cache: "no-store", headers: { ...init.headers, ...auth } }).catch((e: unknown) => {
+    if (e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError")) throw e;
+    return unreachable();
+  });
 }
 
 /** The backend's error envelope is { error: { message, details } }. */

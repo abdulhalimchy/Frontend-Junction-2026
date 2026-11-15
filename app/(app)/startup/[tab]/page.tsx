@@ -18,7 +18,9 @@ import { startupHref } from "@/lib/startup-cookie";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CompanyRecord } from "@/app/(app)/company/[id]/live-company";
 import { DeckCheck } from "@/components/warmline/deck-check";
-import { getActiveStartupId, getDeckCheck, getDeckChecks, getProfile, getStartups } from "@/lib/session";
+import { ROLE_HOME } from "@/lib/account";
+import { getActiveStartupId, getDeckCheck, getDeckChecks, getRole, getStartups } from "@/lib/session";
+
 
 const TABS = ["overview", "competitors", "investors", "connect", "deck"] as const;
 type Tab = (typeof TABS)[number];
@@ -33,8 +35,7 @@ async function StartupPageContent({ params, searchParams }: PageProps<"/startup/
   const { tab } = (await params) as { tab: Tab };
   const requested = (await searchParams).s;
   if (!TABS.includes(tab)) notFound();
-  const profile = await getProfile();
-  if (profile.role !== "founder") redirect("/home");
+  if ((await getRole()) !== "founder") redirect(ROLE_HOME.investor);
 
   // The startup comes from the URL (?s=); without one, the last startup chosen (cookie), else the first one.
   const { items, error } = await getStartups();

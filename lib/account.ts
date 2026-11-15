@@ -1,10 +1,18 @@
-// Mock account. Until real sign-in exists, "signing in" only writes this cookie: who you said you are and the
-// goals you picked. Nothing is checked and the backend still runs as the shared demo account (lib/backend/client.ts).
-// Shared by the server (lib/session.ts) and the browser (sign-in, sign-up, onboarding, sign out).
+// The signed-in account's name and email, for display. Set by Google sign-in (app/api/auth/google) in an
+// httpOnly cookie, so only the server reads it (lib/session.ts). The backend is the source of truth.
+
+import type { Role } from "./types";
 
 export const ACCOUNT_COOKIE = "wl_account";
 
-export type Account = { name: string; email: string; goals?: string[] };
+/** The founder or investor view. The backend profile's role is the source of truth; this cookie mirrors it. */
+export const ROLE_COOKIE = "wl_role";
+export const roleCookieOptions = { path: "/", sameSite: "lax" as const, maxAge: 60 * 60 * 24 * 365 };
+
+/** Where each side lands after onboarding or a switch of role. */
+export const ROLE_HOME: Record<Role, string> = { founder: "/startup/overview", investor: "/portfolio" };
+
+export type Account = { name: string; email: string };
 
 export function parseAccount(raw: string | undefined): Account | null {
   if (!raw) return null;
@@ -12,11 +20,7 @@ export function parseAccount(raw: string | undefined): Account | null {
     try {
       const v = JSON.parse(text) as Partial<Account>;
       if (v && typeof v === "object")
-        return {
-          name: typeof v.name === "string" ? v.name : "",
-          email: typeof v.email === "string" ? v.email : "",
-          goals: Array.isArray(v.goals) ? v.goals.filter((g): g is string => typeof g === "string") : undefined,
-        };
+        return { name: typeof v.name === "string" ? v.name : "", email: typeof v.email === "string" ? v.email : "" };
     } catch {
       /* try the decoded form next */
     }
@@ -30,29 +34,4 @@ function safeDecode(s: string) {
   } catch {
     return s;
   }
-}
-
-/** "anna.virtanen@northlight.example" → "Anna Virtanen": a stand-in name for sign-in, where we only ask for the email. */
-export function nameFromEmail(email: string) {
-  return email
-    .split("@")[0]
-    .split(/[._+-]+/)
-    .filter(Boolean)
-    .map((p) => p[0].toUpperCase() + p.slice(1))
-    .join(" ");
-}
-
-// -- browser only ---------------------------------------------------------------
-
-export function saveAccount(account: Account) {
-  document.cookie = `${ACCOUNT_COOKIE}=${encodeURIComponent(JSON.stringify(account))}; path=/; max-age=${60 * 60 * 24 * 30}; samesite=lax`;
-}
-
-export function readAccount(): Account | null {
-  const prefix = `${ACCOUNT_COOKIE}=`;
-  return parseAccount(document.cookie.split("; ").find((c) => c.startsWith(prefix))?.slice(prefix.length));
-}
-
-export function clearAccount() {
-  document.cookie = `${ACCOUNT_COOKIE}=; path=/; max-age=0; samesite=lax`;
 }

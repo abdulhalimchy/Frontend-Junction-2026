@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { cn } from "@/lib/utils";
 import { redirect } from "next/navigation";
+import { ROLE_HOME } from "@/lib/account";
 import { EmptyState, PageHeader, Panel, StatCard } from "@/components/warmline/blocks";
 import { AddCompanyButton, PortfolioTable, SuggestionsPanel } from "@/components/warmline/portfolio";
 import { CompetitorPanel, InsightsPoller, LeadInvestorsPanel, RefreshFundingButton } from "@/components/warmline/portfolio-insights";
@@ -13,7 +14,7 @@ import { normaliseName } from "@/lib/cala/market";
 import { indexAnalyses, plainError } from "@/lib/portfolio-insights";
 import { slushAttendeeIndex } from "@/lib/cala/slush";
 import { formatMoney } from "@/lib/format";
-import { getProfile } from "@/lib/session";
+import { getRole } from "@/lib/session";
 import type { Alert, InvestorsAnalysis, PortfolioAnalysis, PortfolioCompany, PortfolioRounds, PortfolioSuggestions } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Portfolio" };
@@ -42,8 +43,7 @@ function raisedSinceEntry(companies: PortfolioCompany[], analyses: PortfolioAnal
 }
 
 export default async function PortfolioPage() {
-  const profile = await getProfile();
-  if (profile.role !== "investor") redirect("/home");
+  if ((await getRole()) !== "investor") redirect(ROLE_HOME.founder);
 
   const [list, suggestions, analyses, status, alerts, slush] = await Promise.all([
     listPortfolio().then(

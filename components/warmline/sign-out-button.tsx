@@ -3,14 +3,13 @@
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { clearAccount } from "@/lib/account";
 import { cn } from "@/lib/utils";
 
-/** Mock sign out: forgets the account cookie and goes back to the landing page. */
+/** Signs out (app/api/auth/sign-out ends the session) and goes back to the landing page. */
 export function SignOutButton({ compact, className }: { compact?: boolean; className?: string }) {
   const router = useRouter();
-  function signOut() {
-    clearAccount();
+  async function signOut() {
+    await fetch("/api/auth/sign-out", { method: "POST" }).catch(() => null);
     router.push("/");
     router.refresh();
   }
