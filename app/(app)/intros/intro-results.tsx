@@ -5,8 +5,8 @@ import { SlushTag } from "@/components/warmline/badges";
 import { EmptyState, EntityAvatar, Panel } from "@/components/warmline/blocks";
 import { SourceChip } from "@/components/warmline/source-chip";
 import { calaErrorKind } from "@/lib/cala/client";
-import { findIntroPaths, type IntroPath, type Link as PathLink, type Node, type RoundRef, type Tie } from "@/lib/cala/intros";
-import { formatDay } from "@/lib/format";
+import { findIntroPaths, type IntroPath, type Node } from "@/lib/cala/intros";
+import { askReason, companyList, linkSentence, roundName, tieLabel, tieSentence } from "@/lib/intro-text";
 
 export async function IntroResults({ fromId, toId }: { fromId: string; toId: string }) {
   let r: Awaited<ReturnType<typeof findIntroPaths>>;
@@ -158,50 +158,6 @@ function Edge({ text, title, sources }: { text: string; title: string; sources: 
       <SourceChip sources={sources} />
     </span>
   );
-}
-
-function askReason(t: Tie) {
-  if (t.kind === "backs_you") return t.lead ? "(your lead investor)" : "(your investor)";
-  if (t.kind === "you_backed") return "(you invested in them)";
-  return "(your co-investor)";
-}
-
-function companyList(companies: { name: string }[]) {
-  const names = companies.slice(0, 3).map((c) => c.name);
-  return companies.length > 3 ? `${names.join(", ")} and ${companies.length - 3} more` : names.join(" and ").replace(/ and (?=.* and )/g, ", ");
-}
-
-function roundName(r: RoundRef | null) {
-  if (!r) return "";
-  const when = r.date ? ` (${formatDay(r.date).replace(/^\d+ /, "")})` : "";
-  return r.company ? `${r.company}'s ${r.stage}${when}` : `a ${r.stage} round${when}`;
-}
-
-/** Short edge label between you and the contact; the full sentence is the tooltip. */
-function tieLabel(t: Tie) {
-  if (t.kind === "backs_you") return `${t.lead ? "led" : "invested in"} your ${t.round ? t.round.stage : "company"}`;
-  if (t.kind === "you_backed") return "you invested";
-  return `co-invested${t.round ? ` in a ${t.round.stage}` : ""}`;
-}
-
-function tieSentence(t: Tie, from: Node, other: Node) {
-  const round = t.round ? ` in ${t.kind === "backs_you" ? "your" : "the same"} ${t.round.stage}` : "";
-  if (t.kind === "backs_you") return `${other.name} ${t.lead ? "led" : "invested"}${round || ` in ${from.name}`}`;
-  if (t.kind === "you_backed") return `${from.name} invested in ${other.name}`;
-  return `co-invested${round ? ` ${round.trim()} round` : ""}`;
-}
-
-function linkSentence(l: PathLink, via: Node, to: Node) {
-  switch (l.kind) {
-    case "invested_in_target":
-      return l.round ? `invested in ${roundName(l.round)}` : `invested in ${to.name}`;
-    case "target_invested":
-      return l.round ? `${to.name} invested in ${roundName(l.round)}` : `${to.name} invested in ${via.name}`;
-    case "same_round":
-      return `both in ${roundName(l.round)}`;
-    case "shared_portfolio":
-      return `both backed ${l.companies.length === 1 ? l.companies[0].name : `${l.companies.length} companies`}`;
-  }
 }
 
 export function IntroResultsSkeleton() {

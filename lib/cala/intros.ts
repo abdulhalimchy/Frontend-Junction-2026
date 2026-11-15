@@ -17,6 +17,7 @@ import { slushAttendeeIndex } from "./slush";
 const MAX_ROUNDS = 6; // rounds of `from` read to find its investors / co-investors
 const MAX_CONTACTS = 15; // contacts checked against the target
 const MAX_PATHS = 8;
+const MAX_BRIDGES = 4;
 
 const QUERY = {
   properties: ["name"],
@@ -48,6 +49,9 @@ export type RoundRef = { id: string; stage: string; company: string | null; date
 
 export type IntroPath = { via: Node; tie: Tie; link: Link; score: number };
 
+/** A company that one of `from`'s investors and `to` both backed: its founders know both sides. */
+export type CompanyBridge = { company: { id: string; name: string }; via: Node; sources: Source[] };
+
 export type IntroResult = {
   from: Node;
   to: Node;
@@ -56,6 +60,8 @@ export type IntroResult = {
   /** A deal `from` and `to` already share (same round, or both backed a company): a natural opener. */
   common: CommonGround | null;
   paths: IntroPath[];
+  /** Companies backed by both one of `from`'s investors and `to` (founder referrals), strongest investor first. */
+  bridges: CompanyBridge[];
   /** How many of `from`'s contacts were checked, and how many it has on record. */
   checked: number;
   contacts: number;
@@ -189,10 +195,29 @@ export async function findIntroPaths(fromId: string, toId: string): Promise<Intr
     .slice(0, MAX_CONTACTS);
   const checked = await mapLimit(ranked, 4, async (c) => {
     const a = await loadTies(c.node.id).catch(() => null);
-    const hit = a && linkBetween(a, t, new Set([f.id]));
-    return hit ? { via: node(a), tie: c.tie, link: hit.link, score: c.weight + hit.score } : null;
+    if (!a) return { path: null, bridges: [] as CompanyBridge[] };
+    const hit = linkBetween(a, t, new Set([f.id]));
+    // Founder referrals: companies this investor of `from` backed that `to` backed too.
+    const bridges: CompanyBridge[] =
+      c.tie.kind === "backs_you"
+        ? [...a.portfolio.values()]
+            .filter((r) => r.id !== f.id && r.id !== t.id && t.portfolio.has(r.id))
+            .map((r) => ({ company: { id: r.id, name: r.name }, via: node(a), sources: [...toSources(r.properties.sources), ...toSources(t.portfolio.get(r.id)!.properties.sources)] }))
+        : [];
+    return { path: hit ? { via: node(a), tie: c.tie, link: hit.link, score: c.weight + hit.score } : null, bridges };
   });
+  const seenCompanies = new Set<string>();
+  const bridges = checked
+    .flatMap((c) => c.bridges)
+    .filter((b) => {
+      const key = normaliseName(b.company.name);
+      if (seenCompanies.has(key)) return false;
+      seenCompanies.add(key);
+      return true;
+    })
+    .slice(0, MAX_BRIDGES);
   const paths = checked
+    .map((c) => c.path)
     .filter((p): p is IntroPath => !!p)
     .sort((x, y) => y.score - x.score)
     .slice(0, MAX_PATHS);
@@ -211,5 +236,5 @@ export async function findIntroPaths(fromId: string, toId: string): Promise<Intr
     if (d) Object.assign(r, { company: d.issuer?.name ?? null, date: d.round.date?.date ?? null, stage: d.round.stage || r.stage });
   });
 
-  return { from: node(f), to: node(t), direct, common, paths, checked: ranked.length, contacts: contacts.size };
+  return { from: node(f), to: node(t), direct, common, paths, bridges, checked: ranked.length, contacts: contacts.size };
 }

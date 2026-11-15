@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Loading from "@/app/(app)/loading";
-import { CircleAlert, ExternalLink, Rocket } from "lucide-react";
+import { CircleAlert, ExternalLink, Network, Rocket } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -11,14 +11,16 @@ import { AddStartupButton } from "@/components/warmline/add-startup-button";
 import { AnalysisTab } from "@/components/warmline/analysis-tab";
 import { StartupGaps } from "@/components/warmline/startup-gaps";
 import { getAnalysis, getStartup } from "@/lib/backend/startups";
-import type { CompetitorsAnalysis, InvestorsAnalysis } from "@/lib/types";
+import type { CompetitorsAnalysis, InvestorsAnalysis, Startup } from "@/lib/types";
+import { findInvestorRoutes } from "@/lib/cala/connect";
+import { ConnectView } from "@/components/warmline/connect-view";
 import { startupHref } from "@/lib/startup-cookie";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CompanyRecord } from "@/app/(app)/company/[id]/live-company";
 import { DeckCheck } from "@/components/warmline/deck-check";
 import { getActiveStartupId, getDeckCheck, getProfile, getStartups } from "@/lib/session";
 
-const TABS = ["overview", "competitors", "investors", "deck"] as const;
+const TABS = ["overview", "competitors", "investors", "connect", "deck"] as const;
 type Tab = (typeof TABS)[number];
 
 export function generateStaticParams() {
@@ -97,6 +99,7 @@ async function AddedStartup({ id, tab }: { id: string; tab: Tab }) {
           { key: "overview", label: "Overview", href: startupHref(id, "overview") },
           { key: "competitors", label: "Competitors", href: startupHref(id, "competitors"), count: comp?.companies.length },
           { key: "investors", label: "Find investors", href: startupHref(id, "investors"), count: inv?.investors.length },
+          { key: "connect", label: "Connect", href: startupHref(id, "connect") },
           { key: "deck", label: "Deck check", href: startupHref(id, "deck") },
         ]}
       />
@@ -131,8 +134,61 @@ async function AddedStartup({ id, tab }: { id: string; tab: Tab }) {
         </div>
       )}
       {tab === "investors" && <AnalysisTab key={`${id}-investors`} startupId={startup.id} startupName={startup.name} kind="investors" initial={investorsRun} />}
+      {tab === "connect" && (
+        <Suspense key={id} fallback={<ConnectSkeleton />}>
+          <ConnectTab startup={startup} investors={inv} />
+        </Suspense>
+      )}
       {tab === "deck" && <DeckTab key={id} companyName={startup.name} startupId={id} />}
     </>
+  );
+}
+
+/** Connect: how to reach the best-matched investors, as a network map and step-by-step routes. */
+async function ConnectTab({ startup, investors }: { startup: Startup; investors: InvestorsAnalysis | null }) {
+  if (!investors?.investors.length)
+    return (
+      <EmptyState
+        icon={Network}
+        title="Find your investors first"
+        description="Connect maps routes to the investors that fit you best. Run Find investors, then come back here."
+        action={
+          <Button asChild>
+            <Link href={startupHref(startup.id, "investors")}>Find investors</Link>
+          </Button>
+        }
+      />
+    );
+  if (!startup.calaCompanyId)
+    return (
+      <EmptyState
+        icon={Network}
+        title="No verified company record to start from"
+        description="Warm routes come from your company's investors, deals and co-investors on record. Match your startup to its verified record with Edit details."
+        action={<EditStartupButton startup={startup} />}
+      />
+    );
+  const data = await findInvestorRoutes(startup.calaCompanyId, investors.investors);
+  if (!data.routes.length)
+    return <EmptyState icon={Network} title="No new investors to reach" description="Every matched investor already backs you." />;
+  const you = data.routes.find((r) => r.result)?.result?.from ?? { id: startup.calaCompanyId, name: startup.name, atSlush: false, investor: false };
+  return <ConnectView data={data} you={{ ...you, name: startup.name }} />;
+}
+
+function ConnectSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="rounded-xl border bg-card p-5">
+        <p className="text-sm font-medium">Mapping your routes to investors</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">Reading your investors, their portfolios and Slush events. The first time takes 20–40 seconds, then it is cached.</p>
+        <Skeleton className="mt-4 h-72 rounded-lg" />
+      </div>
+      <div className="grid gap-3 lg:grid-cols-2">
+        {[0, 1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-44 rounded-xl" />
+        ))}
+      </div>
+    </div>
   );
 }
 

@@ -51,12 +51,12 @@ export function PageHeader({
   return (
     <div className="mb-6">
       {eyebrow && <div className="mb-2">{eyebrow}</div>}
-      <div className="flex items-end justify-between gap-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
         <div className="min-w-0">
-          <h1 className="text-[26px] font-semibold tracking-tight">{title}</h1>
+          <h1 className="text-[22px] font-semibold tracking-tight sm:text-[26px]">{title}</h1>
           {description && <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{description}</p>}
         </div>
-        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+        {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
       </div>
       {children}
     </div>
@@ -143,13 +143,13 @@ export function EmptyState({
 /** Route-based tabs (each tab is its own URL). */
 export function TabNav({ tabs, active }: { tabs: { href: string; label: string; key: string; count?: number }[]; active: string }) {
   return (
-    <nav className="mb-6 flex gap-1 border-b">
+    <nav className="mb-6 flex gap-1 overflow-x-auto border-b [scrollbar-width:none]">
       {tabs.map((t) => (
         <Link
           key={t.key}
           href={t.href}
           className={cn(
-            "-mb-px flex items-center gap-1.5 border-b-2 px-3 pb-2.5 text-sm font-medium transition-colors",
+            "-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-3 pb-2.5 text-sm font-medium whitespace-nowrap transition-colors",
             t.key === active ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
           )}
         >

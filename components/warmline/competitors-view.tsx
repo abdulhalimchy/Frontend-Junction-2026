@@ -1,5 +1,6 @@
 "use client";
 
+import { SearchedFor } from "./searched-for";
 import { Building2, MapPin, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { formatFuzzyDate, formatMoney } from "@/lib/format";
@@ -38,11 +39,16 @@ export function CompetitorsView({ data, startupName }: { data: CompetitorsAnalys
         title="Where you stand"
         description={
           peers
-            ? `${startupName} next to ${data.companies.length} companies whose description matches your industry. Check that each one really competes with you.`
+            ? `${startupName} next to ${data.companies.length} companies in your space. Check that each one really competes with you.`
             : `${startupName} next to the ${data.companies.length} companies on record as its competitors.`
         }
         bodyClassName="px-0 pb-2"
       >
+        {peers && (
+          <div className="px-5 pb-3">
+            <SearchedFor searches={data.searches} leftOut={data.left_out} />
+          </div>
+        )}
         <StandingTable rows={rows} />
         <p className="px-5 pt-2 text-xs text-subtle">— not on record. Hover a raised amount to see what it is based on.</p>
         {data.unresolved > 0 && (
