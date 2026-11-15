@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { Building2, CalendarDays, Landmark, MapPin, Search as SearchIcon, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { Input } from "@/components/ui/input";
+import { SuggestInput } from "@/components/warmline/suggest-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SlushTag } from "@/components/warmline/badges";
 import { EmptyState, EntityAvatar, FactGrid, PageHeader, Panel, StatCard, TabNav } from "@/components/warmline/blocks";
@@ -178,8 +178,8 @@ function PageLink({ href, disabled, children }: { href: string; disabled: boolea
 function AttendeeSearch({ q }: { q: string }) {
   return (
     <form action="/events/slush-2026/attendees" className="relative">
-      <SearchIcon className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-      <Input name="q" defaultValue={q} placeholder="Find an attendee by name" className="h-11 rounded-xl bg-card pl-10 text-[15px]" />
+      <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
+      <SuggestInput name="q" defaultValue={q} remote="/api/slush/attendees" placeholder="Find an attendee by name" className="h-11 rounded-xl bg-card pl-10 text-[15px]" />
     </form>
   );
 }

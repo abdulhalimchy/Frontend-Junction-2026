@@ -6,6 +6,7 @@ import { listStartups } from "@/lib/backend/startups";
 import { STARTUP_COOKIE } from "@/lib/startup-cookie";
 import { getDeckCheckById, getLatestDeckCheck, listDeckChecks } from "@/lib/backend/deck-checks";
 import { profiles } from "@/lib/mocks/misc";
+import { ACCOUNT_COOKIE, parseAccount } from "@/lib/account";
 
 // Phase 1: the role lives in a cookie so it can be switched from the UI.
 // Phase 2 reads the signed-in user and their profile from Supabase instead.
@@ -17,8 +18,17 @@ export async function getRole(): Promise<Role> {
   return store.get(ROLE_COOKIE)?.value === "investor" ? "investor" : "founder";
 }
 
+/** The demo persona for the role, with the name, email and goals from the mock account (lib/account.ts) on top. */
 export async function getProfile() {
-  return profiles[await getRole()];
+  const base = profiles[await getRole()];
+  const account = parseAccount((await cookies()).get(ACCOUNT_COOKIE)?.value);
+  if (!account) return base;
+  return {
+    ...base,
+    name: account.name || base.name,
+    email: account.email || base.email,
+    goals: account.goals?.length ? account.goals : base.goals,
+  };
 }
 
 /** Changes on the watched entities, newest first (created by the backend's nightly scan), or a readable error. */

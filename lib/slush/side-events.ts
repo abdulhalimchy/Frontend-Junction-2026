@@ -57,6 +57,24 @@ export const SIDE_EVENTS: SideEvent[] = [...(data as SideEvent[])].sort(
 
 export const SIDE_EVENT_DAYS = [...new Set(SIDE_EVENTS.map((e) => e.date))].sort();
 
+/** What the side-event search suggests as you type: hosts, speakers and their organisations, event titles, venues. */
+export const SEARCH_SUGGESTIONS: { key: string; label: string; hint: string }[] = (() => {
+  const seen = new Set<string>();
+  const out: { key: string; label: string; hint: string }[] = [];
+  const add = (label: string | null | undefined, hint: string) => {
+    const key = normaliseName(label ?? "");
+    if (!label || !key || seen.has(key)) return;
+    seen.add(key);
+    out.push({ key, label, hint });
+  };
+  for (const e of SIDE_EVENTS) for (const h of e.hosts) add(h, "Host");
+  for (const e of SIDE_EVENTS) for (const s of e.speakers) add(s.name, s.org ? `Speaker · ${s.org}` : "Speaker");
+  for (const e of SIDE_EVENTS) for (const s of e.speakers) add(s.org, "Speaker's organisation");
+  for (const e of SIDE_EVENTS) add(e.title, "Event");
+  for (const e of SIDE_EVENTS) add(e.venue?.split(",")[0], "Venue");
+  return out;
+})();
+
 export type SideEventFilters = { day?: string; topic?: string; q?: string; going?: boolean };
 
 export function filterSideEvents(events: SideEvent[], f: SideEventFilters, mine: Set<string>) {

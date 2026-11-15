@@ -3,7 +3,7 @@ import { MOCK_ONLY_PATHS, demoDataEnabled } from "./lib/demo";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
-  // Phase 2: "/" should send signed-out visitors to /sign-in instead.
+  // "/" is the landing page (app/page.tsx). proxy.ts sends signed-out visitors from app pages to /sign-in.
   async redirects() {
     // Alerts were folded into the watch list; old links land there.
     const alerts = { source: "/alerts", destination: "/watchlist", permanent: false };
@@ -20,7 +20,6 @@ const nextConfig: NextConfig = {
     }
     return [
       alerts,
-      { source: "/", destination: "/home", permanent: false },
       { source: "/events", destination: "/events/slush-2026/overview", permanent: false },
       { source: "/startup", destination: "/startup/overview", permanent: false },
     ];

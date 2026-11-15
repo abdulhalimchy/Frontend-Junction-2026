@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SuggestInput } from "@/components/warmline/suggest-input";
 import { cn } from "@/lib/utils";
 import { cancelAnalysisAction, clearHistoryAction, deleteAnalysisAction, refreshAnalysisAction } from "./actions";
 
@@ -30,11 +30,14 @@ export function MarketSearch({ defaultValue = "", busy = false, size = "md", aut
       }}
     >
       <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
+        <Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
+        <SuggestInput
           name="q"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onValueChange={setText}
+          remote="/api/markets/suggest"
+          // A saved report opens straight away (free); an example only fills the box, since a new analysis takes a minute.
+          onPick={(s) => (s.href ? start(() => router.push(s.href!)) : setText(s.label))}
           maxLength={300}
           autoFocus={autoFocus}
           readOnly={pending}

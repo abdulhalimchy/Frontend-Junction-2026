@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { BookmarkCheck, CalendarDays, Clock, ExternalLink, MapPin, Mic, Search as SearchIcon, Star } from "lucide-react";
 import Link from "next/link";
-import { Input } from "@/components/ui/input";
+import { SuggestInput } from "@/components/warmline/suggest-input";
 import { Pill, SlushTag } from "@/components/warmline/badges";
 import { EmptyState, Panel } from "@/components/warmline/blocks";
 import { getRsvps, type RsvpSummary } from "@/lib/backend/rsvps";
@@ -10,6 +10,7 @@ import { fetchSlush } from "@/lib/cala/slush";
 import { formatDay } from "@/lib/format";
 import { normaliseName } from "@/lib/names";
 import {
+  SEARCH_SUGGESTIONS,
   SIDE_EVENTS,
   SIDE_EVENT_DAYS,
   SIDE_EVENT_TOPICS,
@@ -241,8 +242,8 @@ function Filters({ filters, goingCount }: { filters: SideEventFilters; goingCoun
         {filters.day && <input type="hidden" name="day" value={filters.day} />}
         {filters.topic && <input type="hidden" name="topic" value={filters.topic} />}
         {filters.going && <input type="hidden" name="going" value="1" />}
-        <SearchIcon className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input name="q" defaultValue={filters.q} placeholder="Search side events, hosts, speakers or venues" className="h-11 rounded-xl bg-card pl-10 text-[15px]" />
+        <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
+        <SuggestInput name="q" defaultValue={filters.q} options={SEARCH_SUGGESTIONS} placeholder="Search side events, hosts, speakers or venues" className="h-11 rounded-xl bg-card pl-10 text-[15px]" />
       </form>
       <div className="flex flex-wrap items-center gap-1.5">
         <Chip href={href({ going: filters.going ? undefined : "1" })} active={!!filters.going}>

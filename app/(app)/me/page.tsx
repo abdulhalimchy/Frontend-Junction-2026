@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { PageHeader, Panel } from "@/components/warmline/blocks";
 import { PrivacySettings } from "@/components/warmline/privacy-settings";
 import { RoleSwitch } from "@/components/warmline/role-switch";
+import { SignOutButton } from "@/components/warmline/sign-out-button";
 import { getProfile } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Me" };
@@ -46,9 +45,7 @@ export default async function MePage() {
           <Panel title="Role" description="Switch to see the app as a founder or an investor (demo).">
             <RoleSwitch role={profile.role} />
           </Panel>
-          <Button variant="outline" className="w-full bg-card" asChild>
-            <Link href="/sign-in">Sign out</Link>
-          </Button>
+          <SignOutButton />
         </div>
       </div>
     </>

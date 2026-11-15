@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, CalendarDays, Crown, Handshake, Route, Users } from "lucide-react";
+import { ArrowDown, ArrowLeft, CalendarDays, Crown, Handshake, Route, Users } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { CompanyAsk } from "@/components/warmline/company-ask";
 import { MarketError } from "@/components/warmline/market-view";
 import { SourceChip } from "@/components/warmline/source-chip";
 import { WatchButton } from "@/components/warmline/watch-button";
-import { InvestorList } from "@/app/(app)/market/company-analysis";
+import { CompetitorsSection, InvestorList, RoundsTable } from "./company-market";
 import { SLUSH_EVENT_ID } from "@/lib/mocks/misc";
 import { fetchCompanyPeople, fetchCompanyProfile, type CompanyPeople, type PersonLink } from "@/lib/cala/company";
 import { EMPTY_EXTRAS, fetchCompanyExtras, type CompanyExtras } from "@/lib/cala/company-extras";
@@ -30,7 +30,7 @@ import { CountriesPanel, FinancialsPanel, GroupPanel, InvestmentsPanel, ListingB
 const TIMELINE_ROUNDS = 6;
 const EMPTY_PEOPLE: CompanyPeople = { founders: [], leadership: [], board: [], team: [], events: [] };
 
-export async function LiveCompany({ id }: { id: string }) {
+export async function LiveCompany({ id, region }: { id: string; region: string }) {
   const [profile, peopleRes, extrasRes] = await Promise.allSettled([fetchCompanyProfile(id), fetchCompanyPeople(id), fetchCompanyExtras(id)]);
   if (profile.status === "rejected") return <MarketError error={profile.reason} />;
   const p = profile.value;
@@ -52,9 +52,9 @@ export async function LiveCompany({ id }: { id: string }) {
             </Link>
           </Button>
           <Button variant="outline" size="sm" className="bg-card" asChild>
-            <Link href={`/market?${new URLSearchParams({ company: id, region: "anywhere" })}`}>
-              Competitors&apos; market <ArrowRight />
-            </Link>
+            <a href="#competitors">
+              Competitors&apos; market <ArrowDown />
+            </a>
           </Button>
         </div>
       </div>
@@ -62,6 +62,8 @@ export async function LiveCompany({ id }: { id: string }) {
       <Header p={p} slush={slush} extras={extras} />
 
       <CompanyBody id={id} p={p} people={people} extras={extras} />
+
+      <CompetitorsSection profile={p} region={region} />
     </>
   );
 }
@@ -119,6 +121,14 @@ function CompanyBody({ id, p, people, extras }: { id: string; p: CompanyProfile;
             </Suspense>
           ) : (
             <EmptyState compact title="No funding on record" description="Normal for bootstrapped and young companies." />
+          )}
+          {p.rounds.length > timeline.length && (
+            <details className="mt-4 border-t pt-3">
+              <summary className="cursor-pointer text-sm font-medium text-primary hover:underline">Show all {plural(p.rounds.length, "round")} and filings</summary>
+              <div className="mt-3">
+                <RoundsTable rounds={p.rounds} />
+              </div>
+            </details>
           )}
         </Panel>
 

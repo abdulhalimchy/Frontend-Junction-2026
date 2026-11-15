@@ -13,6 +13,7 @@ import { WatchButton } from "@/components/warmline/watch-button";
 import { getCompany, getSimilarCompanies } from "@/lib/cala";
 import { getRole } from "@/lib/session";
 import { fetchCompanyProfile } from "@/lib/cala/company";
+import { REGIONS } from "@/lib/cala/market";
 import { LiveCompany } from "./live-company";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -28,10 +29,14 @@ export async function generateMetadata({ params }: PageProps<"/company/[id]">) {
   return { title: c?.name ?? "Company" };
 }
 
-async function CompanyPageContent({ params }: PageProps<"/company/[id]">) {
+async function CompanyPageContent({ params, searchParams }: PageProps<"/company/[id]">) {
   const { id } = await params;
   // Cala entity IDs show the live overview; the demo personas (e.g. northlight-robotics) keep their mock page.
-  if (UUID.test(id)) return <LiveCompany id={id} />;
+  if (UUID.test(id)) {
+    // ?region= narrows the competitors' market; it defaults to anywhere.
+    const { region } = await searchParams;
+    return <LiveCompany id={id} region={typeof region === "string" && REGIONS[region] ? region : "anywhere"} />;
+  }
   // DEMO_DATA=off: demo persona pages are hidden.
   if (!demoDataEnabled()) notFound();
   const [c, similar, role] = await Promise.all([getCompany(id), getSimilarCompanies(id), getRole()]);

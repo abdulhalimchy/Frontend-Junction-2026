@@ -16,6 +16,7 @@ import type { Role, StartupSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
 import { RoleSwitch } from "./role-switch";
+import { SignOutButton } from "./sign-out-button";
 import { StartupNav } from "./startup-nav";
 
 type Item = { href: string; match: string; label: string; icon: typeof House; slush?: boolean; startups?: boolean };
@@ -123,12 +124,14 @@ export function Sidebar(
               {props.user.name
                 .split(" ")
                 .map((p) => p[0])
+                .slice(0, 2)
                 .join("")}
             </span>
-            <span className="min-w-0">
+            <span className="min-w-0 flex-1">
               <span className="block truncate text-[13px] font-medium">{props.user.name}</span>
               <span className="block truncate text-[11px] text-muted-foreground">{org}</span>
             </span>
+            <SignOutButton compact />
           </div>
         </div>
       )}

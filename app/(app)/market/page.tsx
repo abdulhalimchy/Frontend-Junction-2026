@@ -4,21 +4,21 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { EmptyState, EntityAvatar, PageHeader } from "@/components/warmline/blocks";
+import { SuggestInput } from "@/components/warmline/suggest-input";
 import { MarketError, ResultsLoading } from "@/components/warmline/market-view";
 import { mocksEnabled } from "@/lib/cala/client";
 import { findCompanies } from "@/lib/cala/company";
 import { REGIONS } from "@/lib/cala/market";
 import { cn } from "@/lib/utils";
-import { CompanyAnalysis } from "./company-analysis";
 import { MarketSearch } from "./history-controls";
 
 export const metadata: Metadata = { title: "Market analysis" };
 
 // Two kinds of analysis, chosen up front:
 // - Market analysis lives at /market/report (size, players, funding and deals, trends, checked summary).
-// - Company analysis lives here: /market?mode=company to find a company, /market?company=<id> to analyse it.
+// - Company analysis starts here: /market?mode=company finds a company, then opens its page at /company/<id>,
+//   which holds the profile, funding, people and the market of its competitors.
 
 const MARKET_PRESETS = ["climate tech in the Nordics", "seed-stage fintech in Finland", "underwater drones in Europe", "AI chips worldwide"];
 const COMPANY_PRESETS = ["GE HealthCare", "Wheel.me", "Hyperion Robotics", "Aiven"];
@@ -37,33 +37,27 @@ async function Analysis({ searchParams }: PageProps<"/market">) {
   const text = str("sector");
   const regionParam = REGIONS[str("region")] ? str("region") : "";
 
-  // A typed name while a company is selected starts a new company search.
-  const companyId = /^[0-9a-f-]{36}$/i.test(str("company")) && !text ? str("company") : null;
-  const companyMode = Boolean(companyId) || str("mode") === "company" || Boolean(str("company"));
+  // Old company-analysis links (/market?company=<id>) open the company page, which now holds the competitors' market.
+  if (/^[0-9a-f-]{36}$/i.test(str("company")) && !text) redirect(`/company/${str("company")}${regionParam ? `?region=${regionParam}` : ""}`);
+  const companyMode = str("mode") === "company" || Boolean(str("company"));
 
   // Old market-view links (/market?sector=…) now open the market analysis.
   if (!companyMode && text) redirect(`/market/report?${new URLSearchParams({ sector: text, ...(regionParam ? { region: regionParam } : {}) })}`);
   if (!companyMode) return <Chooser />;
 
-  // Competitors of a company default to anywhere.
-  const region = regionParam || "anywhere";
   return (
     <>
       <PageHeader
         eyebrow={<BackToChooser />}
         title="Company analysis"
-        description="One company's verified profile, funding history and investors, then the market of its competitors."
+        description="Find a company to open its verified profile, funding history, people and the market of its competitors."
       />
-      <CompanySearch text={companyId ? "" : text} region={region} companyId={companyId} />
+      <CompanySearch text={text} />
       {mocksEnabled() ? (
         <EmptyState icon={Building2} title="Company analysis needs live data" description="Set USE_MOCKS=false in .env.local. The data lookups run in the backend (CALA_API_KEY in its .env)." />
-      ) : companyId ? (
-        <Suspense key={`${companyId}|${region}`} fallback={<ResultsLoading />}>
-          <CompanyAnalysis id={companyId} region={region} />
-        </Suspense>
       ) : text ? (
         <Suspense key={`pick|${text}`} fallback={<ResultsLoading />}>
-          <CompanyPicker text={text} region={region} />
+          <CompanyPicker text={text} />
         </Suspense>
       ) : (
         <EmptyState icon={Building2} title="Type a company name" description="We look it up by name, then show its profile, funding and competitors." />
@@ -122,6 +116,8 @@ function Chooser() {
           hidden={{ mode: "company" }}
           placeholder="Company name, e.g. GE HealthCare"
           button="Find company"
+          suggest="/api/search"
+          suggestHrefBase="/company"
           presets={COMPANY_PRESETS.map((t) => ({ label: t, href: `/market?${new URLSearchParams({ mode: "company", sector: t })}` }))}
           note="You pick the exact company first: brands, legal entities and subsidiaries are recorded separately."
         />
@@ -141,6 +137,8 @@ function ChoiceCard({
   withRegion,
   presets,
   note,
+  suggest,
+  suggestHrefBase,
 }: {
   icon: typeof LineChart;
   title: string;
@@ -152,6 +150,9 @@ function ChoiceCard({
   withRegion?: string;
   presets: { label: string; href: string }[];
   note: string;
+  /** Suggestions endpoint for the box, and where a picked suggestion opens. */
+  suggest?: string;
+  suggestHrefBase?: string;
 }) {
   return (
     <section className="flex flex-col rounded-2xl border bg-card p-6 shadow-[0_1px_2px_rgba(22,24,26,0.04)]">
@@ -165,8 +166,8 @@ function ChoiceCard({
           <input key={k} type="hidden" name={k} value={v} />
         ))}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input name="sector" required placeholder={placeholder} className="h-10 pl-9" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
+          <SuggestInput name="sector" required placeholder={placeholder} className="h-10 pl-9" remote={suggest} remoteHrefBase={suggestHrefBase} />
         </div>
         <div className="flex gap-2">
           {withRegion && <RegionSelect name="region" defaultValue={withRegion} label="Region" className="flex-1" />}
@@ -205,27 +206,24 @@ function RegionSelect({ name, defaultValue, label, className }: { name: string; 
   );
 }
 
-/** Search bar for the company flow. With a company selected, an empty box just changes the competitors' region. */
-function CompanySearch({ text, region, companyId }: { text: string; region: string; companyId: string | null }) {
+/** Search bar for the company flow. */
+function CompanySearch({ text }: { text: string }) {
   return (
     <form action="/market" className="mb-6 flex items-center gap-2 rounded-xl border bg-card p-3">
       <input type="hidden" name="mode" value="company" />
-      {companyId && <input type="hidden" name="company" value={companyId} />}
       <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input name="sector" defaultValue={text} placeholder={companyId ? "Search another company" : "Company name, e.g. GE HealthCare"} className="h-9 pl-9" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
+        <SuggestInput name="sector" defaultValue={text} placeholder="Company name, e.g. GE HealthCare" className="h-9 pl-9" remote="/api/search" remoteHrefBase="/company" />
       </div>
-      <span className="text-xs text-muted-foreground">Competitors in</span>
-      <RegionSelect name="region" defaultValue={region} label="Region for competitors" className="h-9" />
       <Button type="submit" className="h-9">
-        {companyId ? "Update" : "Find company"}
+        Find company
       </Button>
     </form>
   );
 }
 
 /** Lists Cala's matches, exact names first. Several legal entities can share a name. */
-async function CompanyPicker({ text, region }: { text: string; region: string }) {
+async function CompanyPicker({ text }: { text: string }) {
   let res;
   try {
     res = await findCompanies(text);
@@ -246,7 +244,7 @@ async function CompanyPicker({ text, region }: { text: string; region: string })
       <ul className="divide-y">
         {list.map((m) => (
           <li key={m.id}>
-            <Link href={`/market?${new URLSearchParams({ company: m.id, region })}`} className="flex items-center gap-3 px-5 py-3 hover:bg-muted/40">
+            <Link href={`/company/${m.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-muted/40">
               <EntityAvatar name={m.name} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 text-sm font-medium">

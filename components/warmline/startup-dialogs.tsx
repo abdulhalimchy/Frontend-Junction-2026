@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SuggestInput } from "./suggest-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -335,12 +336,16 @@ export function CompanyLookupDialog({
                 Company name or website
               </Label>
               <div className="relative">
-                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-subtle" />
-                <Input
+                <Search className="pointer-events-none absolute top-4 left-2.5 z-10 size-4 -translate-y-1/2 text-subtle" />
+                <SuggestInput
                   id="startup-lookup-domain"
                   autoFocus
+                  inline
                   value={domain}
-                  onChange={(e) => setDomain(e.target.value)}
+                  onValueChange={setDomain}
+                  // Names are suggested from the records as you type; a website is looked up as it is.
+                  remote={looksLikeDomain(domain) || busy ? undefined : "/api/search"}
+                  onPick={(s) => pick({ id: s.key, name: s.label, description: s.hint ?? "", domain: "", headquarters: "", founded: "" })}
                   placeholder="Northlight Robotics or northlight.ai"
                   className="pl-8"
                 />
