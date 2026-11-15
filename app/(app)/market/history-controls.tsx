@@ -48,8 +48,8 @@ export function MarketSearch({
           name="q"
           value={text}
           onValueChange={setText}
-          remote="/api/markets/suggest"
-          // A saved report opens straight away (free); an example only fills the box, since a new analysis takes a minute.
+          remote={kind === "company" ? "/api/markets/suggest?kind=company" : "/api/markets/suggest"}
+          // A saved report or a named company opens straight away; an example market only fills the box, since a new analysis takes a minute.
           onPick={(s) => (s.href ? start(() => router.push(s.href!)) : setText(s.label))}
           maxLength={300}
           autoFocus={autoFocus}
