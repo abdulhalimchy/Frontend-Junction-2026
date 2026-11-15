@@ -96,8 +96,15 @@ export default function PrivacyPage() {
       <LegalSection id="rights" title="Your rights">
         <ul>
           <li>
-            <strong>See and take your data:</strong> download everything we keep about you under{" "}
-            <Link href="/me">Account settings</Link> (Export my data).
+            <strong>See your data:</strong> your profile is under <Link href="/me">Account settings</Link>. Ask us for a full copy of
+            everything we keep about you, as a file you can take elsewhere
+            {PRIVACY_CONTACT ? (
+              <>
+                {" "}
+                (<a href={`mailto:${PRIVACY_CONTACT}`}>{PRIVACY_CONTACT}</a>)
+              </>
+            ) : null}
+            .
           </li>
           <li>
             <strong>Correct it:</strong> change your role and goals in Account settings. Your name and email come from Google; change them there

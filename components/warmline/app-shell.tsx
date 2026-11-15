@@ -12,7 +12,7 @@ const SHARED: PaletteItem[] = [
   { type: "page", label: "Watch list", hint: "What you follow, and what changed", href: "/watchlist" },
   { type: "page", label: "Slush 2026", hint: "Event space", href: "/events/slush-2026/overview" },
   { type: "page", label: "Data by Cala", hint: "Where the data comes from", href: "/cala" },
-  { type: "page", label: "Account settings", hint: "Profile, export your data, delete account", href: "/me" },
+  { type: "page", label: "Account settings", hint: "Profile, role, delete account", href: "/me" },
 ];
 
 export async function AppShell({ children }: { children: React.ReactNode }) {

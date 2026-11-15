@@ -34,7 +34,8 @@ export function MarketSearch({
   const disabled = pending || busy || !text.trim();
   return (
     <form
-      className="flex items-center gap-2"
+      // Wraps the button under the box when the card is too narrow for both (two cards side by side on a tablet).
+      className="flex flex-wrap items-center gap-2"
       onSubmit={(e) => {
         e.preventDefault();
         const q = text.trim();
@@ -42,7 +43,7 @@ export function MarketSearch({
         start(() => router.push(`/market/${kind === "company" ? "company" : "report"}?${new URLSearchParams({ q })}`));
       }}
     >
-      <div className="relative flex-1">
+      <div className="relative min-w-0 flex-1 basis-40">
         <Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
         <SuggestInput
           name="q"
@@ -59,7 +60,7 @@ export function MarketSearch({
           className={cn(h, "pl-9")}
         />
       </div>
-      <Button type="submit" className={h} disabled={disabled} aria-busy={pending}>
+      <Button type="submit" className={cn(h, "shrink-0")} disabled={disabled} aria-busy={pending}>
         {pending ? (
           <>
             <Loader2 className="animate-spin" /> Reading your search…

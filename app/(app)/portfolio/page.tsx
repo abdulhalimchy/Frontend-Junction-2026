@@ -119,7 +119,7 @@ export default async function PortfolioPage() {
           </div>
 
           <Tabs defaultValue="companies" className="gap-5">
-            <TabsList variant="line" className="h-auto w-full justify-start gap-1 border-b p-0">
+            <TabsList variant="line" className="h-auto w-full justify-start gap-0 overflow-x-auto overflow-y-hidden border-b p-0 [scrollbar-width:none] sm:gap-1 [&::-webkit-scrollbar]:hidden">
               <PortfolioTab value="companies" icon={Briefcase} label="Companies" count={companies.length} />
               <PortfolioTab value="leads" icon={ArrowUpRight} label="Lead investors" count={withLeads || undefined} />
               <PortfolioTab value="competitors" icon={Swords} label="Competitors" count={competitorAlerts || undefined} tone="warning" />
@@ -173,9 +173,9 @@ function PortfolioTab({
   return (
     <TabsTrigger
       value={value}
-      className="h-10 flex-none rounded-none px-3 text-[13px] after:bottom-[-1px] after:bg-primary data-active:text-primary"
+      className="h-10 flex-none rounded-none px-2 text-[13px] after:bottom-[-1px] after:bg-primary data-active:text-primary sm:px-3"
     >
-      <Icon />
+      <Icon className="hidden sm:block" />
       {label}
       {count !== undefined && (
         <span className={cn("rounded-full px-1.5 text-[11px] tabular", tone === "warning" ? "bg-warning-soft text-warning" : "bg-muted text-muted-foreground")}>

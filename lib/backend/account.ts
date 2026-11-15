@@ -42,12 +42,6 @@ export async function updateProfile(patch: ProfilePatch): Promise<BackendProfile
   return res.json();
 }
 
-/** Everything the backend stores about the user, as JSON (GDPR access and portability). */
-export async function exportData(): Promise<unknown> {
-  const res = await backendFetch("/accounts/me/export/");
-  if (!res.ok) throw await backendError(res);
-  return res.json();
-}
 
 /**
  * Permanently deletes the signed-in user's backend account and everything it owns (startups, deck checks and

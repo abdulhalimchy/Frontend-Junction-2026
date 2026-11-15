@@ -41,11 +41,11 @@ export async function LiveCompany({ id, region }: { id: string; region: string }
 
   return (
     <>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <Link href="/market?mode=company" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-3" /> Company analysis
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <WatchButton entityType="company" calaId={id} name={p.name} size="sm" />
           <Button variant="outline" size="sm" className="bg-card" asChild>
             <Link href={`/intros?${new URLSearchParams({ to: id, toName: p.name })}`}>

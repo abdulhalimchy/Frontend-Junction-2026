@@ -80,10 +80,11 @@ export function StatCard({
 }) {
   return (
     <div className={cn("rounded-xl border bg-card p-4 shadow-panel transition-colors hover:border-foreground/20", tone === "slush" && "border-slush/30 bg-slush-soft/40 hover:border-slush/50")}>
-      <div className="flex items-center justify-between gap-2">
-        <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
-          {Icon && <Icon className="size-3.5" />}
-          {label}
+      {/* In a narrow card the source chip drops under the label instead of squeezing it. */}
+      <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
+        <span className="flex min-w-0 flex-1 basis-24 items-start gap-1.5 text-[13px] text-muted-foreground">
+          {Icon && <Icon className="mt-0.5 size-3.5 shrink-0" />}
+          <span className="min-w-0">{label}</span>
         </span>
         {sources && <SourceChip sources={sources} />}
       </div>
@@ -143,18 +144,19 @@ export function EmptyState({
 /** Route-based tabs (each tab is its own URL). */
 export function TabNav({ tabs, active }: { tabs: { href: string; label: string; key: string; count?: number }[]; active: string }) {
   return (
-    <nav className="mb-6 flex gap-1 overflow-x-auto border-b [scrollbar-width:none]">
+    // Scrolls sideways when the tabs don't fit; on phones they are tighter (and drop their counts) so most fit.
+    <nav className="mb-6 flex gap-0 overflow-x-auto border-b [scrollbar-width:none] sm:gap-1 [&::-webkit-scrollbar]:hidden">
       {tabs.map((t) => (
         <Link
           key={t.key}
           href={t.href}
           className={cn(
-            "-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-3 pb-2.5 text-sm font-medium whitespace-nowrap transition-colors",
+            "-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-2.5 pb-2.5 text-[13px] font-medium whitespace-nowrap transition-colors sm:px-3 sm:text-sm",
             t.key === active ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
           )}
         >
           {t.label}
-          {t.count !== undefined && <span className="rounded-full bg-muted px-1.5 text-[11px] text-muted-foreground tabular">{t.count}</span>}
+          {t.count !== undefined && <span className="hidden rounded-full bg-muted px-1.5 text-[11px] text-muted-foreground tabular sm:inline">{t.count}</span>}
         </Link>
       ))}
     </nav>

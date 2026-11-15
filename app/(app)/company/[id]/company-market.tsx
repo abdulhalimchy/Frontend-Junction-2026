@@ -14,14 +14,14 @@ import type { CompanyProfile } from "@/lib/types";
 export function CompetitorsSection({ profile, region }: { profile: CompanyProfile; region: string }) {
   return (
     <section id="competitors" className="mt-10 scroll-mt-6">
-      <div className="mb-3 flex items-end justify-between gap-4">
-        <div>
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+        <div className="min-w-0">
           <h2 className="text-lg font-semibold tracking-tight">Competitors&apos; market</h2>
           <p className="text-sm text-muted-foreground">
             Companies identified as competitors of {profile.name}, in {regionOf(region).label}.
           </p>
         </div>
-        <form action={`/company/${profile.id}#competitors`} className="flex items-center gap-2">
+        <form action={`/company/${profile.id}#competitors`} className="flex shrink-0 flex-wrap items-center gap-2">
           <span className="text-xs text-muted-foreground">Competitors in</span>
           <select
             name="region"

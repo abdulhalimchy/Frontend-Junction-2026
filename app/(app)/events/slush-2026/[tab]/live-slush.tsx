@@ -47,13 +47,13 @@ export async function LiveSlush({ tab, q, page, filters }: { tab: LiveTab; q: st
             <div className="mt-4 flex flex-wrap items-center gap-5 text-sm text-muted-foreground">
               {e.date.value && (
                 <span className="flex items-center gap-1.5">
-                  <CalendarDays className="size-4" /> {formatDay(e.date.value)}
+                  <CalendarDays className="size-4 shrink-0" /> {formatDay(e.date.value)}
                   <SourceChip sources={e.date.sources} />
                 </span>
               )}
               {e.location.value && (
                 <span className="flex items-center gap-1.5">
-                  <MapPin className="size-4" /> {e.location.value}
+                  <MapPin className="size-4 shrink-0" /> {e.location.value}
                   <SourceChip sources={e.location.sources} />
                 </span>
               )}
@@ -205,10 +205,12 @@ async function AttendeeRow({ a }: { a: SlushAttendee }) {
   const detail = r?.description || (!r ? "Details unavailable right now" : !r.id ? "Not found in Cala" : "No description on record");
   return (
     <AttendeeRowShell a={a} href={r?.id ? `/company/${r.id}` : undefined} missing={!r ? "unavailable" : !r.id ? "not-found" : undefined}>
-      <span className="flex items-center gap-1.5">
-        <span className="truncate">{detail}</span>
-        {r?.hq && <span className="shrink-0 text-subtle">· {r.hq}</span>}
-        {r && r.sources.length > 0 && <SourceChip sources={r.sources} />}
+      <span className="flex min-w-0 items-center gap-1.5">
+        {/* Two lines on phones, where the row is narrow; one line with the extras from sm up. */}
+        <span className="line-clamp-2 min-w-0 sm:line-clamp-none sm:truncate">{detail}</span>
+        {/* Long street addresses must give way on small screens: the place is a hint, the description matters more. */}
+        {r?.hq && <span className="hidden max-w-[40%] min-w-0 truncate text-subtle sm:inline">· {r.hq}</span>}
+        {r && r.sources.length > 0 && <SourceChip sources={r.sources} className="hidden sm:inline-flex" />}
       </span>
     </AttendeeRowShell>
   );
@@ -255,7 +257,7 @@ function AttendeeRowShell({
         <div className="text-sm">{name}</div>
         <div className="mt-0.5 min-w-0 text-xs text-muted-foreground">{children ?? <Skeleton className="h-3 w-64" />}</div>
       </div>
-      {a.firstSeen && <span className="shrink-0 text-xs text-subtle tabular">Added {formatDay(a.firstSeen)}</span>}
+      {a.firstSeen && <span className="hidden shrink-0 text-xs text-subtle tabular sm:inline">Added {formatDay(a.firstSeen)}</span>}
       <SourceChip sources={a.sources} />
     </div>
   );

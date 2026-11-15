@@ -1,9 +1,8 @@
-import { Download, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import Loading from "@/app/(app)/loading";
-import { Button } from "@/components/ui/button";
 import { PageHeader, Panel } from "@/components/warmline/blocks";
 import { DeleteAccount } from "@/components/warmline/delete-account";
 import { RoleSwitch } from "@/components/warmline/role-switch";
@@ -17,7 +16,7 @@ export const metadata: Metadata = { title: "Account settings" };
 export default function MePage() {
   return (
     <>
-      <PageHeader title="Account settings" description="Your profile, your data, and your account." />
+      <PageHeader title="Account settings" description="Your profile and your account." />
       <Suspense fallback={<Loading />}>
         <MeContent />
       </Suspense>
@@ -73,23 +72,6 @@ async function MeContent() {
           </dl>
         </Panel>
 
-        <Panel title="Your data" description="Download everything Warmline stores about you, as a JSON file.">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-[13px] text-muted-foreground">
-              Your profile, startups, portfolio, decks and their checks, analyses, watch list and alerts. See the{" "}
-              <Link href="/privacy" className="font-medium text-primary hover:underline">
-                privacy page
-              </Link>
-              .
-            </p>
-            <Button variant="outline" className="h-9 bg-card" asChild>
-              {/* A plain link: the route answers with a file download. */}
-              <a href="/api/account/export" download>
-                <Download /> Export my data
-              </a>
-            </Button>
-          </div>
-        </Panel>
 
         <Panel
           title="Delete account"
