@@ -80,7 +80,7 @@ export function StartupProfile({ startup: s, variant = "full" }: { startup: Star
             compact
             icon={Building2}
             title="No funding on record"
-            description="When a round is reported publicly and Cala picks it up, it shows here with its sources."
+            description="When a round is reported publicly and it appears in the records, it shows here with its sources."
           />
         </Panel>
       )}
@@ -106,13 +106,13 @@ export function StartupProfile({ startup: s, variant = "full" }: { startup: Star
             <p>Values found by the lookup keep their sources. Anything you typed or changed is shown as your own entry, with no source.</p>
             {s.calaCompanyId ? (
               <p>
-                Matched in Cala. Its funding, people and investors are below.{" "}
+                Matched to a verified record. Its funding, people and investors are below.{" "}
                 <Link href={`/company/${s.calaCompanyId}`} className="font-medium text-primary hover:underline">
                   See the public brief
                 </Link>
               </p>
             ) : (
-              <p>Not matched to a company in Cala yet.</p>
+              <p>Not matched to a verified company record yet.</p>
             )}
           </div>
         </Panel>

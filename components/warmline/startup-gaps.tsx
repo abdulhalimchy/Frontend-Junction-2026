@@ -23,12 +23,12 @@ export function gapsFor(s: Startup, raisedOnRecord: boolean | null, calaStage?: 
       tone: "missing",
       title: "Stage not set",
       why: calaStage
-        ? `Cala records you at ${calaStage}. Add your current stage so investor matching can score stage fit.`
+        ? `Public records list you at ${calaStage}. Add your current stage so investor matching can score stage fit.`
         : "Investor matching scores stage fit; it is neutral until you set one.",
       action: "Add stage",
     });
   if (missing("industry"))
-    gaps.push({ id: "industry", tone: "missing", title: "Industry not set", why: "Needed to find companies like yours when you are not matched in Cala.", action: "Add industry" });
+    gaps.push({ id: "industry", tone: "missing", title: "Industry not set", why: "Needed to find companies like yours when you are not matched to a record.", action: "Add industry" });
   if (missing("headquarters"))
     gaps.push({ id: "hq", tone: "missing", title: "Location missing", why: "Used to score investors by region.", action: "Add location" });
   if (missing("founded"))
@@ -39,11 +39,11 @@ export function gapsFor(s: Startup, raisedOnRecord: boolean | null, calaStage?: 
     gaps.push({
       id: "cala",
       tone: "info",
-      title: "Not matched in Cala",
+      title: "Not matched to a company record",
       why: "Your funding and team are not on public record yet, so competitors are found by industry instead.",
     });
   else if (raisedOnRecord === false)
-    gaps.push({ id: "raised", tone: "info", title: "No funding round on record", why: "Cala has no sourced round for you, so you are not ranked on money raised." });
+    gaps.push({ id: "raised", tone: "info", title: "No funding round on record", why: "No sourced round is on record for you, so you are not ranked on money raised." });
   const unsourced = TRACKED.filter((f) => !missing(f) && !s.sources[f]?.length).length;
   if (unsourced)
     gaps.push({

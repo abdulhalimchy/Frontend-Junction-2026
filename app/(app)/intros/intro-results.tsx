@@ -16,12 +16,12 @@ export async function IntroResults({ fromId, toId }: { fromId: string; toId: str
     const kind = calaErrorKind(e);
     const msg =
       kind === "no_credit"
-        ? "The Cala credit balance is empty."
+        ? "The data credit balance is empty."
         : kind === "rate_limited"
-          ? "Cala is rate limiting requests. Try again in a minute."
+          ? "Too many requests right now. Try again in a minute."
           : kind === "missing_key"
-            ? "Cala is not configured on this server."
-            : "Could not load one of these companies from Cala. Try again.";
+            ? "The data source is not configured on this server."
+            : "Could not load one of these companies. Try again.";
     return <EmptyState icon={Route} title="Intro paths are unavailable" description={msg} />;
   }
   const { from, to, direct, common, paths } = r;
@@ -83,8 +83,8 @@ export async function IntroResults({ fromId, toId }: { fromId: string; toId: str
             title={`No intro path to ${to.name} on record`}
             description={
               r.contacts
-                ? `None of the ${r.checked} investors, portfolio companies or co-investors of ${from.name} that we checked has invested with ${to.name} on record. Cala's investment graph is incomplete, so this is not proof there is none.`
-                : `Cala has no investors, portfolio companies or co-investors on record for ${from.name}, so there is nothing to start a path from. Check that you picked the right legal entity.`
+                ? `None of the ${r.checked} investors, portfolio companies or co-investors of ${from.name} that we checked has invested with ${to.name} on record. The investment records are incomplete, so this is not proof there is none.`
+                : `There are no investors, portfolio companies or co-investors on record for ${from.name}, so there is nothing to start a path from. Check that you picked the right legal entity.`
             }
           />
         )
@@ -206,7 +206,7 @@ function linkSentence(l: PathLink, via: Node, to: Node) {
 
 export function IntroResultsSkeleton() {
   return (
-    <Panel title="Finding intro paths" description="Reading your investors and co-investors from Cala. The first search can take 10–20 seconds, then it is cached.">
+    <Panel title="Finding intro paths" description="Reading your investors and co-investors. The first search can take 10–20 seconds, then it is cached.">
       <div className="space-y-3">
         {[0, 1, 2].map((i) => (
           <Skeleton key={i} className="h-24 rounded-lg" />

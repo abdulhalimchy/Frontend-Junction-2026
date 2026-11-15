@@ -35,7 +35,7 @@ export async function CompanyAnalysis({ id, region }: { id: string; region: stri
         <Panel
           className="col-span-2"
           title="Funding rounds"
-          description="Every round Cala has a source for. Only equity and grants are summed; filings that match a round by month and amount are merged into it."
+          description="Every round with a source. Only equity and grants are summed; filings that match a round by month and amount are merged into it."
         >
           <RoundsTable rounds={profile.rounds} />
         </Panel>
@@ -48,7 +48,7 @@ export async function CompanyAnalysis({ id, region }: { id: string; region: stri
         <div>
           <h2 className="text-lg font-semibold tracking-tight">Competitors&apos; market</h2>
           <p className="text-sm text-muted-foreground">
-            Companies Cala identifies as competitors of {profile.name}, in {regionOf(region).label}. Change the region above.
+            Companies identified as competitors of {profile.name}, in {regionOf(region).label}. Change the region above.
           </p>
         </div>
       </div>
@@ -70,8 +70,8 @@ async function Competitors({ profile, region }: { profile: CompanyProfile; regio
     return (
       <EmptyState
         icon={Building2}
-        title={`No competitors with a Cala profile in ${regionOf(region).label}`}
-        description={data.unresolved ? `Cala named ${data.unresolved} competitor(s) without a company profile, so they are not shown.` : "Try a wider region."}
+        title={`No competitors with a verified profile in ${regionOf(region).label}`}
+        description={data.unresolved ? `${data.unresolved} competitor(s) were named without a company profile, so they are not shown.` : "Try a wider region."}
       />
     );
   }
@@ -81,7 +81,7 @@ async function Competitors({ profile, region }: { profile: CompanyProfile; regio
       title={`Competitors of ${profile.name}`}
       note={
         data.unresolved > 0 ? (
-          <> {data.unresolved} more competitor(s) were named without a Cala company profile, so they have no sourced data to show.</>
+          <> {data.unresolved} more competitor(s) were named without a verified company profile, so they have no sourced data to show.</>
         ) : null
       }
     />

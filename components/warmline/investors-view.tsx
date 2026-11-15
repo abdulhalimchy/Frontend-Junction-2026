@@ -92,7 +92,7 @@ export function InvestorsView({ data, startupName }: { data: InvestorsAnalysis; 
       </div>
 
       {data.existing.length > 0 && (
-        <Panel title="Already backing you" description={`Investors Cala records in ${startupName}.`}>
+        <Panel title="Already backing you" description={`Investors on record in ${startupName}.`}>
           <ul className="flex flex-wrap gap-2">
             {data.existing.map((i) => (
               <li key={i.id}>
@@ -152,7 +152,7 @@ export function InvestorsView({ data, startupName }: { data: InvestorsAnalysis; 
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-3 text-xs text-muted-foreground">
           <span className="flex items-start gap-1.5">
             <Info className="mt-0.5 size-3.5 shrink-0" />
-            Match is scored from Cala records: your space 35, stage 25, recent activity 20, leading rounds 10, location 10; −10 for backing a
+            Match is scored from verified records: your space 35, stage 25, recent activity 20, leading rounds 10, location 10; −10 for backing a
             direct competitor. Click a score for its breakdown.
           </span>
           {filtered.length > PAGE && (

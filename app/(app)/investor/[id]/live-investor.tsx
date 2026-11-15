@@ -124,7 +124,7 @@ export async function LiveInvestor({ id, showDeals }: { id: string; showDeals: b
             ) : (
               <div className="flex items-center justify-between gap-4 rounded-xl border border-dashed p-4">
                 <p className="text-sm text-muted-foreground">
-                  Each round is a separate Cala lookup, so deal details load on request. Cached for 7 days after.
+                  Each round is a separate lookup, so deal details load on request. Cached for 7 days after.
                 </p>
                 <Button variant="outline" size="sm" className="shrink-0 bg-card" asChild>
                   <Link href={`/investor/${p.id}?deals=1`} scroll={false}>
@@ -186,7 +186,7 @@ export async function LiveInvestor({ id, showDeals }: { id: string; showDeals: b
             )}
           </Panel>
 
-          <Panel title="Team" description="People Cala links to this investor.">
+          <Panel title="Team" description="People linked to this investor.">
             {p.team.length ? (
               <ul className="max-h-72 space-y-2.5 overflow-auto pr-1">
                 {p.team.map((t) => (

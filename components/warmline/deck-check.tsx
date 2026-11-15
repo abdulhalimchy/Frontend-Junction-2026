@@ -120,7 +120,7 @@ export function DeckCheck({
             </div>
             <div>
               <p className="text-sm font-medium">Drop a pitch deck (PDF)</p>
-              <p className="mt-1 text-[13px] text-muted-foreground">We extract each factual claim and check it against Cala. The file stays private to you.</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">We extract each factual claim and check it against verified sources. The file stays private to you.</p>
             </div>
             <Button onClick={() => input.current?.click()}>Choose PDF</Button>
           </>
@@ -135,7 +135,7 @@ export function DeckCheck({
                 {uploading
                   ? "Uploading…"
                   : running
-                    ? "Reading the deck and checking claims against Cala. This can take a minute…"
+                    ? "Reading the deck and checking claims against verified sources. This can take a minute…"
                     : failed
                       ? "Check failed"
                       : `${result?.pages ? `${result.pages} pages · ` : ""}${result?.companyName ? `${result.companyName} · ` : ""}checked ${formatDay(result!.checkedAt)}`}
@@ -213,7 +213,7 @@ function Results({ result, founder }: { result: DeckCheckResult; founder: boolea
             <p className="mt-1 text-[13px] text-muted-foreground">
               {counts.differs
                 ? "Investors check decks against the same records. Change the slide to match, or, if the record is wrong, correct it at the source and upload the deck again."
-                : "Every claim Cala could check matches a sourced record."}
+                : "Every claim that could be checked matches a sourced record."}
               {counts.cant_verify > 0 && ` ${counts.cant_verify} claim${counts.cant_verify === 1 ? " has" : "s have"} no public source; keep the evidence at hand.`}
             </p>
           </div>
@@ -282,7 +282,7 @@ function Results({ result, founder }: { result: DeckCheckResult; founder: boolea
                   <th className="w-[34%] px-5 py-2 font-medium">Claim</th>
                   <th className="w-16 px-2 py-2 font-medium">Slide</th>
                   <th className="w-40 px-2 py-2 font-medium">Status</th>
-                  <th className="px-2 py-2 font-medium">What Cala says</th>
+                  <th className="px-2 py-2 font-medium">What the sources say</th>
                   <th className="w-32 px-5 py-2 text-right font-medium">Source</th>
                 </tr>
               </thead>

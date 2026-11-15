@@ -78,12 +78,25 @@ export type SizeFigure = {
 };
 export type Claim = { text: string; sources: Source[] };
 export type Insight = Claim & { kind: "trend" | "opportunity" | "risk"; title: string };
+/** A funding round or deal named in the sourced facts, with its quote checked word for word. */
+export type Deal = {
+  factId: string;
+  company: string;
+  type: "funding" | "grant" | "acquisition" | "merger" | "ipo" | "other";
+  stage: string;
+  value: Money | null;
+  date: string;
+  counterparty: string;
+  quote: string;
+  sources: Source[];
+};
 
 export type ReportSummary = {
   model: string;
   headline: Claim | null;
   bullets: Claim[];
   sizes: SizeFigure[];
+  deals: Deal[];
   insights: Insight[];
   factCount: number;
   tokens?: TokenUsage;
@@ -91,15 +104,18 @@ export type ReportSummary = {
   dropped: { what: string; reason: string }[];
 };
 
-type ApiSummary = Omit<ReportSummary, "factCount" | "sizes"> & {
+type ApiSummary = Omit<ReportSummary, "factCount" | "sizes" | "deals"> & {
   fact_count: number;
   sizes: (Omit<SizeFigure, "factId"> & { fact_id: string })[];
+  deals?: (Omit<Deal, "factId"> & { fact_id: string })[];
 };
 
+const withFactId = <T extends { fact_id: string }>({ fact_id, ...z }: T) => ({ ...z, factId: fact_id });
+
 export async function summariseMarket(input: { market: string; region: string; year: number; facts: Fact[] }): Promise<ReportSummary> {
-  const { fact_count, sizes, ...s } = await post<ApiSummary>("/markets/summary/", input);
+  const { fact_count, sizes, deals, ...s } = await post<ApiSummary>("/markets/summary/", input);
   count(s.tokens);
-  return { ...s, factCount: fact_count, sizes: sizes.map(({ fact_id, ...z }) => ({ ...z, factId: fact_id })) };
+  return { ...s, factCount: fact_count, sizes: sizes.map(withFactId), deals: (deals ?? []).map(withFactId) };
 }
 
 // ---------------------------------------------------------------------------------------------------------
@@ -119,6 +135,9 @@ export type MarketAnalysisRow = {
   sector: string;
   typed: string;
   region: string;
+  /** Where the analysis looks, as the planner named it: "Finland", "Europe", "Worldwide". */
+  place: string;
+  title: string;
   year: number;
   status: "loading" | "ready" | "failed";
   runs: number;
@@ -130,8 +149,21 @@ export type MarketAnalysisRow = {
   finishedAt: string | null;
 };
 
+/** The Cala requests the backend's LLM wrote from the typed text. */
+export type MarketPlan = {
+  market: string;
+  place: string;
+  countries: string[];
+  title: string;
+  size_question: string;
+  trends_question: string;
+  deals_question: string;
+  players_query: string;
+};
+
 export type MarketAnalysis = MarketAnalysisRow & {
   startedAt: string | null;
+  plan: Partial<MarketPlan>;
   changes: string[];
   size?: EvidenceSection;
   deals?: EvidenceSection;
@@ -146,6 +178,8 @@ type ApiRow = {
   sector: string;
   typed: string;
   region: string;
+  place: string;
+  title: string;
   year: number;
   status: MarketAnalysisRow["status"];
   runs: number;
@@ -159,6 +193,7 @@ type ApiRow = {
 type WithFetched = { fetched_at?: number };
 type ApiAnalysis = ApiRow & {
   started_at: string | null;
+  plan?: Partial<MarketPlan>;
   changes: string[];
   data: {
     size?: EvidenceSection & WithFetched;
@@ -176,6 +211,8 @@ function toRow(r: ApiRow): MarketAnalysisRow {
     sector: r.sector,
     typed: r.typed,
     region: r.region,
+    place: r.place,
+    title: r.title,
     year: r.year,
     status: r.status,
     runs: r.runs,
@@ -198,12 +235,13 @@ function toAnalysis(a: ApiAnalysis): MarketAnalysis {
   const d = a.data ?? {};
   let summary: MarketAnalysis["summary"];
   if (d.summary) {
-    const { fact_count, sizes, fetched_at, ...s } = d.summary;
-    summary = { ...s, factCount: fact_count, sizes: sizes.map(({ fact_id, ...z }) => ({ ...z, factId: fact_id })), fetchedAt: fetched_at };
+    const { fact_count, sizes, deals, fetched_at, ...s } = d.summary;
+    summary = { ...s, factCount: fact_count, sizes: sizes.map(withFactId), deals: (deals ?? []).map(withFactId), fetchedAt: fetched_at };
   }
   return {
     ...toRow(a),
     startedAt: a.started_at,
+    plan: a.plan ?? {},
     changes: a.changes ?? [],
     size: section(d.size),
     deals: section(d.deals),
@@ -225,10 +263,11 @@ async function call<T>(path: string, method: "GET" | "POST" | "DELETE", body?: u
 }
 
 /**
- * Opens the analysis of typed market text: the backend checks the text (unless force), then returns the stored
- * analysis for that market, starting it if it never ran. analysis is null when the text is not a market.
+ * Opens the analysis of free text (any wording, with or without a place). The backend's LLM reads it and plans
+ * the Cala requests, then the stored analysis for that market and place is returned, started if it never ran.
+ * analysis is null when the text is not a market (unless force).
  */
-export async function openMarketAnalysis(input: { text: string; region: string; force?: boolean }) {
+export async function openMarketAnalysis(input: { text: string; force?: boolean }) {
   const res = await call<{ verdict: GuardVerdict; analysis: ApiAnalysis | null }>("/markets/analyses/", "POST", input);
   return { verdict: res.verdict, analysis: res.analysis ? toAnalysis(res.analysis) : null };
 }
@@ -243,6 +282,11 @@ export async function listMarketAnalyses() {
 
 export async function refreshMarketAnalysis(id: string) {
   return toAnalysis(await call<ApiAnalysis>(`/markets/analyses/${encodeURIComponent(id)}/refresh/`, "POST"));
+}
+
+/** Stops a running analysis. It rolls back to the last finished result; a first run is deleted (deleted: true). */
+export async function cancelMarketAnalysis(id: string) {
+  return (await call<{ deleted: boolean }>(`/markets/analyses/${encodeURIComponent(id)}/cancel/`, "POST")).deleted;
 }
 
 export async function deleteMarketAnalysis(id: string) {

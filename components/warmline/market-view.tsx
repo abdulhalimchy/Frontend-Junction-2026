@@ -74,7 +74,7 @@ export function MarketView({ data, title, note }: { data: MarketData; title: str
       </Panel>
 
       <p className="text-xs text-muted-foreground">
-        How this market was defined: companies come from Cala&apos;s <code className="rounded bg-muted px-1">knowledge_query</code> for{" "}
+        How this market was defined: companies come from the structured query {" "}
         <code className="rounded bg-muted px-1">{data.definition}</code>. Every number above comes from sourced company and funding-round
         entities{mocksEnabled() ? " (mock data: USE_MOCKS=true)" : ""}.
         {note}
@@ -252,17 +252,17 @@ export function MarketError({ error }: { error: unknown }) {
   const copy = {
     missing_key: {
       icon: KeyRound,
-      title: "Cala API key missing or rejected",
-      description: "Cala is called by the backend: set CALA_API_KEY in the backend's .env and restart it, or set USE_MOCKS=true here to use fixture data.",
+      title: "Data source key missing or rejected",
+      description: "Data lookups run in the backend: set CALA_API_KEY in the backend's .env and restart it, or set USE_MOCKS=true here to use fixture data.",
     },
-    rate_limited: { icon: AlertCircle, title: "Cala rate limit reached", description: "Wait a minute and reload. Results are cached once they load." },
+    rate_limited: { icon: AlertCircle, title: "Too many requests", description: "Wait a minute and reload. Results are cached once they load." },
     no_credit: {
       icon: KeyRound,
-      title: "Cala credit balance is empty",
-      description: "Top up at console.cala.ai. Results already loaded stay available. New questions are paused for 10 minutes after Cala reports the empty balance, then tried again.",
+      title: "Data credit balance is empty",
+      description: "Top up at console.cala.ai. Results already loaded stay available. New lookups are paused for 10 minutes after the empty balance is reported, then tried again.",
     },
-    invalid_request: { icon: AlertCircle, title: "Cala could not run this query", description: "Try describing the market in different words." },
-    upstream: { icon: AlertCircle, title: "Could not reach Cala", description: error instanceof Error ? error.message : "Unknown error." },
+    invalid_request: { icon: AlertCircle, title: "This search could not be run", description: "Try describing the market in different words." },
+    upstream: { icon: AlertCircle, title: "Could not reach the data source", description: "It did not answer this time. Refresh to try again." },
   }[kind];
   return <EmptyState icon={copy.icon} title={copy.title} description={copy.description} />;
 }
@@ -272,7 +272,7 @@ export function ResultsLoading() {
     <div className="space-y-6">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin text-primary" />
-        Loading companies and funding rounds from Cala. The first load of a market can take up to a minute; repeat views are cached.
+        Loading companies and funding rounds. The first load of a market can take up to a minute; repeat views are cached.
       </div>
       <div className="grid grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (

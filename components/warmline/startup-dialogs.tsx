@@ -43,7 +43,7 @@ const FIELDS: { key: StartupField | "domain"; label: string; placeholder: string
   { key: "industry", label: "Industry", placeholder: "Marine robotics" },
 ];
 
-const ORIGIN_LABEL = { cala: "From Cala", website: "From website", domain: "From domain" } as const;
+const ORIGIN_LABEL = { cala: "From records", website: "From website", domain: "From domain" } as const;
 
 export function valuesOf(s: Partial<Startup> | null): Values {
   const v = { ...EMPTY };
@@ -266,7 +266,7 @@ export function CompanyLookupDialog({
       setSearched(text);
       setStep("pick");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not search Cala.");
+      setError(err instanceof Error ? err.message : "Could not search companies.");
     } finally {
       setBusy(false);
     }
@@ -323,8 +323,8 @@ export function CompanyLookupDialog({
                 ? "Here is what we found. Check each value, change anything that is wrong, then save."
                 : "Fill in what you know. Only the name is required."
               : step === "pick"
-                ? "Pick the company. We fill in what Cala holds on it, and read its website on record."
-                : "Search by name or enter its website. We look it up in Cala and on the site, and fill in what we find."}
+                ? "Pick the company. We fill in what the verified records hold on it, and read its website on record."
+                : "Search by name or enter its website. We look it up in verified records and on the site, and fill in what we find."}
           </DialogDescription>
         </DialogHeader>
 
@@ -353,7 +353,7 @@ export function CompanyLookupDialog({
               </button>
               <Button type="submit" disabled={busy || domain.trim().length < 2}>
                 {busy ? <Loader2 className="animate-spin" /> : looksLikeDomain(domain) ? <Sparkles /> : <Search />}
-                {looksLikeDomain(domain) ? "Look up" : "Search Cala"}
+                {looksLikeDomain(domain) ? "Look up" : "Search"}
               </Button>
             </div>
           </form>
@@ -391,7 +391,7 @@ export function CompanyLookupDialog({
               </ul>
             ) : (
               <p className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
-                Nothing in Cala is named “{searched}”. Try its website instead, or enter the details yourself.
+                No company on record is named “{searched}”. Try its website instead, or enter the details yourself.
               </p>
             )}
             {error && <p className="text-[13px] text-destructive">{error}</p>}
@@ -419,7 +419,7 @@ export function CompanyLookupDialog({
               <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
               <div className="min-w-0">
                 <p className="text-sm font-medium">Looking up {picked?.name ?? draft?.domain}</p>
-                <p className="text-xs text-muted-foreground">Checking Cala and reading the company&apos;s website. This usually takes 5–20 seconds.</p>
+                <p className="text-xs text-muted-foreground">Checking verified records and reading the company&apos;s website. This usually takes 5–20 seconds.</p>
               </div>
             </div>
             <div className="space-y-2">
@@ -628,7 +628,7 @@ export function DeleteStartupDialog({
         <DialogHeader>
           <DialogTitle>Delete {startup?.name}?</DialogTitle>
           <DialogDescription>
-            This removes the startup and everything you entered for it. It cannot be undone. Its record in Cala is not affected.
+            This removes the startup and everything you entered for it. It cannot be undone. Its public record is not affected.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

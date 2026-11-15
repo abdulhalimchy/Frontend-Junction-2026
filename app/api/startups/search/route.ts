@@ -8,6 +8,6 @@ export async function GET(request: Request) {
   try {
     return Response.json({ results: await searchCalaCompanies(q) });
   } catch (e) {
-    return fail(e, "Could not search Cala.");
+    return fail(e, "Could not search companies.");
   }
 }

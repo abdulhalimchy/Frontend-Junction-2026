@@ -63,8 +63,8 @@ async function WatchlistContent({ searchParams }: PageProps<"/watchlist">) {
         title="Watch list"
         description={
           schedule
-            ? `Companies and investors you follow. Cala checks every one of them each night at ${schedule.time} (${zoneCity(schedule.timezone)} time), and new rounds, Slush attendance and team changes show up on their row. Only you can see this list.`
-            : "Companies and investors you follow. When Cala sees a change on one of them, it shows up on its row. Only you can see this list."
+            ? `Companies and investors you follow. We check every one of them each night at ${schedule.time} (${zoneCity(schedule.timezone)} time), and new rounds, Slush attendance and team changes show up on their row. Only you can see this list.`
+            : "Companies and investors you follow. When the records show a change on one of them, it shows up on its row. Only you can see this list."
         }
         actions={items.length ? <ScanButton /> : undefined}
       />

@@ -71,7 +71,7 @@ export function WatchToggle({ entityType, calaId, name, role, initial, unavailab
         onClick={() =>
           mutate(
             () => watchAction({ entityType, calaId, name }),
-            (next) => (next?.inCala === false ? `Watching ${name}` : `Watching ${name}. Cala checks it now and every night; changes show up on your watch list.`),
+            (next) => (next?.inCala === false ? `Watching ${name}` : `Watching ${name}. We check it now and every night; changes show up on your watch list.`),
           )
         }
       >

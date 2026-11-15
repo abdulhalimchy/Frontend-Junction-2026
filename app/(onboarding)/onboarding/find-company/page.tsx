@@ -8,7 +8,7 @@ export default async function FindCompanyPage() {
   // Phase 1 filters a fixed list in the browser; Phase 2 calls Cala as you type.
   const hits = (await searchEntity("")).filter((h) => h.type !== "person");
   return (
-    <OnboardingCard title="Find your company" description="Search Cala by name or by what the company does.">
+    <OnboardingCard title="Find your company" description="Search by name or by what the company does.">
       <FindCompany options={hits.map((h) => ({ id: h.id, name: h.name, subtitle: h.subtitle, type: h.type as "company" | "investor" }))} />
     </OnboardingCard>
   );

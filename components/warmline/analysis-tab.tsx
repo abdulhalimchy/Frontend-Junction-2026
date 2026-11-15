@@ -18,7 +18,7 @@ const COPY: Record<AnalysisKind, { title: string; button: string; running: strin
     button: "Find competitors",
     running: "Finding competitors",
     steps: [
-      "Asks Cala for your competitors (or, if you are not in Cala yet, companies matching your industry)",
+      "Finds your competitors (or, if your company has no record yet, companies matching your industry)",
       "Reads each one's funding rounds, stage, team and lead investors, with sources",
       "Compares the money raised, in one currency only",
     ],
@@ -138,7 +138,7 @@ export function AnalysisTab({
           <Button className="mt-5" onClick={run} disabled={starting}>
             {starting ? <Loader2 className="animate-spin" /> : <Search />} {failed ? "Try again" : copy.button}
           </Button>
-          <p className="mt-2 text-xs text-subtle">Uses live Cala data. Takes 20–60 seconds; the result is saved for next time.</p>
+          <p className="mt-2 text-xs text-subtle">Uses live verified data. Takes 20–60 seconds; the result is saved for next time.</p>
         </div>
       </Panel>
     );
@@ -159,14 +159,14 @@ export function AnalysisTab({
         <span className="flex items-center gap-2 text-muted-foreground">
           {loading ? (
             <>
-              <Loader2 className="size-3.5 animate-spin text-primary" /> Refreshing from Cala… showing the previous result meanwhile.
+              <Loader2 className="size-3.5 animate-spin text-primary" /> Refreshing… showing the previous result meanwhile.
             </>
           ) : state.status === "failed" ? (
             <>
               <CircleAlert className="size-3.5 text-destructive" /> The refresh failed ({state.error}). Showing the result from {ago(state.finished_at)}.
             </>
           ) : (
-            <>Live Cala data, saved {ago(state.finished_at)}.</>
+            <>Live data, saved {ago(state.finished_at)}.</>
           )}
         </span>
         <Button variant="ghost" size="sm" onClick={run} disabled={starting || loading} className="h-7">
@@ -190,7 +190,7 @@ function Running({ label }: { label: string }) {
         <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
         <div>
           <p className="text-sm font-medium">{label}</p>
-          <p className="text-xs text-muted-foreground">Asking Cala and reading each company&apos;s records. You can leave this page; it keeps running.</p>
+          <p className="text-xs text-muted-foreground">Gathering verified data and reading each company&apos;s records. You can leave this page; it keeps running.</p>
         </div>
       </div>
       <div className="mt-5 space-y-2.5">

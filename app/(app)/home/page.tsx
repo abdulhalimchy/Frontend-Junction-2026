@@ -107,7 +107,7 @@ async function FounderHome({ startup, competitors, investors, slushIndex, slush 
           <EmptyState
             icon={Rocket}
             title="Add your startup"
-            description="We look it up in Cala, then show who to meet at Slush and how you compare with your competitors."
+            description="We look it up in verified records, then show who to meet at Slush and how you compare with your competitors."
             action={<AddStartupButton />}
           />
         </div>
@@ -167,7 +167,7 @@ async function FounderHome({ startup, competitors, investors, slushIndex, slush 
             <p className="text-sm text-muted-foreground">None of the {investors.investors.length} investors in companies like yours are on the Slush attendee list.</p>
           )}
         </Panel>
-        <Panel title="Competitors" description="From Cala's record of companies like yours.">
+        <Panel title="Competitors" description="From verified records of companies like yours.">
           {!competitors ? (
             <EmptyState
               compact
@@ -214,7 +214,7 @@ async function InvestorHome({ investorId, slush }: { investorId: string; slush: 
     <div className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-6">
         <div className="grid grid-cols-3 gap-4">
-          <StatCard label="Portfolio companies" value={portfolio.length} icon={Building2} sources={data.investor.description.sources} hint="Prefilled from Cala" />
+          <StatCard label="Portfolio companies" value={portfolio.length} icon={Building2} sources={data.investor.description.sources} hint="Prefilled from verified records" />
           <StatCard label="Deals, last 12 months" value={data.check.stillActive.value.dealsLast12m} icon={Landmark} sources={data.check.stillActive.sources} />
           <StatCard label="Portfolio at Slush" value={portfolio.filter((c) => c.attendsSlush).length} icon={Users} tone="slush" sources={slush.event.attendeeCompanies.sources} />
         </div>
@@ -245,7 +245,7 @@ async function InvestorHome({ investorId, slush }: { investorId: string; slush: 
             ))}
           </ul>
         </Panel>
-        <Panel title="Deck check" description="Upload a founder's deck and check each claim against Cala.">
+        <Panel title="Deck check" description="Upload a founder's deck and check each claim against verified sources.">
           <div className="flex items-center justify-between rounded-lg bg-muted/60 p-4">
             <div className="flex items-center gap-3">
               <FileSearch className="size-5 text-primary" />

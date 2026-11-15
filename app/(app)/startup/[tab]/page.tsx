@@ -43,14 +43,14 @@ async function StartupPageContent({ params, searchParams }: PageProps<"/startup/
 
   return (
     <>
-      <PageHeader title="My startup" description="See your startup as investors see it: its record in Cala, competitors, investors to talk to, and a check of your deck." />
+      <PageHeader title="My startup" description="See your startup as investors see it: its public record, competitors, investors to talk to, and a check of your deck." />
       {error ? (
         <EmptyState icon={CircleAlert} title="Could not load your startups" description={error} />
       ) : (
         <EmptyState
           icon={Rocket}
           title="Add your startup"
-          description="Enter its website. We look it up in Cala and fill in what is on record, with sources; you check and complete the rest."
+          description="Enter its website. We look it up in verified records and fill in what is on record, with sources; you check and complete the rest."
           action={<AddStartupButton />}
         />
       )}
@@ -104,9 +104,9 @@ async function AddedStartup({ id, tab }: { id: string; tab: Tab }) {
         <AddedStartupOverview startup={startup} competitors={comp} investors={inv} deck={(await getDeckCheck(id)).result}>
           {startup.calaCompanyId && (
             <section className="pt-4">
-              <h2 className="text-base font-semibold">On record in Cala</h2>
+              <h2 className="text-base font-semibold">Verified record</h2>
               <p className="mt-1 mb-4 max-w-2xl text-sm text-muted-foreground">
-                What Cala holds on the company this startup is matched to: funding, people, investors and deals, each with its sources.
+                What the verified records hold on the company this startup is matched to: funding, people, investors and deals, each with its sources.
               </p>
               <Suspense fallback={<Skeleton className="h-96 rounded-xl" />}>
                 <CompanyRecord id={startup.calaCompanyId} />
@@ -142,7 +142,7 @@ async function DeckTab({ companyName, startupId }: { companyName: string; startu
   return (
     <>
       <p className="mb-4 max-w-2xl text-sm text-muted-foreground">
-        Check your own deck before investors do. Each claim is matched against Cala; anything without a source is marked “Can&apos;t verify”.
+        Check your own deck before investors do. Each claim is matched against verified sources; anything without a source is marked “Can&apos;t verify”.
       </p>
       <DeckCheck initial={result} companyName={companyName} loadError={error} startupId={startupId} founder />
     </>

@@ -32,14 +32,14 @@ async function IntrosContent({ searchParams }: PageProps<"/intros">) {
     <>
       <PageHeader
         title="Warm intros"
-        description="Who can introduce you, from Cala's investment graph: your investors, your portfolio and your co-investors, and how each is tied to the person you want to meet. Every link shows its sources."
+        description="Who can introduce you, from verified investment records: your investors, your portfolio and your co-investors, and how each is tied to the person you want to meet. Every link shows its sources."
       />
       <Panel className="mb-6 overflow-visible">
         {/* Remount when the URL changes so the pickers show the new selection. */}
         <IntroForm key={`${from?.id}-${to?.id}`} from={from} to={to} />
       </Panel>
       {mocksEnabled() ? (
-        <p className="text-sm text-muted-foreground">Warm intros need live Cala data (USE_MOCKS is on).</p>
+        <p className="text-sm text-muted-foreground">Warm intros need live data (USE_MOCKS is on).</p>
       ) : from && to ? (
         from.id === to.id ? (
           <p className="text-sm text-muted-foreground">Pick two different companies.</p>

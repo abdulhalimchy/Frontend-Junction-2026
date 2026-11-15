@@ -14,7 +14,7 @@ export function FundingTimeline({ rounds, investors }: { rounds: FundingRound[];
         compact
         icon={Banknote}
         title="No funding on record"
-        description="Common for young companies. We only show rounds Cala has a source for."
+        description="Common for young companies. We only show rounds with a source."
       />
     );
   }

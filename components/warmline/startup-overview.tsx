@@ -123,7 +123,7 @@ export function DeckCard({ deck, href }: { deck: DeckCheckResult | null; href: s
   if (!deck || deck.status !== "completed")
     return (
       <SideCard icon={FileCheck2} title="Deck check" href={href} linkLabel={deck ? "See progress" : "Check your deck"}>
-        {deck ? "Your deck is being checked." : "No deck checked yet. See which claims Cala can back up before investors do."}
+        {deck ? "Your deck is being checked." : "No deck checked yet. See which claims the sources back up before investors do."}
       </SideCard>
     );
   const count = (s: string) => deck.claims.filter((c) => c.status === s).length;

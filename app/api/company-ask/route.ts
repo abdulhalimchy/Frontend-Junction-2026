@@ -36,12 +36,12 @@ export async function POST(request: Request) {
     const kind = calaErrorKind(e);
     const message =
       kind === "missing_key"
-        ? "Cala is not configured on this server."
+        ? "The data source is not configured on this server."
         : kind === "no_credit"
-          ? "Cala credit balance is empty. Try again later."
+          ? "The data credit balance is empty. Try again later."
           : kind === "rate_limited"
             ? "Too many questions at once. Try again in a minute."
-            : "Could not get an answer from Cala. Try again.";
+            : "Could not get an answer. Try again.";
     return Response.json({ error: message }, { status: kind === "invalid_request" ? 400 : 502 });
   }
 }

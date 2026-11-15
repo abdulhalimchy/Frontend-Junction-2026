@@ -77,7 +77,7 @@ export function WatchRow({ item, role, checked, changes, recentSince }: Props) {
           </span>
           <span>·</span>
           {!item.inCala ? (
-            <span title="Demo entries are not in Cala, so the nightly check skips them.">Demo entry, not checked</span>
+            <span title="Demo entries have no verified record, so the nightly check skips them.">Demo entry, not checked</span>
           ) : checked ? (
             <span>Checked {checked}</span>
           ) : (

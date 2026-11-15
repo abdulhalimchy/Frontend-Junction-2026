@@ -15,7 +15,7 @@ export default async function DeckCheckPage() {
     <>
       <PageHeader
         title="Deck check"
-        description="Upload a founder's deck. Every factual claim is checked against Cala: confirmed, differs from the record, or can't verify."
+        description="Upload a founder's deck. Every factual claim is checked against verified sources: confirmed, differs from the record, or can't verify."
       />
       <DeckCheck initial={result} loadError={error} />
     </>
