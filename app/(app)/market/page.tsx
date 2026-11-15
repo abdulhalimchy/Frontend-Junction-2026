@@ -52,9 +52,9 @@ function Chooser() {
           </Link>
         }
       />
-      <div className="grid grid-cols-2 gap-6">
-        <section className="flex flex-col rounded-2xl border bg-card p-6 shadow-[0_1px_2px_rgba(22,24,26,0.04)]">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-teal-soft">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <section className="hover-lift flex flex-col rounded-2xl border bg-card p-5 shadow-panel sm:p-6">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-brand-soft">
             <LineChart className="size-5 text-primary" />
           </div>
           <h2 className="mt-4 text-lg font-semibold tracking-tight">Analyse a market</h2>
@@ -73,8 +73,8 @@ function Chooser() {
           </div>
           <p className="mt-auto pt-5 text-xs text-subtle">A new market takes about a minute and can be stopped. Reports are saved to your history, so reopening one is free.</p>
         </section>
-        <section className="flex flex-col rounded-2xl border bg-card p-6 shadow-[0_1px_2px_rgba(22,24,26,0.04)]">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-teal-soft">
+        <section className="hover-lift flex flex-col rounded-2xl border bg-card p-5 shadow-panel sm:p-6">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-brand-soft">
             <Building2 className="size-5 text-primary" />
           </div>
           <h2 className="mt-4 text-lg font-semibold tracking-tight">Analyse a company</h2>

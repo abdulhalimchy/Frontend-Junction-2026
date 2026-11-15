@@ -119,7 +119,7 @@ function CompanyReport({ a }: { a: MarketAnalysis }) {
         chips={
           <>
             <span>Company</span>
-            <Pill tone="teal">{a.sector}</Pill>
+            <Pill tone="brand">{a.sector}</Pill>
             <span>· competitors in</span>
             <Pill tone="neutral">{a.place}</Pill>
           </>

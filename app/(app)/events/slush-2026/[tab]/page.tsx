@@ -75,7 +75,7 @@ async function SlushPageContent({ params, searchParams }: PageProps<"/events/slu
       />
       {tab === "overview" && (
         <div className="space-y-6">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <StatCard label="Companies attending" value={e.attendeeCompanies.value.toLocaleString("en")} icon={Building2} sources={e.attendeeCompanies.sources} tone="slush" />
             <StatCard label="Investors attending" value={e.attendeeInvestors.value.toLocaleString("en")} icon={Landmark} sources={e.attendeeInvestors.sources} tone="slush" />
             <StatCard label="Joined this week" value={e.newThisWeek} icon={Sparkles} sources={e.attendeeCompanies.sources} tone="slush" />

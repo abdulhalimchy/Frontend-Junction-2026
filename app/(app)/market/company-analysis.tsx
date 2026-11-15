@@ -33,7 +33,7 @@ export function Header({ p }: { p: CompanyProfile }) {
             )}
             {p.fundingStage && (
               <span className="inline-flex items-center gap-1">
-                <Pill tone="teal">{p.fundingStage.value}</Pill>
+                <Pill tone="brand">{p.fundingStage.value}</Pill>
                 <SourceChip sources={p.fundingStage.sources} />
               </span>
             )}
@@ -65,7 +65,7 @@ export function Header({ p }: { p: CompanyProfile }) {
         </div>
       </div>
       {facts.length > 0 && (
-        <dl className="mt-5 grid grid-cols-4 gap-3 border-t pt-4">
+        <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 border-t pt-4">
           {facts.map((f) => (
             <div key={f.label} className="min-w-0">
               <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -96,7 +96,7 @@ export function RoundsTable({ rounds }: { rounds: FundingRound[] }) {
       round: { display: <span className="text-[13px] font-medium">{r.stage}</span>, sort: r.stage },
       kind: {
         display: (
-          <Pill tone={r.kind === "equity" ? "teal" : r.kind === "grant" ? "success" : "neutral"}>
+          <Pill tone={r.kind === "equity" ? "brand" : r.kind === "grant" ? "success" : "neutral"}>
             {r.stage === FILING_LABEL ? "Filing, unclassified" : KIND_LABEL[r.kind]}
           </Pill>
         ),

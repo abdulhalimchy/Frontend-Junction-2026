@@ -13,8 +13,8 @@ export async function CompanyOverview({ company: c }: { company: Company }) {
   const [investors, people] = await Promise.all([getInvestors(), getPeople(c.peopleIds)]);
 
   return (
-    <div className="grid grid-cols-3 gap-6">
-      <div className="col-span-2 space-y-6">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="lg:col-span-2 space-y-6">
         <Panel title="About">
           <p className="flex items-start gap-2 text-sm leading-relaxed">
             <span>{c.description.value}</span>

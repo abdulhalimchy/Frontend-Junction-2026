@@ -3,8 +3,8 @@ import type { ClaimStatus, TrustLevel } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const TRUST = {
-  verified: { label: "Verified", icon: BadgeCheck, cls: "bg-teal-soft text-accent-foreground" },
-  verified_at_company: { label: "Verified at company", icon: Building2, cls: "bg-teal-soft/70 text-accent-foreground" },
+  verified: { label: "Verified", icon: BadgeCheck, cls: "bg-brand-soft text-accent-foreground" },
+  verified_at_company: { label: "Verified at company", icon: Building2, cls: "bg-brand-soft/70 text-accent-foreground" },
   self_described: { label: "Self-described", icon: UserRound, cls: "bg-muted text-muted-foreground" },
 } as const;
 
@@ -45,10 +45,10 @@ export function ClaimBadge({ status }: { status: ClaimStatus }) {
   return <span className={cn("inline-flex h-5 items-center rounded-full px-2 text-[11px] font-medium whitespace-nowrap", c.cls)}>{c.label}</span>;
 }
 
-export function Pill({ children, tone = "neutral", className }: { children: React.ReactNode; tone?: "neutral" | "teal" | "warning" | "success"; className?: string }) {
+export function Pill({ children, tone = "neutral", className }: { children: React.ReactNode; tone?: "neutral" | "brand" | "warning" | "success"; className?: string }) {
   const tones = {
     neutral: "bg-muted text-muted-foreground",
-    teal: "bg-teal-soft text-accent-foreground",
+    brand: "bg-brand-soft text-accent-foreground",
     warning: "bg-warning-soft text-warning",
     success: "bg-success-soft text-success",
   };

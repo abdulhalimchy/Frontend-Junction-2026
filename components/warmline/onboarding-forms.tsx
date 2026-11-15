@@ -54,7 +54,7 @@ export function RoleForm({ initial }: { initial: Role }) {
               role="radio"
               aria-checked={on}
               onClick={() => setRole(o.key)}
-              className={cn("rounded-xl border p-4 text-left transition-colors", on ? "border-primary bg-teal-soft/50" : "hover:bg-muted")}
+              className={cn("rounded-xl border p-4 text-left transition-colors", on ? "border-primary bg-brand-soft/50" : "hover:bg-muted")}
             >
               <span className="flex items-center gap-3">
                 <span className={cn("flex size-9 items-center justify-center rounded-lg", on ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
@@ -238,7 +238,7 @@ export function GoalsForm({ role, initial }: { role: Role; initial: string[] }) 
               onClick={() => setPicked((p) => (on ? p.filter((x) => x !== g) : [...p, g]))}
               className={cn(
                 "flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm transition-colors",
-                on ? "border-primary bg-teal-soft text-accent-foreground" : "bg-card hover:bg-muted",
+                on ? "border-primary bg-brand-soft text-accent-foreground" : "bg-card hover:bg-muted",
               )}
             >
               {on && <Check className="size-3.5" />}

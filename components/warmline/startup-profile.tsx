@@ -25,7 +25,7 @@ export function StartupProfile({ startup: s, variant = "full" }: { startup: Star
   const sourced = filled.filter((f) => src(f).length);
 
   const main = (
-    <div className="col-span-2 space-y-6">
+    <div className="lg:col-span-2 space-y-6">
       <Panel
         title="About"
         action={
@@ -89,7 +89,7 @@ export function StartupProfile({ startup: s, variant = "full" }: { startup: Star
   if (variant === "main") return main;
 
   return (
-    <div className="grid grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       {main}
       <div className="space-y-6">
         <Panel title="Where this comes from">

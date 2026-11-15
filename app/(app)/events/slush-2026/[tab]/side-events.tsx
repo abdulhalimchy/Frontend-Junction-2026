@@ -125,7 +125,7 @@ export async function SideEventsTab({ filters, live }: { filters: SideEventFilte
 function EventCard({ e, ctx }: { e: SideEvent; ctx: Ctx }) {
   const orgs = eventOrgs(e);
   return (
-    <article id={e.id} className="scroll-mt-20 rounded-xl border bg-card p-5 shadow-[0_1px_2px_rgba(22,24,26,0.04)]">
+    <article id={e.id} className="scroll-mt-20 rounded-xl border bg-card p-5 shadow-panel">
       <div className="flex items-start gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -152,7 +152,7 @@ function EventCard({ e, ctx }: { e: SideEvent; ctx: Ctx }) {
           {(e.topics.length > 0 || e.audience.length > 0) && (
             <div className="mt-2.5 flex flex-wrap gap-1.5">
               {e.topics.map((t) => (
-                <Pill key={t} tone="teal">
+                <Pill key={t} tone="brand">
                   {t}
                 </Pill>
               ))}
@@ -215,7 +215,7 @@ function OrgChip({ name, role, ctx, calaId }: { name: string; role: "host" | "sp
   );
   const cls = cn(
     "inline-flex h-6 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium",
-    watched ? "border-primary/40 bg-teal-soft text-accent-foreground" : "bg-card",
+    watched ? "border-primary/40 bg-brand-soft text-accent-foreground" : "bg-card",
   );
   const title = [watched && "On your watch list", atSlush && "On the Slush 2026 attendee list"].filter(Boolean).join(" · ") || undefined;
   return calaId ? (

@@ -69,7 +69,7 @@ async function HistoryList() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="truncate text-sm font-semibold first-letter:uppercase">{r.title || r.sector}</span>
-                  <Pill tone={r.kind === "company" ? "teal" : "neutral"}>{r.kind === "company" ? "Company" : "Market"}</Pill>
+                  <Pill tone={r.kind === "company" ? "brand" : "neutral"}>{r.kind === "company" ? "Company" : "Market"}</Pill>
                   {r.kind !== "company" || r.place !== "Worldwide" ? <Pill tone="neutral">{r.kind === "company" ? `Competitors in ${r.place}` : r.place}</Pill> : null}
                   <StatusPill status={r.status} />
                 </div>
@@ -97,7 +97,7 @@ function StatusPill({ status }: { status: MarketAnalysisRow["status"] }) {
   if (status === "ready") return null;
   if (status === "failed") return <Pill tone="warning">Failed</Pill>;
   return (
-    <Pill tone="teal">
+    <Pill tone="brand">
       <Loader2 className="size-3 animate-spin" /> Running
     </Pill>
   );

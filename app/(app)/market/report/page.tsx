@@ -83,7 +83,7 @@ async function Report({ searchParams }: PageProps<"/market/report">) {
         chips={
           <>
             <span>Market</span>
-            <Pill tone="teal">{a.sector}</Pill>
+            <Pill tone="brand">{a.sector}</Pill>
             <span>in</span>
             <Pill tone="neutral">{a.place}</Pill>
           </>

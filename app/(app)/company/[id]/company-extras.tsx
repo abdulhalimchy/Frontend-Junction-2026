@@ -186,7 +186,7 @@ export function ListingBadges({ extras }: { extras: CompanyExtras }) {
     <>
       {extras.listings.map((l) => (
         <span key={l.exchange} className="inline-flex items-center gap-1">
-          <Pill tone="teal">
+          <Pill tone="brand">
             <Landmark className="size-3" />
             {l.exchange}
             {l.symbol ? ` · ${l.symbol}` : ""}

@@ -13,6 +13,7 @@ import {
   CommandList,
   CommandShortcut,
 } from "@/components/ui/command";
+import { ThemeToggle } from "./theme-toggle";
 
 export type PaletteItem = { type: "company" | "investor" | "person" | "page"; label: string; hint: string; href: string; remote?: boolean };
 
@@ -81,17 +82,18 @@ export function TopBar({ items, menu }: { items: PaletteItem[]; menu?: React.Rea
   ] as const;
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b bg-background/85 px-4 backdrop-blur md:gap-4 md:px-8">
+    <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b bg-background/70 px-4 backdrop-blur-xl md:gap-4 md:px-8">
       {menu}
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-9 w-full max-w-[420px] min-w-0 items-center gap-2 rounded-lg border bg-card px-3 text-left text-sm text-muted-foreground transition-colors hover:border-primary/30"
+        className="flex h-9 w-full max-w-[420px] min-w-0 items-center gap-2 rounded-lg border bg-card/80 px-3 text-left text-sm text-muted-foreground transition-all hover:border-primary/40 hover:bg-card hover:shadow-[0_0_0_3px_rgb(242_155_110/0.08)]"
       >
         <Search className="size-4 shrink-0" />
         <span className="flex-1 truncate">Search companies, investors, people…</span>
         <kbd className="hidden rounded border bg-muted px-1.5 font-sans text-[11px] text-muted-foreground sm:inline">⌘K</kbd>
       </button>
+      <ThemeToggle className="ml-auto" />
 
       <CommandDialog open={open} onOpenChange={setOpen} title="Search Warmline" description="Search companies, investors and people">
         <Command>

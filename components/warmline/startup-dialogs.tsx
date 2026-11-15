@@ -82,7 +82,7 @@ export function StartupForm({
                 <span
                   className={cn(
                     "inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[10px] font-medium",
-                    kept ? "bg-teal-soft text-accent-foreground" : "bg-muted text-muted-foreground",
+                    kept ? "bg-brand-soft text-accent-foreground" : "bg-muted text-muted-foreground",
                   )}
                   title={kept ? "Suggested by the lookup. Saved with its sources." : "Edited: saved as your own entry, without sources."}
                 >
@@ -452,7 +452,7 @@ export function CompanyLookupDialog({
         {step === "form" && (
           <form onSubmit={save} className="space-y-4">
             {draft?.enrichment.note && (
-              <p className="rounded-lg bg-teal-soft/60 px-3 py-2 text-[13px] text-accent-foreground">{draft.enrichment.note}</p>
+              <p className="rounded-lg bg-brand-soft/60 px-3 py-2 text-[13px] text-accent-foreground">{draft.enrichment.note}</p>
             )}
             {draft?.enrichment.status === "failed" && (
               <p className="rounded-lg bg-destructive/10 px-3 py-2 text-[13px] text-destructive">

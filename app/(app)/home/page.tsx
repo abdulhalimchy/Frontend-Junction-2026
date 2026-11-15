@@ -109,12 +109,12 @@ async function loadFounder() {
 function Hero({ firstName, description, slush }: { firstName: string; description: string; slush: Slush }) {
   const e = slush.event;
   return (
-    <section className="relative overflow-hidden rounded-2xl border bg-card shadow-[0_1px_2px_rgba(22,24,26,0.04)]">
+    <section className="relative overflow-hidden rounded-2xl border bg-card shadow-panel">
       {/* Soft Slush glow behind the countdown; amber is reserved for Slush. */}
       <div aria-hidden className="pointer-events-none absolute -top-24 -right-24 size-80 rounded-full bg-slush/25 blur-3xl" />
-      <div aria-hidden className="pointer-events-none absolute -bottom-32 left-1/3 size-72 rounded-full bg-teal/10 blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-32 left-1/3 size-72 rounded-full bg-brand/10 blur-3xl" />
 
-      <div className="relative grid gap-6 p-6 md:p-8 xl:grid-cols-[1fr_auto] xl:items-center">
+      <div className="relative grid gap-6 p-5 sm:p-6 md:p-8 xl:grid-cols-[1fr_auto] xl:items-center">
         <div className="min-w-0">
           <SlushTag label="Slush 2026 · 18–19 Nov, Helsinki" />
           <h1 className="mt-3 text-[28px] leading-tight font-semibold tracking-tight md:text-[32px]">
@@ -135,7 +135,7 @@ function Hero({ firstName, description, slush }: { firstName: string; descriptio
           </div>
         </div>
 
-        <div className="flex items-stretch gap-3">
+        <div className="flex flex-col items-stretch gap-3 sm:flex-row">
           <div className="flex min-w-32 flex-col justify-center rounded-xl border border-slush/40 bg-slush-soft/70 px-5 py-4 text-center backdrop-blur-sm">
             <span className="text-5xl leading-none font-semibold tracking-tight text-slush-foreground tabular">{DAYS_TO_SLUSH}</span>
             <span className="mt-1.5 text-xs font-medium text-slush-foreground/80">days to Slush</span>
@@ -175,14 +175,14 @@ type QuickAction = { href: string; label: string; hint: string; icon: LucideIcon
 
 function QuickActions({ actions }: { actions: QuickAction[] }) {
   return (
-    <nav aria-label="Quick actions" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+    <nav aria-label="Quick actions" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {actions.map((a) => (
         <Link
           key={a.href}
           href={a.href}
-          className="group flex items-center gap-3 rounded-xl border bg-card p-3.5 shadow-[0_1px_2px_rgba(22,24,26,0.04)] transition-all hover:-translate-y-px hover:border-primary/40 hover:shadow-md"
+          className="group flex items-center gap-3 rounded-xl border bg-card p-3.5 shadow-panel transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-glow"
         >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-teal-soft text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
             <a.icon className="size-4" />
           </span>
           <span className="min-w-0 flex-1">
@@ -203,7 +203,7 @@ async function FounderHome({ startup, competitors, investors, slushIndex }: NonN
 
   const actions: QuickAction[] = [
     { href: startup ? startupHref(startup.id, "investors") : "/market", label: "Find investors", hint: "Who funds companies like yours", icon: Landmark },
-    { href: "/intros", label: "Warm intros", hint: "Who can introduce you", icon: Route },
+    { href: "/intros", label: "Connect", hint: "Who can introduce you", icon: Route },
     { href: "/market", label: "Market", hint: "Size up your space", icon: LineChart },
     { href: "/watchlist", label: "Watch list", hint: "What you follow", icon: Bookmark },
   ];
@@ -309,7 +309,7 @@ async function FounderHome({ startup, competitors, investors, slushIndex }: NonN
                   <div className="mt-3 border-t border-dashed pt-2.5 text-xs">
                     {c.last_round ? (
                       <span className="flex items-center justify-between gap-2">
-                        <span className="rounded-full bg-teal-soft px-2 py-0.5 font-medium text-accent-foreground">{c.last_round.stage}</span>
+                        <span className="rounded-full bg-brand-soft px-2 py-0.5 font-medium text-accent-foreground">{c.last_round.stage}</span>
                         <span className="font-semibold tabular">{formatMoney(c.last_round.amount)}</span>
                       </span>
                     ) : (
@@ -339,7 +339,7 @@ async function InvestorHome({ investorId, slush }: { investorId: string; slush: 
   const actions: QuickAction[] = [
     { href: "/portfolio", label: "Portfolio", hint: "Your companies", icon: Building2 },
     { href: "/deck-check", label: "Deck check", hint: "Verify a founder's claims", icon: FileSearch },
-    { href: "/intros", label: "Warm intros", hint: "Who can introduce you", icon: Route },
+    { href: "/intros", label: "Connect", hint: "Who can introduce you", icon: Route },
     { href: "/market", label: "Market", hint: "Analyse a market", icon: LineChart },
   ];
 
@@ -407,7 +407,7 @@ async function InvestorHome({ investorId, slush }: { investorId: string; slush: 
             className="group flex flex-col gap-4 rounded-lg border bg-background/40 p-4 transition-colors hover:border-primary/40 sm:flex-row sm:items-center"
           >
             <div className="flex min-w-0 flex-1 items-center gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-teal-soft">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-soft">
                 <FileSearch className="size-5 text-primary" />
               </span>
               <div className="min-w-0">
@@ -508,7 +508,7 @@ function Metric({
         <span
           className={cn(
             "flex size-8 items-center justify-center rounded-lg",
-            slush ? "bg-slush/25 text-slush-foreground" : "bg-teal-soft text-primary",
+            slush ? "bg-slush/25 text-slush-foreground" : "bg-brand-soft text-primary",
           )}
         >
           <Icon className="size-4" />
@@ -526,9 +526,9 @@ function Metric({
     </>
   );
   const cls = cn(
-    "block rounded-xl border bg-card p-4 shadow-[0_1px_2px_rgba(22,24,26,0.04)]",
+    "block rounded-xl border bg-card p-4 shadow-panel",
     slush && "border-slush/40 bg-slush-soft/50",
-    href && "transition-all hover:-translate-y-px hover:border-primary/40 hover:shadow-md",
+    href && "transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-glow",
   );
   return href ? (
     <Link href={href} className={cls}>

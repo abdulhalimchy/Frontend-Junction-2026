@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
+import { ThemeToggle } from "./theme-toggle";
 
 const STEPS = [
   { label: "Role", match: ["/onboarding/role"] },
@@ -17,7 +18,7 @@ export function OnboardingShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="flex h-16 items-center justify-between gap-4 px-5 sm:px-10">
+      <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 bg-background/70 px-5 backdrop-blur-xl sm:px-10">
         <Logo href="/" />
         {current >= 0 && (
           <ol className="hidden items-center gap-2 md:flex">
@@ -35,7 +36,7 @@ export function OnboardingShell({ children }: { children: React.ReactNode }) {
                     <span
                       className={cn(
                         "flex size-5 items-center justify-center rounded-full text-[10px] tabular",
-                        done ? "bg-primary text-primary-foreground" : active ? "bg-teal-soft text-accent-foreground" : "bg-muted",
+                        done ? "bg-primary text-primary-foreground" : active ? "bg-brand-soft text-accent-foreground" : "bg-muted",
                       )}
                     >
                       {done ? <Check className="size-3" /> : i + 1}
@@ -48,7 +49,10 @@ export function OnboardingShell({ children }: { children: React.ReactNode }) {
             })}
           </ol>
         )}
-        <span className="w-24 text-right text-xs text-subtle">{current >= 0 ? `Step ${current + 1} of ${STEPS.length}` : ""}</span>
+        <span className="flex items-center justify-end gap-3 text-xs text-subtle">
+          {current >= 0 ? `Step ${current + 1} of ${STEPS.length}` : ""}
+          <ThemeToggle />
+        </span>
       </header>
       <main className="flex flex-1 items-start justify-center px-4 pb-16 pt-6 sm:px-6 sm:pt-10">{children}</main>
     </div>
@@ -57,7 +61,7 @@ export function OnboardingShell({ children }: { children: React.ReactNode }) {
 
 export function OnboardingCard({ title, description, children, wide }: { title: string; description?: string; children: React.ReactNode; wide?: boolean }) {
   return (
-    <div className={cn("w-full rounded-2xl border bg-card p-6 sm:p-8 shadow-[0_8px_30px_rgba(22,24,26,0.05)]", wide ? "max-w-2xl" : "max-w-md")}>
+    <div className={cn("page-enter w-full rounded-2xl border bg-card/90 p-6 shadow-lift backdrop-blur sm:p-8", wide ? "max-w-2xl" : "max-w-md")}>
       <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
       {description && <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>}
       <div className="mt-6">{children}</div>

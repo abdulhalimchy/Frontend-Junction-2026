@@ -16,7 +16,8 @@ export function FinancialsChart({ data, currency }: { data: Datum[]; currency: s
           <YAxis tickLine={false} axisLine={false} width={56} tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} tickFormatter={(v: number) => compact(v)} />
           <Tooltip
             cursor={{ fill: "var(--muted)", opacity: 0.6 }}
-            contentStyle={{ borderRadius: 10, border: "1px solid var(--border)", fontSize: 12, boxShadow: "0 4px 16px rgba(0,0,0,0.06)" }}
+            contentStyle={{ borderRadius: 10, border: "1px solid var(--border)", fontSize: 12, background: "var(--popover)", color: "var(--foreground)", boxShadow: "var(--lift-shadow)" }}
+            itemStyle={{ color: "var(--foreground)" }}
             formatter={(v, name) => [`${currency} ${compact(Number(v))}`, name === "revenue" ? "Revenue" : "EBITDA"]}
           />
           {hasEbitda && (

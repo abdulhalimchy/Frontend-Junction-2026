@@ -210,7 +210,7 @@ export function PickCompanyList({ candidates, text }: { candidates: { id: string
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-2 text-sm font-medium">
                 {c.name}
-                {c.exact && <span className="rounded-full bg-teal-soft px-2 py-0.5 text-[11px] text-accent-foreground">Exact name</span>}
+                {c.exact && <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[11px] text-accent-foreground">Exact name</span>}
               </span>
               <span className="block truncate text-xs text-muted-foreground">{c.description || c.entity_type}</span>
             </span>

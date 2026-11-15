@@ -41,13 +41,13 @@ export async function LiveInvestor({ id, showDeals }: { id: string; showDeals: b
           <WatchButton entityType="investor" calaId={p.id} name={p.name} size="sm" />
           <Button variant="outline" size="sm" className="bg-card" asChild>
             <Link href={`/intros?${new URLSearchParams({ to: p.id, toName: p.name })}`}>
-              <Route /> Warm intro
+              <Route /> Connect
             </Link>
           </Button>
         </div>
       </div>
 
-      <div className="mb-6 rounded-2xl border bg-card p-6 shadow-[0_1px_2px_rgba(22,24,26,0.04)]">
+      <div className="mb-6 rounded-2xl border bg-card p-6 shadow-panel">
         <div className="flex items-start gap-5">
           <EntityAvatar name={p.name} kind="investor" size="lg" />
           <div className="min-w-0 flex-1">
@@ -94,7 +94,7 @@ export async function LiveInvestor({ id, showDeals }: { id: string; showDeals: b
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-4 gap-4">
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Tile label="Rounds joined" sources={r.total ? r.sources : undefined} hint="Funding rounds on record">
           {r.total ? `${r.total}${plus(r.capped)}` : <Muted>None on record</Muted>}
         </Tile>
@@ -109,8 +109,8 @@ export async function LiveInvestor({ id, showDeals }: { id: string; showDeals: b
         </Tile>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2 space-y-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-6">
           <Panel
             title="Recent deals"
             description={`Company, round, amount and date for up to ${DEALS_LIMIT} rounds, led rounds first. Click a company for its brief.`}
@@ -256,7 +256,7 @@ async function Deals({ p }: { p: InvestorProfile }) {
         display: <span className="whitespace-nowrap text-[13px] tabular">{d.round.date ? formatFuzzyDate(d.round.date) : "—"}</span>,
         sort: d.round.date?.date ?? "",
       },
-      role: { display: d.led ? <Pill tone="teal">Lead</Pill> : <Pill>Participant</Pill>, sort: d.led ? 1 : 0 },
+      role: { display: d.led ? <Pill tone="brand">Lead</Pill> : <Pill>Participant</Pill>, sort: d.led ? 1 : 0 },
       sources: { display: <SourceChip sources={d.round.sources} className="whitespace-nowrap" /> },
     },
   }));

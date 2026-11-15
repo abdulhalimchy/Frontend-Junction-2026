@@ -118,7 +118,7 @@ export function AnalysisTab({
     return (
       <Panel>
         <div className="flex flex-col items-center px-6 py-10 text-center">
-          <div className="mb-4 flex size-11 items-center justify-center rounded-full bg-teal-soft">
+          <div className="mb-4 flex size-11 items-center justify-center rounded-full bg-brand-soft">
             {failed ? <CircleAlert className="size-5 text-destructive" /> : <Search className="size-5 text-primary" />}
           </div>
           <h2 className="text-base font-semibold tracking-tight">{failed ? "The last search failed" : copy.title}</h2>
@@ -153,7 +153,7 @@ export function AnalysisTab({
       <div
         className={cn(
           "flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs",
-          loading ? "border-primary/30 bg-teal-soft/50" : state.status === "failed" ? "border-destructive/30 bg-destructive/5" : "bg-card",
+          loading ? "border-primary/30 bg-brand-soft/50" : state.status === "failed" ? "border-destructive/30 bg-destructive/5" : "bg-card",
         )}
       >
         <span className="flex items-center gap-2 text-muted-foreground">
