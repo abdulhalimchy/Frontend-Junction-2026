@@ -3,11 +3,11 @@
 import { ArrowUpRight, Loader2, RefreshCw, Swords, Ticket } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { formatDay, formatFuzzyDate, formatMoney } from "@/lib/format";
-import type { AnalysisIndex } from "@/lib/portfolio-insights";
+import { type AnalysisIndex, plainError } from "@/lib/portfolio-insights";
 import type {
   Alert,
   AnalysisRound,
@@ -33,6 +33,17 @@ import { api } from "./startup-dialogs";
 const hasData = (a?: PortfolioAnalysis) => !!a && Object.keys(a.data).length > 0;
 const RECENT_DAYS = 180;
 const COLLAPSED = 5;
+const POLL_EVERY_MS = 4000;
+const POLL_FOR_MS = 10 * 60 * 1000;
+
+type AnalysesStatus = { loading: number; enriching: number; version: string | null };
+
+/** A plain reason for a failed analysis. The backend's message names the data provider, so it is not shown. */
+function failure(error: string) {
+  if (/rate limit/i.test(error)) return "Too many lookups at once. Try again in a minute.";
+  if (/credit/i.test(error)) return "The data source is out of credit. Try again later.";
+  return "Try again in a moment.";
+}
 
 function fuzzy(text: string) {
   return formatFuzzyDate({ date: text, precision: text.length === 4 ? "year" : text.length === 7 ? "month" : "day" });
@@ -63,7 +74,7 @@ function useRefresh() {
       else toast.info("Already running, or nothing to look up.");
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not start it.");
+      toast.error(plainError(err, "Could not start it."));
     } finally {
       setBusy(null);
     }
@@ -72,12 +83,37 @@ function useRefresh() {
 }
 
 /** Keeps the page fresh while analyses or lookups run in the background. */
-export function InsightsPoller({ active }: { active: boolean }) {
+export function InsightsPoller({ active, version }: { active: boolean; version: string | null }) {
   const router = useRouter();
+  const seen = useRef(version);
+  useEffect(() => {
+    seen.current = version;
+  }, [version]);
   useEffect(() => {
     if (!active) return;
-    const t = setInterval(() => router.refresh(), 3000);
-    return () => clearInterval(t);
+    // Poll the small status endpoint, and reload the page's data (a full render, with its Cala calls)
+    // only when something finished. Give up after a while rather than poll forever.
+    const until = Date.now() + POLL_FOR_MS;
+    let stop = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = async () => {
+      try {
+        const s = await api<AnalysesStatus>("/api/portfolio/analyses/status");
+        if (stop) return;
+        if (s.version !== seen.current || (!s.loading && !s.enriching)) {
+          seen.current = s.version;
+          router.refresh();
+        }
+      } catch {
+        /* a failed poll is retried on the next tick */
+      }
+      if (!stop && Date.now() < until) timer = setTimeout(tick, POLL_EVERY_MS);
+    };
+    timer = setTimeout(tick, POLL_EVERY_MS);
+    return () => {
+      stop = true;
+      clearTimeout(timer);
+    };
   }, [active, router]);
   return null;
 }
@@ -86,12 +122,12 @@ export function InsightsPoller({ active }: { active: boolean }) {
 
 /** The companies-table cell: rounds after the investor's entry date (or the latest round when no date). */
 export function SinceInvested({ company, analysis }: { company: PortfolioCompany; analysis?: PortfolioAnalysis }) {
-  if (!company.calaCompanyId) return <span className="text-xs text-subtle" title="Not matched in Cala, so no funding history">—</span>;
+  if (!company.calaCompanyId) return <span className="text-xs text-subtle" title="No verified record, so no funding history">—</span>;
   if (!hasData(analysis)) {
-    if (analysis?.status === "failed") return <span className="text-xs text-destructive" title={analysis.error}>Lookup failed</span>;
+    if (analysis?.status === "failed") return <span className="text-xs text-destructive" title={failure(analysis.error)}>Lookup failed</span>;
     return (
       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-        <Loader2 className="size-3 animate-spin" /> Checking Cala
+        <Loader2 className="size-3 animate-spin" /> Checking records
       </span>
     );
   }
@@ -180,7 +216,7 @@ export function CompetitorPanel({ companies, analyses, alerts }: { companies: Po
       }
     >
       {!eligible.length ? (
-        <EmptyState compact icon={Swords} title="No active companies to check" description="Competitors are found from a company's Cala record, industry or description." />
+        <EmptyState compact icon={Swords} title="No active companies to check" description="Competitors are found from a company's verified record, industry or description." />
       ) : (
         <div className="space-y-4">
           {recent.length > 0 && (
@@ -244,7 +280,7 @@ function CompetitorsOf({ company, analysis, onRefresh, busy }: { company: Portfo
         <div className="min-w-0">
           <span className="text-sm font-medium">{company.name}</span>
           <span className="ml-2 text-xs text-muted-foreground">
-            {data?.mode === "peers" ? "Companies like it (not matched in Cala)" : "Competitors on record in Cala"}
+            {data?.mode === "peers" ? "Companies like it (no verified record to match)" : "Competitors on record"}
             {analysis.finishedAt && ` · checked ${formatDay(analysis.finishedAt)}`}
           </span>
         </div>
@@ -253,13 +289,13 @@ function CompetitorsOf({ company, analysis, onRefresh, busy }: { company: Portfo
           {loading ? "Checking" : "Refresh"}
         </Button>
       </div>
-      {analysis.status === "failed" && <p className="px-4 py-2 text-xs text-destructive">The last check failed: {analysis.error}</p>}
+      {analysis.status === "failed" && <p className="px-4 py-2 text-xs text-destructive">The last check failed. {failure(analysis.error)}</p>}
       {!data ? (
         <p className="flex items-center gap-2 px-4 py-3 text-[13px] text-muted-foreground">
-          <Loader2 className="size-3.5 animate-spin" /> Finding competitors in Cala. This takes up to a minute.
+          <Loader2 className="size-3.5 animate-spin" /> Finding competitors in the records. This takes up to a minute.
         </p>
       ) : !rows.length ? (
-        <p className="px-4 py-3 text-[13px] text-muted-foreground">Cala has no competitors on record for {company.name}.</p>
+        <p className="px-4 py-3 text-[13px] text-muted-foreground">No competitors on record for {company.name}.</p>
       ) : (
         <>
           <ul className="divide-y">
@@ -370,7 +406,7 @@ export function SlushPanel({
             ))}
           </div>
         ) : (
-          <p className="text-[13px] text-muted-foreground">None of your portfolio companies is on the Slush attendee list in Cala.</p>
+          <p className="text-[13px] text-muted-foreground">None of your portfolio companies is on the Slush attendee list.</p>
         )}
       </div>
 
@@ -401,7 +437,7 @@ export function SlushPanel({
                     </Button>
                   )}
                 </div>
-                {a?.status === "failed" && <p className="mt-1 text-xs text-destructive">The last search failed: {a.error}</p>}
+                {a?.status === "failed" && <p className="mt-1 text-xs text-destructive">The last search failed. {failure(a.error)}</p>}
                 {data &&
                   (leads.length ? (
                     <ul className="mt-2 space-y-1.5 pl-10">
