@@ -30,11 +30,11 @@ export function BarList({ data, emptyText }: { data: BarDatum[]; emptyText: stri
     <ul className="space-y-2">
       {data.map((d) => {
         const label = d.href ? (
-          <Link href={d.href} className="truncate hover:text-primary hover:underline">
+          <Link href={d.href} className={d.highlight ? "truncate font-semibold hover:text-primary hover:underline" : "truncate hover:text-primary hover:underline"}>
             {d.label}
           </Link>
         ) : (
-          <span className="truncate">{d.label}</span>
+          <span className={d.highlight ? "truncate font-semibold" : "truncate"}>{d.label}</span>
         );
         return (
           <li key={d.label} className="group text-[13px]" title={d.note ? `${d.label}: ${d.note}` : undefined}>
@@ -43,7 +43,7 @@ export function BarList({ data, emptyText }: { data: BarDatum[]; emptyText: stri
               <span className="tabular shrink-0 whitespace-nowrap text-muted-foreground">{d.display}</span>
             </div>
             <div className="mt-1 h-1.5 rounded-full bg-muted/50">
-              <div className="h-full rounded-full transition-opacity group-hover:opacity-80" style={{ width: `${Math.max(3, (d.value / max) * 100)}%`, background: MAIN }} />
+              <div className="h-full rounded-full transition-opacity group-hover:opacity-80" style={{ width: `${Math.max(3, (d.value / max) * 100)}%`, background: d.highlight ? SECOND : MAIN }} />
             </div>
           </li>
         );

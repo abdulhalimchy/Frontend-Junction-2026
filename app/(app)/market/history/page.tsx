@@ -8,7 +8,7 @@ import { Pill } from "@/components/warmline/badges";
 import { listMarketAnalyses, type MarketAnalysisRow } from "@/lib/backend/markets";
 import { ClearHistoryButton, DeleteAnalysisButton, PollWhileLoading } from "../history-controls";
 
-export const metadata: Metadata = { title: "Market analysis history" };
+export const metadata: Metadata = { title: "Analysis history" };
 
 // Every market report this account ran, as stored in the backend database. Opening one shows the saved
 // result (no Cala credit); Clear history deletes them all from the database.
@@ -22,8 +22,8 @@ export default function HistoryPage() {
             <ArrowLeft className="size-3" /> Back
           </Link>
         }
-        title="Market analysis history"
-        description="Your past market reports, most recently opened first. Opening one shows the saved result instantly; refresh it from the report to fetch fresh data."
+        title="Analysis history"
+        description="Your past market and company reports, most recently opened first. Opening one shows the saved result instantly; refresh it from the report to fetch fresh data."
       />
       <Suspense fallback={<HistoryLoading />}>
         <HistoryList />
@@ -43,8 +43,8 @@ async function HistoryList() {
     return (
       <EmptyState
         icon={History}
-        title="No market analyses yet"
-        description="Analyse a market and it will be saved here."
+        title="No analyses yet"
+        description="Analyse a market or a company and it will be saved here."
         action={
           <Link href="/market" className="text-sm text-primary hover:underline">
             Analyse a market
@@ -65,11 +65,12 @@ async function HistoryList() {
       <ul className="divide-y overflow-hidden rounded-xl border bg-card">
         {rows.map((r) => (
           <li key={r.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40">
-            <Link href={`/market/report?id=${r.id}`} className="group flex min-w-0 flex-1 items-center gap-3">
+            <Link href={`/market/${r.kind === "company" ? "company" : "report"}?id=${r.id}`} className="group flex min-w-0 flex-1 items-center gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="truncate text-sm font-semibold first-letter:uppercase">{r.title || r.sector}</span>
-                  <Pill tone="neutral">{r.place}</Pill>
+                  <Pill tone={r.kind === "company" ? "teal" : "neutral"}>{r.kind === "company" ? "Company" : "Market"}</Pill>
+                  {r.kind !== "company" || r.place !== "Worldwide" ? <Pill tone="neutral">{r.kind === "company" ? `Competitors in ${r.place}` : r.place}</Pill> : null}
                   <StatusPill status={r.status} />
                 </div>
                 <p className="mt-0.5 line-clamp-1 text-[13px] text-muted-foreground">
@@ -77,7 +78,7 @@ async function HistoryList() {
                 </p>
                 <p className="mt-0.5 text-xs text-subtle">
                   {r.typed && r.typed.toLowerCase() !== (r.title || r.sector).toLowerCase() ? `You searched “${r.typed}” · ` : ""}
-                  {r.playerCount ? `${r.playerCount} leading players · ` : ""}
+                  {r.kind !== "company" && r.playerCount ? `${r.playerCount} leading players · ` : ""}
                   {r.finishedAt ? `Updated ${when(r.finishedAt)}` : `Started ${when(r.createdAt)}`}
                   {r.runs > 1 ? ` · refreshed ${r.runs - 1}×` : ""}
                 </p>

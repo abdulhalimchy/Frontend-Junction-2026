@@ -1,92 +1,15 @@
 import { Banknote, Building2, Globe, MapPin, Users } from "lucide-react";
 import Link from "next/link";
-import { Suspense } from "react";
 import { Pill } from "@/components/warmline/badges";
-import { EmptyState, EntityAvatar, Panel } from "@/components/warmline/blocks";
+import { EmptyState, EntityAvatar } from "@/components/warmline/blocks";
 import { DataTable, type Row } from "@/components/warmline/data-table";
-import { MarketError, MarketView, ResultsLoading } from "@/components/warmline/market-view";
 import { SourceChip } from "@/components/warmline/source-chip";
-import { fetchCompanyProfile, fetchCompetitorMarket } from "@/lib/cala/company";
-import { fetchCompanyExtras } from "@/lib/cala/company-extras";
-import { CompanyKeyFacts, CompanyKeyFactsSkeleton } from "@/components/warmline/company-facts";
-import { FILING_LABEL, regionOf } from "@/lib/cala/market";
+import { FILING_LABEL } from "@/lib/cala/market";
 import { formatFuzzyDate, formatMoney, shortPlace } from "@/lib/format";
-import { groupInvestors, type InvestorGroup } from "@/lib/names";
+import type { InvestorGroup } from "@/lib/names";
 import type { CompanyProfile, FundingRound, Source } from "@/lib/types";
 
-/** One company from Cala: sourced profile, funding and investors, then the market of its competitors. */
-export async function CompanyAnalysis({ id, region }: { id: string; region: string }) {
-  let profile: CompanyProfile;
-  try {
-    profile = await fetchCompanyProfile(id);
-  } catch (e) {
-    return <MarketError error={e} />;
-  }
-
-  return (
-    <>
-      <Header p={profile} />
-      <div className="mb-6">
-        <Suspense fallback={<CompanyKeyFactsSkeleton />}>
-          <KeyFacts p={profile} />
-        </Suspense>
-      </div>
-      <div className="mb-6 grid grid-cols-3 gap-6">
-        <Panel
-          className="col-span-2"
-          title="Funding rounds"
-          description="Every round with a source. Only equity and grants are summed; filings that match a round by month and amount are merged into it."
-        >
-          <RoundsTable rounds={profile.rounds} />
-        </Panel>
-        <Panel title="Investors" description="Organisations and people with a sourced investment.">
-          <InvestorList investors={groupInvestors(profile.investors)} />
-        </Panel>
-      </div>
-
-      <div className="mb-3 mt-10 flex items-end justify-between">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">Competitors&apos; market</h2>
-          <p className="text-sm text-muted-foreground">
-            Companies identified as competitors of {profile.name}, in {regionOf(region).label}. Change the region above.
-          </p>
-        </div>
-      </div>
-      <Suspense fallback={<ResultsLoading />}>
-        <Competitors profile={profile} region={region} />
-      </Suspense>
-    </>
-  );
-}
-
-async function Competitors({ profile, region }: { profile: CompanyProfile; region: string }) {
-  let data;
-  try {
-    data = await fetchCompetitorMarket(profile, region);
-  } catch (e) {
-    return <MarketError error={e} />;
-  }
-  if (!data.companies.length) {
-    return (
-      <EmptyState
-        icon={Building2}
-        title={`No competitors with a verified profile in ${regionOf(region).label}`}
-        description={data.unresolved ? `${data.unresolved} competitor(s) were named without a company profile, so they are not shown.` : "Try a wider region."}
-      />
-    );
-  }
-  return (
-    <MarketView
-      data={data}
-      title={`Competitors of ${profile.name}`}
-      note={
-        data.unresolved > 0 ? (
-          <> {data.unresolved} more competitor(s) were named without a verified company profile, so they have no sourced data to show.</>
-        ) : null
-      }
-    />
-  );
-}
+// Company profile pieces shared by the company report (/market/company) and the company page.
 
 export function Header({ p }: { p: CompanyProfile }) {
   const facts: { icon: typeof MapPin; label: string; value: string; sources: Source[] }[] = [];
@@ -158,12 +81,6 @@ export function Header({ p }: { p: CompanyProfile }) {
       )}
     </div>
   );
-}
-
-/** Same key facts as the company page; the listing (for "Public") comes from the cached extras. */
-async function KeyFacts({ p }: { p: CompanyProfile }) {
-  const extras = await fetchCompanyExtras(p.id).catch(() => null);
-  return <CompanyKeyFacts p={p} listing={extras?.listings[0]} />;
 }
 
 const KIND_LABEL = { equity: "Equity", grant: "Grant", other: "Debt or other" } as const;

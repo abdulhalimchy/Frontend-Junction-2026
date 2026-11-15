@@ -1,11 +1,12 @@
 import type { MarketAnalysis, ReportSummary, SizeFigure } from "@/lib/backend/markets";
+import { groupInvestors, type InvestorRef } from "@/lib/names";
 import type { MarketCompany, Money } from "@/lib/types";
 
 // Chart and headline numbers for a market report, derived from the stored, sourced data (no extra requests).
 // Money is never converted: every money chart uses one currency (the most common one among the rounds) and
 // says how many rounds in other currencies it leaves out. Grants are kept apart from equity.
 
-export type BarDatum = { label: string; value: number; display: string; href?: string; note?: string };
+export type BarDatum = { label: string; value: number; display: string; href?: string; note?: string; highlight?: boolean };
 export type YearDatum = { year: number; equity: number; grants: number; rounds: number };
 
 export type ReportNumbers = {
@@ -79,12 +80,17 @@ function sizeSeries(summary: ReportSummary | undefined): ReportNumbers["size"] {
 }
 
 export function reportNumbers(a: MarketAnalysis): ReportNumbers {
-  const companies = a.players?.companies ?? [];
+  return numbersFor(a.players?.companies ?? [], a.year, a.summary);
+}
+
+/** The same numbers for any set of companies (a market's players, or a company with its competitors). */
+export function numbersFor(companies: MarketCompany[], year: number, summary?: ReportSummary): ReportNumbers {
   const currency = dominantCurrency(companies);
-  const since = a.year - 2;
+  const since = year - 2;
   const byYear = new Map<number, YearDatum>();
   const stageCount = new Map<string, number>();
-  const investors = new Map<string, { name: string; companies: Set<string> }>();
+  // Investor records of the same firm (name variants, aliases, website) count as one, as on company pages.
+  const tagged: (InvestorRef & { company: string })[] = companies.flatMap((c) => c.investors.map((i) => ({ ...i, company: c.name })));
   let otherCurrencyRounds = 0;
   let equityTotal = 0;
   let recentRounds = 0;
@@ -123,19 +129,13 @@ export function reportNumbers(a: MarketAnalysis): ReportNumbers {
       equityTotal += reported.amount;
       reportedTotals++;
     }
-    for (const i of c.investors) {
-      const key = i.name.toLowerCase().replace(/[^a-z0-9]/g, "");
-      const e = investors.get(key) ?? { name: i.name, companies: new Set<string>() };
-      e.companies.add(c.name);
-      investors.set(key, e);
-    }
   }
 
-  const years = [...byYear.values()].sort((x, y) => x.year - y.year).filter((d) => d.year >= a.year - 9);
+  const years = [...byYear.values()].sort((x, y) => x.year - y.year).filter((d) => d.year >= year - 9);
   return {
     currency,
     otherCurrencyRounds,
-    size: sizeSeries(a.summary),
+    size: sizeSeries(summary),
     companies: companies.length,
     equityTotal: currency && equityTotal ? { amount: equityTotal, currency } : null,
     reportedTotals,
@@ -144,8 +144,8 @@ export function reportNumbers(a: MarketAnalysis): ReportNumbers {
     fundingByYear: years,
     topFunded: funded.sort((x, y) => y.value - x.value).slice(0, 10),
     stages: STAGE_ORDER.filter((s) => stageCount.has(s)).map((s) => ({ label: s, value: stageCount.get(s)!, display: `${stageCount.get(s)} ${stageCount.get(s) === 1 ? "round" : "rounds"}` })),
-    investors: [...investors.values()]
-      .filter((i) => i.companies.size > 0)
+    investors: groupInvestors(tagged)
+      .map((g) => ({ name: g.name, companies: new Set(g.members.map((m) => (m as InvestorRef & { company: string }).company)) }))
       .sort((x, y) => y.companies.size - x.companies.size || x.name.localeCompare(y.name))
       .slice(0, 8)
       .map((i) => ({ label: i.name, value: i.companies.size, display: `${i.companies.size} ${i.companies.size === 1 ? "company" : "companies"}`, note: [...i.companies].join(", ") })),
