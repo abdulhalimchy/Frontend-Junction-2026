@@ -31,7 +31,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>What you give us:</strong> whether you are a founder or an investor, your goals, and what you add: startups, portfolio
-            companies, pitch decks (the PDF and its checks), market and company analyses, your watch list, alerts and event RSVPs.
+            companies, pitch decks (the PDF and its checks), market and company analyses, your watch list and alerts.
           </li>
           <li>
             <strong>To keep you signed in:</strong> sign-in tokens and the time of your last sign-in. The server&apos;s logs record requests

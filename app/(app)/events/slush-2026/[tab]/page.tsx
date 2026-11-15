@@ -28,7 +28,7 @@ async function SlushPageContent({ params, searchParams }: PageProps<"/events/slu
   const { tab } = (await params) as { tab: Tab };
   const sp = await searchParams;
   const str = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string).slice(0, 100) : undefined);
-  const filters: SideEventFilters = { day: str("day"), topic: str("topic"), q: str("q"), going: str("going") === "1" };
+  const filters: SideEventFilters = { day: str("day"), topic: str("topic"), q: str("q") };
   // Live from Cala unless USE_MOCKS=true (same switch as Market). The mock page below is the demo persona view.
   if (!mocksEnabled()) {
     if (tab === "new") redirect("/events/slush-2026/attendees");

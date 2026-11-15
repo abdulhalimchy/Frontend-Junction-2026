@@ -75,15 +75,14 @@ export const SEARCH_SUGGESTIONS: { key: string; label: string; hint: string }[] 
   return out;
 })();
 
-export type SideEventFilters = { day?: string; topic?: string; q?: string; going?: boolean };
+export type SideEventFilters = { day?: string; topic?: string; q?: string };
 
-export function filterSideEvents(events: SideEvent[], f: SideEventFilters, mine: Set<string>) {
+export function filterSideEvents(events: SideEvent[], f: SideEventFilters) {
   const needle = f.q ? normaliseName(f.q) : "";
   return events.filter(
     (e) =>
       (!f.day || e.date === f.day) &&
       (!f.topic || (e.topics as string[]).includes(f.topic)) &&
-      (!f.going || mine.has(e.id)) &&
       (!needle ||
         [e.title, e.venue ?? "", e.description, ...e.hosts, ...e.speakers.flatMap((s) => [s.name, s.org ?? ""])].some((t) =>
           normaliseName(t).includes(needle),

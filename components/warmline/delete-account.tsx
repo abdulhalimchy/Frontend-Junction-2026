@@ -25,7 +25,7 @@ const WHAT_GOES = [
   "Startups you added and their analyses",
   "Pitch decks you uploaded, the PDFs included, and their checks",
   "Your portfolio, market and company analyses",
-  "Your watch list, alerts and side-event RSVPs",
+  "Your watch list and alerts",
 ];
 
 /** Permanently deletes the account and everything in it, after the user types "delete". */

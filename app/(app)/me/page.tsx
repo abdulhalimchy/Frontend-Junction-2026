@@ -76,7 +76,7 @@ async function MeContent() {
         <Panel title="Your data" description="Download everything Warmline stores about you, as a JSON file.">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-[13px] text-muted-foreground">
-              Your profile, startups, portfolio, decks and their checks, analyses, watch list, alerts and RSVPs. See the{" "}
+              Your profile, startups, portfolio, decks and their checks, analyses, watch list and alerts. See the{" "}
               <Link href="/privacy" className="font-medium text-primary hover:underline">
                 privacy page
               </Link>

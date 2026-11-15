@@ -4,7 +4,6 @@ import Link from "next/link";
 import { SuggestInput } from "@/components/warmline/suggest-input";
 import { Pill, SlushTag } from "@/components/warmline/badges";
 import { EmptyState, Panel } from "@/components/warmline/blocks";
-import { getRsvps, type RsvpSummary } from "@/lib/backend/rsvps";
 import { listWatchItems } from "@/lib/backend/watchlist";
 import { fetchSlush } from "@/lib/cala/slush";
 import { formatDay } from "@/lib/format";
@@ -22,17 +21,14 @@ import {
 } from "@/lib/slush/side-events";
 import type { WatchItem } from "@/lib/watchlist";
 import { cn } from "@/lib/utils";
-import { GoingButton } from "./going-button";
 
 // The "Side events" tab: a guide to Slush Week side events, who is publicly named on each (hosts, sponsors,
-// speakers), which of them the user watches or are on Slush's attendee list, and the user's own "I'm going".
+// speakers), and which of them the user watches or are on Slush's attendee list.
 
 const BASE = "/events/slush-2026/side-events";
 const ACCESS_LABEL = { open: "Open", "invite-only": "Invite only", application: "Apply to join", paid: "Paid" } as const;
 
 type Ctx = {
-  rsvps: RsvpSummary;
-  rsvpError: string | null;
   watched: Map<string, WatchItem>; // by normalised name
   watchedIds: Set<string>;
   atSlush: Set<string>; // normalised names on Cala's Slush 2026 attendee list
@@ -40,24 +36,20 @@ type Ctx = {
 };
 
 export async function SideEventsTab({ filters, live }: { filters: SideEventFilters; live: boolean }) {
-  const [rsvpRes, watchRes, slushRes] = await Promise.allSettled([
-    getRsvps("slush-2026"),
+  const [watchRes, slushRes] = await Promise.allSettled([
     listWatchItems(),
     live ? fetchSlush() : Promise.reject(new Error("mocks")),
   ]);
   const watchItems = watchRes.status === "fulfilled" ? watchRes.value : [];
   const ctx: Ctx = {
-    rsvps: rsvpRes.status === "fulfilled" ? rsvpRes.value : { mine: [], counts: {} },
-    rsvpError: rsvpRes.status === "rejected" ? (rsvpRes.reason instanceof Error ? rsvpRes.reason.message : "Backend unavailable") : null,
     watched: new Map(watchItems.map((w) => [normaliseName(w.name), w])),
     watchedIds: new Set(watchItems.map((w) => w.calaId)),
     atSlush: new Set(slushRes.status === "fulfilled" ? slushRes.value.attendees.map((a) => normaliseName(a.name)) : []),
     live,
   };
-  const mine = new Set(ctx.rsvps.mine);
-  const shown = filterSideEvents(SIDE_EVENTS, filters, mine);
+  const shown = filterSideEvents(SIDE_EVENTS, filters);
   const fromWatchlist = SIDE_EVENTS.filter((e) => eventOrgs(e).some((o) => ctx.watched.has(normaliseName(o.name))));
-  const unfiltered = !filters.day && !filters.topic && !filters.q && !filters.going;
+  const unfiltered = !filters.day && !filters.topic && !filters.q;
   const checked = SIDE_EVENTS.map((e) => e.checkedOn).sort().at(-1);
 
   return (
@@ -68,7 +60,7 @@ export async function SideEventsTab({ filters, live }: { filters: SideEventFilte
         holders. Each event links to where it is listed. “Who’s there” is who those pages name: hosts, sponsors and speakers, not guest lists.
       </div>
 
-      <Filters filters={filters} goingCount={mine.size} />
+      <Filters filters={filters} />
 
       {unfiltered && fromWatchlist.length > 0 && (
         <Panel title="Hosted by companies and investors you watch" description="Side events where someone on your watch list is a host, sponsor or speaker.">
@@ -95,11 +87,7 @@ export async function SideEventsTab({ filters, live }: { filters: SideEventFilte
       )}
 
       {shown.length === 0 ? (
-        <EmptyState
-          icon={filters.going ? CalendarDays : SearchIcon}
-          title={filters.going ? "Nothing in your week yet" : "No side events match"}
-          description={filters.going ? "Press “I'm going” on a side event to add it here." : "Try another day or topic, or clear the search."}
-        />
+        <EmptyState icon={SearchIcon} title="No side events match" description="Try another day or topic, or clear the search." />
       ) : (
         SIDE_EVENT_DAYS.filter((d) => shown.some((e) => e.date === d)).map((day) => (
           <section key={day}>
@@ -162,7 +150,6 @@ function EventCard({ e, ctx }: { e: SideEvent; ctx: Ctx }) {
             </div>
           )}
         </div>
-        <GoingButton id={e.id} title={e.title} going={ctx.rsvps.mine.includes(e.id)} count={ctx.rsvps.counts[e.id] ?? 0} unavailable={ctx.rsvpError ?? undefined} />
       </div>
 
       {(orgs.length > 0 || e.speakers.length > 0) && (
@@ -229,9 +216,9 @@ function OrgChip({ name, role, ctx, calaId }: { name: string; role: "host" | "sp
   );
 }
 
-function Filters({ filters, goingCount }: { filters: SideEventFilters; goingCount: number }) {
+function Filters({ filters }: { filters: SideEventFilters }) {
   const href = (patch: Partial<Record<keyof SideEventFilters, string | undefined>>) => {
-    const next = { day: filters.day, topic: filters.topic, q: filters.q, going: filters.going ? "1" : undefined, ...patch };
+    const next = { day: filters.day, topic: filters.topic, q: filters.q, ...patch };
     const qs = new URLSearchParams(Object.entries(next).filter((kv): kv is [string, string] => !!kv[1]));
     return qs.size ? `${BASE}?${qs}` : BASE;
   };
@@ -241,15 +228,10 @@ function Filters({ filters, goingCount }: { filters: SideEventFilters; goingCoun
       <form action={BASE} className="relative">
         {filters.day && <input type="hidden" name="day" value={filters.day} />}
         {filters.topic && <input type="hidden" name="topic" value={filters.topic} />}
-        {filters.going && <input type="hidden" name="going" value="1" />}
         <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
         <SuggestInput name="q" defaultValue={filters.q} options={SEARCH_SUGGESTIONS} placeholder="Search side events, hosts, speakers or venues" className="h-11 rounded-xl bg-card pl-10 text-[15px]" />
       </form>
       <div className="flex flex-wrap items-center gap-1.5">
-        <Chip href={href({ going: filters.going ? undefined : "1" })} active={!!filters.going}>
-          <CalendarDays className="size-3.5" /> My week{goingCount > 0 && ` · ${goingCount}`}
-        </Chip>
-        <span className="mx-1 h-4 w-px bg-border" />
         <Chip href={href({ day: undefined })} active={!filters.day}>
           All days
         </Chip>

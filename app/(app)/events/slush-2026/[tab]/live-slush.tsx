@@ -3,6 +3,7 @@ import { Building2, CalendarDays, Landmark, MapPin, Search as SearchIcon, Sparkl
 import Link from "next/link";
 import { SuggestInput } from "@/components/warmline/suggest-input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SlushTag } from "@/components/warmline/badges";
 import { EmptyState, EntityAvatar, FactGrid, PageHeader, Panel, StatCard, TabNav } from "@/components/warmline/blocks";
 import { Markdown } from "@/components/warmline/markdown";
@@ -201,9 +202,9 @@ function AttendeeList({ attendees }: { attendees: SlushAttendee[] }) {
 /** One attendee with its Cala description; the name and attendance source show while details load. */
 async function AttendeeRow({ a }: { a: SlushAttendee }) {
   const r = await resolveAttendee(a).catch(() => null);
-  const detail = r?.description || (r ? "No description on record" : "Details unavailable right now");
+  const detail = r?.description || (!r ? "Details unavailable right now" : !r.id ? "Not found in Cala" : "No description on record");
   return (
-    <AttendeeRowShell a={a} href={r?.id ? `/company/${r.id}` : undefined}>
+    <AttendeeRowShell a={a} href={r?.id ? `/company/${r.id}` : undefined} missing={!r ? "unavailable" : !r.id ? "not-found" : undefined}>
       <span className="flex items-center gap-1.5">
         <span className="truncate">{detail}</span>
         {r?.hq && <span className="shrink-0 text-subtle">· {r.hq}</span>}
@@ -213,11 +214,37 @@ async function AttendeeRow({ a }: { a: SlushAttendee }) {
   );
 }
 
-function AttendeeRowShell({ a, href, children }: { a: SlushAttendee; href?: string; children?: React.ReactNode }) {
+/** Why an attendee has no company page, shown on hover over its name. */
+const NO_PAGE = {
+  "not-found": "Not found in Cala, so there is no company page for it yet.",
+  unavailable: "Could not reach Cala for this company right now. Try again later.",
+} as const;
+
+function AttendeeRowShell({
+  a,
+  href,
+  missing,
+  children,
+}: {
+  a: SlushAttendee;
+  href?: string;
+  /** Set once the lookup is done and found no page; while it runs, the name shows plain. */
+  missing?: keyof typeof NO_PAGE;
+  children?: React.ReactNode;
+}) {
   const name = href ? (
     <Link href={href} className="font-medium hover:text-primary">
       {a.name}
     </Link>
+  ) : missing ? (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span tabIndex={0} className="cursor-help font-medium underline decoration-dotted decoration-subtle underline-offset-4">
+          {a.name}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top">{NO_PAGE[missing]}</TooltipContent>
+    </Tooltip>
   ) : (
     <span className="font-medium">{a.name}</span>
   );
