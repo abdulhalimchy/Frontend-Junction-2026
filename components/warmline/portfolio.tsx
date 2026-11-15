@@ -3,7 +3,7 @@
 import { Building2, Check, Link2, Loader2, MoreHorizontal, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -19,6 +19,8 @@ import { cn } from "@/lib/utils";
 import { Pill } from "./badges";
 import { EmptyState, EntityAvatar, Panel } from "./blocks";
 import { SourceChip } from "./source-chip";
+import type { AnalysisIndex } from "@/lib/portfolio-insights";
+import { SinceInvested } from "./portfolio-insights";
 import { api, CompanyLookupDialog, StartupForm, valuesOf, type Values } from "./startup-dialogs";
 
 // -- deal terms -----------------------------------------------------------------
@@ -315,18 +317,10 @@ function formatFuzzy(text: string) {
   return formatFuzzyDate({ date: text, precision: text.length === 4 ? "year" : text.length === 7 ? "month" : "day" });
 }
 
-export function PortfolioTable({ companies }: { companies: PortfolioCompany[] }) {
-  const router = useRouter();
+/** The page polls (InsightsPoller) while one-click adds fill in and analyses run. */
+export function PortfolioTable({ companies, analyses = {} }: { companies: PortfolioCompany[]; analyses?: AnalysisIndex }) {
   const [editing, setEditing] = useState<PortfolioCompany | null>(null);
   const [removing, setRemoving] = useState<PortfolioCompany | null>(null);
-
-  // One-click adds fill in from Cala in the background: refresh until they are done.
-  const filling = companies.some((c) => c.enrichment.status === "pending" || c.enrichment.status === "processing");
-  useEffect(() => {
-    if (!filling) return;
-    const t = setInterval(() => router.refresh(), 2500);
-    return () => clearInterval(t);
-  }, [filling, router]);
 
   if (!companies.length)
     return (
@@ -348,6 +342,7 @@ export function PortfolioTable({ companies }: { companies: PortfolioCompany[] })
               <th className="py-2 pr-4 font-medium">Stage</th>
               <th className="py-2 pr-4 font-medium">Invested</th>
               <th className="py-2 pr-4 font-medium">Entry</th>
+              <th className="py-2 pr-4 font-medium">Since you invested</th>
               <th className="py-2 pr-4 text-right font-medium">Ownership</th>
               <th className="py-2 pr-4 font-medium">Status</th>
               <th className="w-10 py-2" />
@@ -393,6 +388,9 @@ export function PortfolioTable({ companies }: { companies: PortfolioCompany[] })
                   </td>
                   <td className="py-3 pr-4 text-[13px]">
                     {[c.entryRound, formatFuzzy(c.investedOn)].filter(Boolean).join(" · ") || <span className="text-subtle">—</span>}
+                  </td>
+                  <td className="max-w-64 py-3 pr-4">
+                    <SinceInvested company={c} analysis={analyses[c.id]?.rounds} />
                   </td>
                   <td className="py-3 pr-4 text-right tabular">{c.ownership !== null ? `${c.ownership}%` : <span className="text-subtle">—</span>}</td>
                   <td className="py-3 pr-4">

@@ -1,5 +1,5 @@
 import "server-only";
-import type { PortfolioCompany, PortfolioDeal, PortfolioSuggestions, Source, Startup, StartupField } from "@/lib/types";
+import type { PortfolioAnalysis, PortfolioAnalysisKind, PortfolioCompany, PortfolioDeal, PortfolioSuggestions, Source, Startup, StartupField } from "@/lib/types";
 import { backendError, backendFetch } from "./client";
 import { STARTUP_FIELDS } from "./startups";
 
@@ -160,4 +160,38 @@ export async function linkFund(calaId: string | null): Promise<PortfolioSuggesti
 export async function dismissSuggestion(calaId: string, name: string): Promise<void> {
   const res = await send("/portfolio/dismiss/", "POST", { cala_id: calaId, name });
   if (!res.ok) throw await backendError(res);
+}
+
+// -- analyses -------------------------------------------------------------------
+
+type ApiAnalysis = {
+  company: string;
+  kind: PortfolioAnalysisKind;
+  status: PortfolioAnalysis["status"];
+  data: Record<string, unknown>;
+  error: string;
+  finished_at: string | null;
+};
+
+const toAnalysis = (a: ApiAnalysis): PortfolioAnalysis => ({
+  company: a.company,
+  kind: a.kind,
+  status: a.status,
+  data: a.data ?? {},
+  error: a.error,
+  finishedAt: a.finished_at,
+});
+
+/** Every stored analysis for the portfolio. Reading never starts a run. */
+export async function listPortfolioAnalyses(): Promise<PortfolioAnalysis[]> {
+  return (await json<ApiAnalysis[]>(await backendFetch("/portfolio/analyses/"))).map(toAnalysis);
+}
+
+/** Run (or refresh) analyses in the background: `kinds` (default all) for one company (default all). */
+export async function refreshPortfolioAnalyses(body: { companyId?: string; kinds?: PortfolioAnalysisKind[] }): Promise<PortfolioAnalysis[]> {
+  const res = await send("/portfolio/analyses/refresh/", "POST", {
+    company: body.companyId ?? null,
+    ...(body.kinds?.length ? { kinds: body.kinds } : {}),
+  });
+  return (await json<ApiAnalysis[]>(res)).map(toAnalysis);
 }

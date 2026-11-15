@@ -1,13 +1,17 @@
-import { Bell, Briefcase, Coins, Landmark } from "lucide-react";
+import { Briefcase, Coins, Landmark, TrendingUp } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EmptyState, PageHeader, Panel, StatCard } from "@/components/warmline/blocks";
 import { AddCompanyButton, PortfolioTable, SuggestionsPanel } from "@/components/warmline/portfolio";
-import { getPortfolioSuggestions, listPortfolio } from "@/lib/backend/portfolio";
+import { CompetitorPanel, InsightsPoller, RefreshFundingButton, SlushPanel } from "@/components/warmline/portfolio-insights";
+import { listAlerts } from "@/lib/backend/alerts";
+import { getPortfolioSuggestions, listPortfolio, listPortfolioAnalyses } from "@/lib/backend/portfolio";
+import { normaliseName } from "@/lib/cala/market";
+import { indexAnalyses } from "@/lib/portfolio-insights";
+import { slushAttendeeIndex } from "@/lib/cala/slush";
 import { formatMoney } from "@/lib/format";
 import { getProfile } from "@/lib/session";
-import type { PortfolioCompany, PortfolioSuggestions } from "@/lib/types";
+import type { Alert, InvestorsAnalysis, PortfolioAnalysis, PortfolioCompany, PortfolioRounds, PortfolioSuggestions } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Portfolio" };
 
@@ -24,11 +28,21 @@ function totalInvested(companies: PortfolioCompany[]) {
     .join(" + ");
 }
 
+/** Companies with an equity round on record after the investor's entry date. */
+function raisedSinceEntry(companies: PortfolioCompany[], analyses: PortfolioAnalysis[]) {
+  const rounds = new Map(analyses.filter((a) => a.kind === "rounds").map((a) => [a.company, a.data as unknown as PortfolioRounds]));
+  return companies.filter((c) => {
+    const entry = c.investedOn;
+    const r = rounds.get(c.id)?.rounds ?? [];
+    return entry && r.some((x) => x.kind === "equity" && x.date && x.date.slice(0, entry.length) > entry);
+  }).length;
+}
+
 export default async function PortfolioPage() {
   const profile = await getProfile();
   if (profile.role !== "investor") redirect("/home");
 
-  const [list, suggestions] = await Promise.all([
+  const [list, suggestions, analyses, alerts, slush] = await Promise.all([
     listPortfolio().then(
       (companies) => ({ companies, error: null as string | null }),
       (e) => ({ companies: [] as PortfolioCompany[], error: message(e, "Could not load your portfolio.") }),
@@ -37,18 +51,43 @@ export default async function PortfolioPage() {
       (data) => ({ data: data as PortfolioSuggestions | null, error: null as string | null }),
       (e) => ({ data: null, error: message(e, "Could not load suggestions from Cala.") }),
     ),
+    listPortfolioAnalyses().catch(() => [] as PortfolioAnalysis[]),
+    listAlerts().catch(() => [] as Alert[]),
+    slushAttendeeIndex().then(
+      (index) => ({ index, error: null as string | null }),
+      (e) => ({ index: null, error: message(e, "Could not load Slush attendees.") }),
+    ),
   ]);
 
   const { companies } = list;
   const active = companies.filter((c) => c.status === "active");
-  const watched = companies.filter((c) => c.calaCompanyId).length;
+  const index = indexAnalyses(analyses);
+
+  // Slush: which companies attend, and which investors found for them do.
+  const attends = (id: string, name: string) => !!slush.index && (slush.index.ids.has(id) || slush.index.names.has(normaliseName(name)));
+  const attending = companies.filter((c) => c.calaCompanyId && attends(c.calaCompanyId, c.name)).map((c) => c.id);
+  const attendingInvestors = analyses
+    .filter((a) => a.kind === "investors" && a.data.investors)
+    .flatMap((a) => (a.data as unknown as InvestorsAnalysis).investors)
+    .filter((i) => attends(i.id, i.name))
+    .map((i) => i.id);
+
+  const busy =
+    analyses.some((a) => a.status === "loading") || companies.some((c) => c.enrichment.status === "pending" || c.enrichment.status === "processing");
+  const inCala = companies.filter((c) => c.calaCompanyId).length;
 
   return (
     <>
+      <InsightsPoller active={busy} />
       <PageHeader
         title="Portfolio"
         description="Your portfolio companies and what you invested. Profiles are filled in from Cala and each company's website, with sources; your investment details stay private."
-        actions={<AddCompanyButton />}
+        actions={
+          <>
+            <RefreshFundingButton count={inCala} />
+            <AddCompanyButton />
+          </>
+        }
       />
 
       {list.error ? (
@@ -60,25 +99,25 @@ export default async function PortfolioPage() {
             <StatCard label="Total invested" value={totalInvested(companies)} icon={Coins} hint="From the amounts you entered" />
             <StatCard label="Board seats" value={companies.filter((c) => c.boardSeat).length} icon={Landmark} />
             <StatCard
-              label="On your watch list"
-              value={watched}
-              icon={Bell}
-              hint={
-                <>
-                  New rounds show up on the{" "}
-                  <Link href="/watchlist" className="underline-offset-2 hover:underline">
-                    watch list
-                  </Link>
-                </>
-              }
+              label="Raised since you invested"
+              value={raisedSinceEntry(companies, analyses)}
+              icon={TrendingUp}
+              hint="Companies with a new equity round on record in Cala"
             />
           </div>
 
           <SuggestionsPanel initial={suggestions.data} error={suggestions.error} />
 
-          <Panel title="Companies" description="Edit a company to update your investment or fix its profile.">
-            <PortfolioTable companies={companies} />
+          <Panel className="mb-6" title="Companies" description="Edit a company to update your investment or fix its profile. Funding comes from Cala, with sources.">
+            <PortfolioTable companies={companies} analyses={index} />
           </Panel>
+
+          {companies.length > 0 && (
+            <>
+              <SlushPanel companies={companies} analyses={index} attending={attending} attendingInvestors={attendingInvestors} slushError={slush.error} />
+              <CompetitorPanel companies={companies} analyses={index} alerts={alerts} />
+            </>
+          )}
         </>
       )}
     </>
