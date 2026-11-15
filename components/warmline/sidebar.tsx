@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Bell,
   Bookmark,
   BriefcaseBusiness,
   CalendarDays,
@@ -19,9 +18,9 @@ import { Logo } from "./logo";
 import { RoleSwitch } from "./role-switch";
 import { StartupNav } from "./startup-nav";
 
-type Item = { href: string; match: string; label: string; icon: typeof House; badge?: number; slush?: boolean; startups?: boolean };
+type Item = { href: string; match: string; label: string; icon: typeof House; slush?: boolean; startups?: boolean };
 
-function navFor(role: Role, unread: number): Item[] {
+function navFor(role: Role): Item[] {
   const top: Item[] = [
     { href: "/home", match: "/home", label: "Home", icon: House },
     { href: "/market", match: "/market", label: "Market", icon: LineChart },
@@ -36,18 +35,16 @@ function navFor(role: Role, unread: number): Item[] {
         ];
   const rest: Item[] = [
     { href: "/watchlist", match: "/watchlist", label: "Watch list", icon: Bookmark },
-    { href: "/alerts", match: "/alerts", label: "Alerts", icon: Bell, badge: unread || undefined },
     { href: "/events/slush-2026/overview", match: "/events", label: "Events", icon: CalendarDays, slush: true },
   ];
   return [...top, ...roleItems, ...rest];
 }
 
-const liveItems = (unread: number): Item[] => [
+const LIVE_ITEMS: Item[] = [
   { href: "/market", match: "/market", label: "Market", icon: LineChart },
   { href: "/intros", match: "/intros", label: "Warm intros", icon: Route },
   { href: "/deck-check", match: "/deck-check", label: "Deck check", icon: FileSearch },
   { href: "/watchlist", match: "/watchlist", label: "Watch list", icon: Bookmark },
-  { href: "/alerts", match: "/alerts", label: "Alerts", icon: Bell, badge: unread || undefined },
   { href: "/events/slush-2026/overview", match: "/events", label: "Slush 2026", icon: CalendarDays, slush: true },
 ];
 
@@ -55,11 +52,10 @@ type StartupsProp = { items: StartupSummary[]; activeId: string; error: string |
 
 export function Sidebar(
   props: { inMenu?: boolean } & (
-    | { live: true; unread: number }
+    | { live: true }
     | {
         live?: false;
         role: Role;
-        unread: number;
         user: { name: string; org: string };
         /** Founder only: the startups listed under "My startup". */
         startups?: StartupsProp;
@@ -70,7 +66,7 @@ export function Sidebar(
   const params = useSearchParams();
   const startups = props.live ? undefined : props.startups;
   // Live mode (DEMO_DATA=off): only the pages backed by real data (Cala, the backend).
-  const items: Item[] = props.live ? liveItems(props.unread) : navFor(props.role, props.unread);
+  const items: Item[] = props.live ? LIVE_ITEMS : navFor(props.role);
   // The startup on screen: the URL's on My startup pages, else the last one chosen.
   const [chosen, setChosen] = useState(startups?.activeId ?? "");
   const fromUrl = pathname.startsWith("/startup") ? params.get("s") : null;
@@ -108,9 +104,6 @@ export function Sidebar(
               <it.icon className="size-4" />
               <span className="flex-1">{it.label}</span>
               {it.slush && <span className="size-1.5 rounded-full bg-slush" title="Slush 2026" />}
-              {it.badge && (
-                <span className="rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground tabular">{it.badge}</span>
-              )}
             </Link>
           );
         })}

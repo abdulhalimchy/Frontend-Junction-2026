@@ -18,7 +18,7 @@ import { startupHref } from "@/lib/startup-cookie";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CompanyRecord } from "@/app/(app)/company/[id]/live-company";
 import { DeckCheck } from "@/components/warmline/deck-check";
-import { getActiveStartupId, getDeckCheck, getProfile, getStartups } from "@/lib/session";
+import { getActiveStartupId, getDeckCheck, getDeckChecks, getProfile, getStartups } from "@/lib/session";
 
 const TABS = ["overview", "competitors", "investors", "connect", "deck"] as const;
 type Tab = (typeof TABS)[number];
@@ -39,7 +39,8 @@ async function StartupPageContent({ params, searchParams }: PageProps<"/startup/
   // The startup comes from the URL (?s=); without one, the last startup chosen (cookie), else the first one.
   const { items, error } = await getStartups();
   const wanted = typeof requested === "string" && items.some((s) => s.id === requested) ? requested : null;
-  if (wanted) return <AddedStartup id={wanted} tab={tab} />;
+  const check = (await searchParams).check;
+  if (wanted) return <AddedStartup id={wanted} tab={tab} check={typeof check === "string" ? check : undefined} />;
   const fallback = await getActiveStartupId(items);
   if (fallback) redirect(startupHref(fallback, tab));
 
@@ -61,7 +62,7 @@ async function StartupPageContent({ params, searchParams }: PageProps<"/startup/
 }
 
 /** A startup the founder added: its profile, competitors and investors from Cala, and the deck check. */
-async function AddedStartup({ id, tab }: { id: string; tab: Tab }) {
+async function AddedStartup({ id, tab, check }: { id: string; tab: Tab; check?: string }) {
   // Reads the stored analyses (never starts one): they run only when the founder asks on the tab.
   const [competitorsRun, investorsRun] = await Promise.all([
     getAnalysis(id, "competitors").catch(() => null),
@@ -139,7 +140,7 @@ async function AddedStartup({ id, tab }: { id: string; tab: Tab }) {
           <ConnectTab startup={startup} investors={inv} />
         </Suspense>
       )}
-      {tab === "deck" && <DeckTab key={id} companyName={startup.name} startupId={id} />}
+      {tab === "deck" && <DeckTab key={id} companyName={startup.name} startupId={id} check={check} />}
     </>
   );
 }
@@ -193,14 +194,14 @@ function ConnectSkeleton() {
 }
 
 /** Deck check for one startup: only decks uploaded for it. */
-async function DeckTab({ companyName, startupId }: { companyName: string; startupId: string }) {
-  const { result, error } = await getDeckCheck(startupId);
+async function DeckTab({ companyName, startupId, check }: { companyName: string; startupId: string; check?: string }) {
+  const { history, result, error } = await getDeckChecks(startupId, check);
   return (
     <>
       <p className="mb-4 max-w-2xl text-sm text-muted-foreground">
         Check your own deck before investors do. Each claim is matched against verified sources; anything without a source is marked “Can&apos;t verify”.
       </p>
-      <DeckCheck initial={result} companyName={companyName} loadError={error} startupId={startupId} founder />
+      <DeckCheck initial={result} history={history} companyName={companyName} loadError={error} startupId={startupId} founder />
     </>
   );
 }

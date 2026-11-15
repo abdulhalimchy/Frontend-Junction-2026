@@ -112,12 +112,9 @@ export type Alert = {
   /** Why this user sees it, e.g. "One of your competitors". */
   reason?: string;
   date: string;
-  read: boolean;
   href: string;
   /** The watched company or investor this is about (Cala id); empty for older alerts. */
   calaId?: string;
-  /** Mock fixtures only: which demo persona sees it. */
-  roles?: Role[];
   slush?: boolean;
   sources: Source[];
 };
@@ -132,6 +129,8 @@ export type DeckClaim = {
   status: ClaimStatus;
   onRecord?: string; // what Cala holds, when it differs or confirms
   sources: Source[];
+  /** Where a confirmed or differs verdict came from: the verified record or searched web sources. */
+  basis?: "record" | "web" | "";
 };
 
 export type DeckCheckStatus = "pending" | "processing" | "completed" | "failed";
@@ -146,6 +145,9 @@ export type DeckCheckResult = {
   checkedAt: string;
   claims: DeckClaim[];
 };
+
+/** One past check in the history list: the outcome without the claims themselves. */
+export type DeckCheckSummary = Omit<DeckCheckResult, "claims"> & { counts: Record<ClaimStatus, number> };
 
 /** A company in a market view, built only from sourced Cala properties. */
 export type MarketCompany = {
@@ -213,7 +215,6 @@ export type Profile = {
   goals: string[];
   privacy: {
     showInEventDirectory: boolean;
-    allowAlertsEmail: boolean;
   };
 };
 
@@ -245,6 +246,52 @@ export type Startup = {
 
 /** One row in the sidebar's startup list. */
 export type StartupSummary = { id: string; name: string; domain: string };
+
+// ---- Investor portfolio ----
+
+export type PortfolioStatus = "active" | "exited" | "written_off";
+
+/** The investor's own deal terms. Private: never looked up, never shown to anyone else. */
+export type PortfolioDeal = {
+  investedAmount: number | null;
+  currency: string;
+  entryRound: string;
+  investedOn: string; // "2023", "2023-05" or "2023-05-12"; "" when unknown
+  ownership: number | null; // percent
+  boardSeat: boolean;
+  status: PortfolioStatus;
+  notes: string;
+};
+
+/** A portfolio company: a profile filled in like a startup's, plus the deal terms. */
+export type PortfolioCompany = Startup & PortfolioDeal & { origin: "manual" | "cala" };
+
+/** A company Cala says the investor's fund invested in, not yet in the portfolio. */
+export type PortfolioSuggestion = { id: string; name: string; firstReported: string | null; sources: Source[] };
+
+export type PortfolioSuggestions = {
+  fund: { id: string; name: string } | null;
+  results: PortfolioSuggestion[];
+  capped?: boolean;
+};
+
+/** A funding round as the analyses report it (the company's own rounds, newest first). */
+export type AnalysisRound = NonNullable<StandingRow["last_round"]>;
+
+/** A portfolio company's recent rounds and money raised, from Cala. */
+export type PortfolioRounds = { rounds: AnalysisRound[]; raised: StandingRow["raised"]; capped: boolean };
+
+export type PortfolioAnalysisKind = "rounds" | "competitors" | "investors";
+
+/** A stored analysis for one portfolio company. While "loading" (a refresh), `data` still holds the last result. */
+export type PortfolioAnalysis = {
+  company: string;
+  kind: PortfolioAnalysisKind;
+  status: "loading" | "ready" | "failed";
+  data: Record<string, unknown>;
+  error: string;
+  finishedAt: string | null;
+};
 
 // ---- On-demand analyses for an added startup (Competitors and Find investors tabs) ----
 

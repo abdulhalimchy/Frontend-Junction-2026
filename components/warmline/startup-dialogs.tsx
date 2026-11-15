@@ -18,7 +18,7 @@ export function setActiveStartup(id: string) {
   document.cookie = `${STARTUP_COOKIE}=${encodeURIComponent(id)}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
 }
 
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
+export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, { ...init, headers: { "Content-Type": "application/json", ...init?.headers } });
   if (res.status === 204) return undefined as T;
   const body = await res.json().catch(() => ({}));
@@ -28,9 +28,9 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
 // -- form -------------------------------------------------------------------
 
-type Values = Record<StartupField | "domain", string>;
+export type Values = Record<StartupField | "domain", string>;
 
-const EMPTY: Values = { name: "", domain: "", description: "", founded: "", headquarters: "", employees: "", stage: "", industry: "" };
+export const EMPTY: Values = { name: "", domain: "", description: "", founded: "", headquarters: "", employees: "", stage: "", industry: "" };
 
 const FIELDS: { key: StartupField | "domain"; label: string; placeholder: string; wide?: boolean; multiline?: boolean }[] = [
   { key: "name", label: "Name", placeholder: "Northlight Robotics", wide: true },
@@ -45,13 +45,13 @@ const FIELDS: { key: StartupField | "domain"; label: string; placeholder: string
 
 const ORIGIN_LABEL = { cala: "From records", website: "From website", domain: "From domain" } as const;
 
-function valuesOf(s: Partial<Startup> | null): Values {
+export function valuesOf(s: Partial<Startup> | null): Values {
   const v = { ...EMPTY };
   for (const k of Object.keys(EMPTY) as (keyof Values)[]) if (typeof s?.[k] === "string") v[k] = s[k] as string;
   return v;
 }
 
-function StartupForm({
+export function StartupForm({
   values,
   onChange,
   suggestions,
@@ -132,6 +132,52 @@ function looksLikeDomain(text: string) {
  * found. Or fill everything in by hand. */
 export function AddStartupDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const openStartup = useOpenStartup();
+  return (
+    <CompanyLookupDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      endpoint="/api/startups"
+      title="Add a startup"
+      noun="startup"
+      onSaved={(s) => openStartup(s.id)}
+    />
+  );
+}
+
+export type LookupDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** Collection route: GET/PATCH/DELETE {endpoint}/:id, POST {endpoint} and {endpoint}/lookup. */
+  endpoint: string;
+  title: string;
+  /** "startup" or "company", used in messages. */
+  noun: string;
+  onSaved: (s: Startup) => void;
+  /** More fields under the profile form (e.g. a portfolio company's deal terms), sent with the save. */
+  extra?: React.ReactNode;
+  extraBody?: Record<string, unknown>;
+  /** Check the extra fields before saving; return an error message to block the save. */
+  validateExtra?: () => string | null;
+  /** Start right away from this Cala company (e.g. a suggestion), skipping the search. */
+  initial?: CalaCandidate | null;
+  /** Called when the dialog resets (closed or cancelled), so the owner can clear its extra fields. */
+  onReset?: () => void;
+};
+
+/** The add flow shared by founders' startups and investors' portfolio companies. */
+export function CompanyLookupDialog({
+  open,
+  onOpenChange,
+  endpoint,
+  title,
+  noun,
+  onSaved,
+  extra,
+  extraBody,
+  validateExtra,
+  initial,
+  onReset,
+}: LookupDialogProps) {
   const [step, setStep] = useState<Step>("domain");
   const [domain, setDomain] = useState("");
   const [candidates, setCandidates] = useState<CalaCandidate[]>([]);
@@ -148,7 +194,7 @@ export function AddStartupDialog({ open, onOpenChange }: { open: boolean; onOpen
     let stop = false;
     const tick = async () => {
       try {
-        const next = await api<Startup>(`/api/startups/${draft.id}`);
+        const next = await api<Startup>(`${endpoint}/${draft.id}`);
         if (stop) return;
         if (next.enrichment.status === "completed" || next.enrichment.status === "failed") {
           setDraft(next);
@@ -170,11 +216,11 @@ export function AddStartupDialog({ open, onOpenChange }: { open: boolean; onOpen
       stop = true;
       clearTimeout(timer);
     };
-  }, [step, draft]);
+  }, [step, draft, endpoint]);
 
   function reset(keepDraft: boolean) {
     // A draft the user walked away from is deleted, so it never shows up anywhere.
-    if (draft && !keepDraft) void api(`/api/startups/${draft.id}`, { method: "DELETE" }).catch(() => {});
+    if (draft && !keepDraft) void api(`${endpoint}/${draft.id}`, { method: "DELETE" }).catch(() => {});
     setStep("domain");
     setDomain("");
     setCandidates([]);
@@ -184,6 +230,7 @@ export function AddStartupDialog({ open, onOpenChange }: { open: boolean; onOpen
     setValues(EMPTY);
     setError(null);
     setBusy(false);
+    onReset?.();
   }
 
   function change(next: boolean, keepDraft = false) {
@@ -195,7 +242,7 @@ export function AddStartupDialog({ open, onOpenChange }: { open: boolean; onOpen
     setError(null);
     setBusy(true);
     try {
-      const d = await api<Startup>("/api/startups/lookup", { method: "POST", body: JSON.stringify(body) });
+      const d = await api<Startup>(`${endpoint}/lookup`, { method: "POST", body: JSON.stringify(body) });
       setDraft(d);
       setStep("looking");
     } catch (err) {
@@ -230,6 +277,15 @@ export function AddStartupDialog({ open, onOpenChange }: { open: boolean; onOpen
     void start({ calaId: c.id });
   }
 
+  // Opened from a suggestion: skip the search and look the picked company up straight away.
+  useEffect(() => {
+    if (!open || !initial || step !== "domain" || draft) return;
+    // Deferred so the cleanup cancels it when the effect re-runs (Strict Mode) and only one lookup starts.
+    const t = setTimeout(() => pick(initial), 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initial]);
+
   function manual() {
     setError(null);
     setValues({ ...EMPTY, ...(looksLikeDomain(domain) ? { domain: domain.trim() } : { name: domain.trim() }) });
@@ -238,27 +294,29 @@ export function AddStartupDialog({ open, onOpenChange }: { open: boolean; onOpen
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    if (!values.name.trim()) return setError("Give the startup a name.");
+    if (!values.name.trim()) return setError(`Give the ${noun} a name.`);
+    const extraError = validateExtra?.();
+    if (extraError) return setError(extraError);
     setError(null);
     setBusy(true);
     try {
       const s = draft
-        ? await api<Startup>(`/api/startups/${draft.id}`, { method: "PATCH", body: JSON.stringify({ ...values, is_draft: false }) })
-        : await api<Startup>("/api/startups", { method: "POST", body: JSON.stringify(values) });
+        ? await api<Startup>(`${endpoint}/${draft.id}`, { method: "PATCH", body: JSON.stringify({ ...values, ...extraBody, is_draft: false }) })
+        : await api<Startup>(endpoint, { method: "POST", body: JSON.stringify({ ...values, ...extraBody }) });
       toast.success(`${s.name} added`);
       change(false, true);
-      openStartup(s.id);
+      onSaved(s);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save the startup.");
+      setError(err instanceof Error ? err.message : `Could not save the ${noun}.`);
       setBusy(false);
     }
   }
 
   return (
     <Dialog open={open} onOpenChange={change}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add a startup</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             {step === "form"
               ? draft
@@ -397,13 +455,14 @@ export function AddStartupDialog({ open, onOpenChange }: { open: boolean; onOpen
               </p>
             )}
             <StartupForm values={values} onChange={setValues} suggestions={draft?.suggestions} />
+            {extra}
             {error && <p className="text-[13px] text-destructive">{error}</p>}
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => change(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={busy}>
-                {busy && <Loader2 className="animate-spin" />} Save startup
+                {busy && <Loader2 className="animate-spin" />} Save {noun}
               </Button>
             </DialogFooter>
           </form>
