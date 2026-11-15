@@ -4,7 +4,6 @@ import {
   Bell,
   Bookmark,
   Building2,
-  CalendarDays,
   ChevronRight,
   FileSearch,
   Landmark,
@@ -61,8 +60,8 @@ async function HomeContent() {
   const description =
     profile.role === "founder"
       ? founder?.startup
-        ? `Here is who to meet at Slush and what changed around ${founder.startup.name}.`
-        : "Add your startup to see who to meet at Slush and how you compare."
+        ? `Here are your best investor matches, your competitors, and what changed around ${founder.startup.name}.`
+        : "Add your startup to see which investors fit and how you compare."
       : "Here is what changed across your portfolio and who is new on the attendee list.";
 
   return (
@@ -217,14 +216,15 @@ async function FounderHome({ startup, competitors, investors, slushIndex }: NonN
           <EmptyState
             icon={Rocket}
             title="Add your startup"
-            description="We look it up in verified records, then show who to meet at Slush and how you compare with your competitors."
+            description="We look it up in verified records, then show which investors fit and how you compare with your competitors."
             action={<AddStartupButton />}
           />
         </MainGrid>
       </>
     );
 
-  const toMeet = (investors?.investors ?? []).filter((i) => atSlush(i.name, i.id)).slice(0, 5);
+  // Best matches overall; attending Slush is a tag, not a filter.
+  const topInvestors = [...(investors?.investors ?? [])].sort((a, b) => b.match.score - a.match.score).slice(0, 5);
   const rivals = (competitors?.companies ?? []).slice(0, 3);
 
   return (
@@ -232,8 +232,8 @@ async function FounderHome({ startup, competitors, investors, slushIndex }: NonN
       <QuickActions actions={actions} />
       <MainGrid side={<ChangesSide />}>
         <Panel
-          title={<PanelTitle icon={Landmark}>Investors to meet at Slush</PanelTitle>}
-          description="Attending, investing in companies like yours, and checked against your competitors."
+          title={<PanelTitle icon={Landmark}>Investors for you</PanelTitle>}
+          description="Investing in companies like yours, checked against your competitors."
           action={<SeeAll href={startupHref(startup.id, "investors")}>All investors</SeeAll>}
         >
           {!investors ? (
@@ -241,21 +241,24 @@ async function FounderHome({ startup, competitors, investors, slushIndex }: NonN
               compact
               icon={Landmark}
               title="Investors not checked yet"
-              description="Find who funds companies like yours; the ones attending Slush show here."
+              description="Find who funds companies like yours and how well each one fits."
               action={
                 <Button size="sm" asChild>
                   <Link href={startupHref(startup.id, "investors")}>Find investors</Link>
                 </Button>
               }
             />
-          ) : toMeet.length ? (
+          ) : topInvestors.length ? (
             <ul className="-mx-2">
-              {toMeet.map((i) => (
+              {topInvestors.map((i) => (
                 <li key={i.id}>
                   <RowLink href={`/investor/${i.id}`}>
                     <EntityAvatar name={i.name} kind="investor" />
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium group-hover:text-primary">{i.name}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-sm font-medium group-hover:text-primary">{i.name}</span>
+                        {atSlush(i.name, i.id) && <SlushTag label="At Slush" className="shrink-0" />}
+                      </div>
                       <div className="truncate text-xs text-muted-foreground">{i.why}</div>
                     </div>
                     <div className="hidden items-center gap-2 text-xs sm:flex">
@@ -268,18 +271,7 @@ async function FounderHome({ startup, competitors, investors, slushIndex }: NonN
               ))}
             </ul>
           ) : (
-            <div className="flex items-start gap-3 rounded-lg bg-muted/60 p-4">
-              <CalendarDays className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-              <div className="text-sm">
-                <p className="text-muted-foreground">
-                  None of the <span className="font-medium text-foreground tabular">{investors.investors.length}</span> investors in companies like yours are on the Slush
-                  attendee list yet.
-                </p>
-                <Link href="/intros" className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-medium text-primary hover:underline">
-                  Look for a warm intro instead <ArrowRight className="size-3.5" />
-                </Link>
-              </div>
-            </div>
+            <p className="text-sm text-muted-foreground">No investors on record for companies like yours.</p>
           )}
         </Panel>
 
@@ -311,6 +303,7 @@ async function FounderHome({ startup, competitors, investors, slushIndex }: NonN
                   <div className="flex items-center gap-2">
                     <EntityAvatar name={c.name} size="sm" />
                     <span className="truncate text-sm font-medium group-hover:text-primary">{c.name}</span>
+                    {atSlush(c.name, c.id) && <SlushTag label="At Slush" className="ml-auto shrink-0" />}
                   </div>
                   <p className="mt-2 line-clamp-2 flex-1 text-xs text-muted-foreground">{c.description?.value ?? "No description on record"}</p>
                   <div className="mt-3 border-t border-dashed pt-2.5 text-xs">
