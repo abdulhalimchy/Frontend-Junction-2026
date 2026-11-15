@@ -22,8 +22,8 @@ export function Panel({
   return (
     <section className={cn("rounded-xl border bg-card shadow-panel", className)}>
       {(title || action) && (
-        <header className="flex items-start justify-between gap-4 px-5 pt-4">
-          <div>
+        <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-5 pt-4">
+          <div className="min-w-0 flex-1 basis-48">
             {title && <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>}
             {description && <p className="mt-0.5 text-[13px] text-muted-foreground">{description}</p>}
           </div>
@@ -145,7 +145,7 @@ export function EmptyState({
 export function TabNav({ tabs, active }: { tabs: { href: string; label: string; key: string; count?: number }[]; active: string }) {
   return (
     // Scrolls sideways when the tabs don't fit; on phones they are tighter (and drop their counts) so most fit.
-    <nav className="mb-6 flex gap-0 overflow-x-auto border-b [scrollbar-width:none] sm:gap-1 [&::-webkit-scrollbar]:hidden">
+    <nav className="mb-6 flex gap-0 overflow-x-auto border-b [scrollbar-width:none] max-sm:[mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)] sm:gap-1 [&::-webkit-scrollbar]:hidden">
       {tabs.map((t) => (
         <Link
           key={t.key}

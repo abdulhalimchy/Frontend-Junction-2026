@@ -71,7 +71,7 @@ export function CompanyAsk({ companyId, companyName }: { companyId: string; comp
               type="button"
               disabled={busy}
               onClick={() => ask(q)}
-              className="h-6 rounded-full bg-muted px-2.5 text-xs text-muted-foreground transition-colors hover:bg-brand-soft hover:text-accent-foreground disabled:opacity-50"
+              className="h-8 rounded-full bg-muted px-3 text-xs sm:h-6 sm:px-2.5 text-muted-foreground transition-colors hover:bg-brand-soft hover:text-accent-foreground disabled:opacity-50"
             >
               {q}
             </button>
@@ -81,14 +81,14 @@ export function CompanyAsk({ companyId, companyName }: { companyId: string; comp
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" showCloseButton className="gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-[640px]">
-          <SheetHeader className="border-b px-8 pt-7 pb-5">
-            <SheetTitle className="flex items-center gap-2 pr-10 text-xl font-semibold tracking-tight">
+          <SheetHeader className="border-b px-5 pt-5 pb-4 sm:px-8 sm:pt-7 sm:pb-5">
+            <SheetTitle className="flex flex-wrap items-center gap-x-2 gap-y-1 pr-10 text-lg font-semibold tracking-tight sm:text-xl">
               Ask about {companyName} <AiTag />
             </SheetTitle>
             <SheetDescription>Instant verification &amp; intelligence dossier</SheetDescription>
           </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto px-8 py-7">
+          <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-8 sm:py-7">
             <div className="text-xs font-medium tracking-[0.08em] uppercase">Suggested questions</div>
             <div className="mt-3 flex flex-wrap gap-2">
               {SUGGESTED.map((q) => (
@@ -112,7 +112,7 @@ export function CompanyAsk({ companyId, companyName }: { companyId: string; comp
             <div ref={endRef} />
           </div>
 
-          <div className="border-t px-5 py-5">
+          <div className="border-t px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5">
             <AskInput value={draft} onChange={setDraft} onSubmit={() => ask(draft)} disabled={busy} placeholder="Ask anything about this company" autoFocus />
           </div>
         </SheetContent>
@@ -124,17 +124,17 @@ export function CompanyAsk({ companyId, companyName }: { companyId: string; comp
 function TurnView({ turn }: { turn: Turn }) {
   return (
     <section>
-      <div className="flex items-center gap-2 text-xs font-medium tracking-[0.08em] uppercase">
+      <div className="flex items-start gap-2 text-xs font-medium tracking-[0.08em] uppercase">
         {turn.status === "pending" ? (
-          <Loader2 className="size-4 animate-spin text-primary" />
+          <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
         ) : turn.status === "error" ? (
-          <CircleAlert className="size-4 text-destructive" />
+          <CircleAlert className="size-4 shrink-0 text-destructive" />
         ) : (
-          <CircleCheck className="size-4 text-primary" />
+          <CircleCheck className="size-4 shrink-0 text-primary" />
         )}
-        <span>Question: {turn.question}</span>
+        <span className="min-w-0 wrap-break-word">Question: {turn.question}</span>
       </div>
-      <div className="mt-3 rounded-xl border bg-card px-5 py-4">
+      <div className="mt-3 rounded-xl border bg-card px-4 py-3.5 sm:px-5 sm:py-4">
         {turn.status === "pending" && (
           <div className="space-y-2">
             <div className="text-sm text-muted-foreground">Checking sources… this can take up to a minute.</div>
@@ -183,7 +183,7 @@ function citation(href: string | undefined, sources: AskSource[]) {
       rel="noreferrer"
       title={`${n}. ${s.name}`}
       aria-label={`Source ${n}: ${s.name}`}
-      className="relative -top-px ml-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded bg-muted px-1 align-middle font-mono text-[11px] leading-none font-medium text-muted-foreground no-underline transition-colors hover:bg-brand-soft hover:text-accent-foreground"
+      className="relative -top-px ml-0.5 inline-flex h-[18px] min-w-[18px] pointer-coarse:after:absolute pointer-coarse:after:-inset-2 pointer-coarse:after:content-[''] items-center justify-center rounded bg-muted px-1 align-middle font-mono text-[11px] leading-none font-medium text-muted-foreground no-underline transition-colors hover:bg-brand-soft hover:text-accent-foreground"
     >
       {n}
     </a>
@@ -224,12 +224,13 @@ function AskInput({
             onSubmit();
           }
         }}
+        // 16px text on phones: iOS Safari zooms the page when a focused field uses a smaller size.
         rows={multiline ? 3 : 1}
         maxLength={300}
         autoFocus={autoFocus}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="min-w-0 flex-1 resize-none bg-transparent py-1.5 text-sm leading-relaxed outline-none placeholder:text-muted-foreground"
+        className="min-w-0 flex-1 resize-none bg-transparent py-1.5 text-base leading-relaxed sm:text-sm outline-none placeholder:text-muted-foreground"
       />
       <button
         type="submit"
@@ -244,5 +245,5 @@ function AskInput({
 }
 
 function AiTag() {
-  return <span className="inline-flex h-6 items-center rounded-full bg-brand-soft px-2.5 font-mono text-xs font-semibold text-accent-foreground">Warmline AI</span>;
+  return <span className="inline-flex h-6 shrink-0 items-center rounded-full whitespace-nowrap bg-brand-soft px-2.5 font-mono text-xs font-semibold text-accent-foreground">Warmline AI</span>;
 }

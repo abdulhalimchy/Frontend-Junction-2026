@@ -74,7 +74,7 @@ function StandingTable({ rows }: { rows: StandingRow[] }) {
       <table className="w-full min-w-[600px] text-sm">
         <thead>
           <tr className="border-y bg-muted/40 text-left text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-            <th className="px-5 py-2 font-medium">Company</th>
+            <th className="px-5 py-2 font-medium max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:bg-[color-mix(in_oklab,var(--muted)_40%,var(--card))]">Company</th>
             <th className="px-3 py-2 font-medium">Stage</th>
             <th className="px-3 py-2 font-medium">Raised</th>
             <th className="px-3 py-2 font-medium">Last round</th>
@@ -85,8 +85,14 @@ function StandingTable({ rows }: { rows: StandingRow[] }) {
         <tbody>
           {rows.map((r) => (
             <tr key={r.id || "you"} className={cn("border-b last:border-0", r.you && "bg-brand-soft/50")}>
-              <td className="px-5 py-3">
-                <span className="flex items-center gap-2 whitespace-nowrap">
+              {/* Pinned on phones, where the name may wrap so the other columns stay in view. */}
+              <td
+                className={cn(
+                  "px-5 py-3 max-sm:max-w-40 max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:shadow-[6px_0_8px_-8px_rgb(0_0_0/0.45)]",
+                  r.you ? "max-sm:bg-[color-mix(in_oklab,var(--brand-soft)_50%,var(--card))]" : "max-sm:bg-card",
+                )}
+              >
+                <span className="flex items-center gap-2 sm:whitespace-nowrap">
                   {r.you && <span className="h-5 w-1 shrink-0 rounded-full bg-primary" />}
                   {r.id && !r.you ? (
                     <Link href={`/company/${r.id}`} className="font-medium hover:text-primary hover:underline">

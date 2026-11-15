@@ -66,7 +66,7 @@ function Chooser() {
           <div className="mt-4 flex flex-wrap items-center gap-1.5">
             <span className="mr-1 text-xs text-muted-foreground">Try:</span>
             {MARKET_PRESETS.map((t) => (
-              <Link key={t} href={`/market/report?${new URLSearchParams({ q: t })}`} className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground">
+              <Link key={t} href={`/market/report?${new URLSearchParams({ q: t })}`} className="rounded-full border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground sm:py-0.5">
                 {t}
               </Link>
             ))}
@@ -86,7 +86,7 @@ function Chooser() {
           <div className="mt-4 flex flex-wrap items-center gap-1.5">
             <span className="mr-1 text-xs text-muted-foreground">Try:</span>
             {COMPANY_PRESETS.map((t) => (
-              <Link key={t} href={`/market/company?${new URLSearchParams({ q: t })}`} className="rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground">
+              <Link key={t} href={`/market/company?${new URLSearchParams({ q: t })}`} className="rounded-full border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground sm:py-0.5">
                 {t}
               </Link>
             ))}

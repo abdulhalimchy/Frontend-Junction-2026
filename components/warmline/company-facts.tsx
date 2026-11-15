@@ -141,19 +141,19 @@ async function WebFacts({ p, gaps, missing, leadRound }: { p: CompanyProfile; ga
     <>
       {result.facts.length > 0 && (
         <div className="mt-4 rounded-xl border border-dashed bg-card/60 p-4">
-          <div className="mb-3 flex items-center gap-2">
+          <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1">
             <Globe className="size-4 text-muted-foreground" />
             <span className="text-sm font-semibold">From the web</span>
             <Pill>Not in the records</Pill>
-            <span className="text-xs text-muted-foreground">Found by search; check the sources.</span>
+            <span className="text-xs text-muted-foreground max-sm:basis-full">Found by search; check the sources.</span>
           </div>
           <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
             {result.facts.map((f) => (
               <div key={f.key} className={f.value.length > 90 ? "sm:col-span-2" : undefined}>
                 <dt className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{f.label}</dt>
-                <dd className="mt-1 flex items-start justify-between gap-2 text-sm leading-relaxed">
+                <dd className="mt-1 flex flex-col items-start gap-1.5 text-sm leading-relaxed sm:flex-row sm:justify-between sm:gap-2">
                   <span>{f.value}</span>
-                  <SourceChip sources={f.sources} className="mt-0.5" />
+                  <SourceChip sources={f.sources} className="sm:mt-0.5" />
                 </dd>
               </div>
             ))}
@@ -197,12 +197,13 @@ export function CompanyKeyFactsSkeleton() {
 function Tile({ label, value, hint, sources }: TileData) {
   return (
     <div className="rounded-xl border bg-card p-4">
-      <div className="flex items-start justify-between gap-2">
-        <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{label}</span>
+      {/* In a narrow tile the source chip drops under the label instead of squeezing it. */}
+      <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
+        <span className="min-w-0 flex-1 basis-24 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{label}</span>
         {sources && sources.length > 0 && <SourceChip sources={sources} />}
       </div>
-      <div className="mt-3 truncate text-xl font-semibold tracking-tight tabular">{value}</div>
-      {hint && <div className="mt-1 truncate text-xs text-muted-foreground">{hint}</div>}
+      <div className="mt-3 text-xl font-semibold tracking-tight wrap-break-word tabular sm:truncate">{value}</div>
+      {hint && <div className="mt-1 text-xs text-muted-foreground sm:truncate">{hint}</div>}
     </div>
   );
 }

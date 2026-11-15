@@ -19,8 +19,9 @@ export function SourceChip({ sources, className }: { sources: Source[]; classNam
   return (
     <Popover>
       <PopoverTrigger
+        // The chip stays 20px tall; on touch screens an invisible ::after grows its tap area to about 40px.
         className={cn(
-          "inline-flex h-5 shrink-0 items-center gap-1 rounded-full border bg-card px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary data-[state=open]:border-primary/40 data-[state=open]:text-primary",
+          "relative inline-flex h-5 shrink-0 pointer-coarse:after:absolute pointer-coarse:after:-inset-x-1 pointer-coarse:after:-inset-y-2.5 pointer-coarse:after:content-[''] items-center gap-1 rounded-full border bg-card px-2 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary data-[state=open]:border-primary/40 data-[state=open]:text-primary",
           className,
         )}
         onClick={(e) => e.stopPropagation()}
@@ -28,7 +29,7 @@ export function SourceChip({ sources, className }: { sources: Source[]; classNam
         <FileText className="size-3" />
         {sources.length} {sources.length === 1 ? "source" : "sources"}
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 gap-0 p-0" onClick={(e) => e.stopPropagation()}>
+      <PopoverContent align="start" className="w-80 max-w-[calc(100vw-2rem)] gap-0 p-0" onClick={(e) => e.stopPropagation()}>
         <div className="border-b px-3 py-2 text-xs font-medium text-muted-foreground">Sources, most authoritative first</div>
         <ul className="max-h-72 divide-y overflow-auto">
           {sorted.map((s, i) => (

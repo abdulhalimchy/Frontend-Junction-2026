@@ -348,7 +348,7 @@ function citation(href: string | undefined, sources: CitedSource[]) {
       rel="noreferrer"
       title={`${n}. ${s.name}`}
       aria-label={`Source ${n}: ${s.name}`}
-      className="relative -top-px ml-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded bg-muted px-1 align-middle font-mono text-[11px] leading-none font-medium text-muted-foreground no-underline transition-colors hover:bg-brand-soft hover:text-accent-foreground"
+      className="relative -top-px ml-0.5 inline-flex h-[18px] min-w-[18px] pointer-coarse:after:absolute pointer-coarse:after:-inset-2 pointer-coarse:after:content-[''] items-center justify-center rounded bg-muted px-1 align-middle font-mono text-[11px] leading-none font-medium text-muted-foreground no-underline transition-colors hover:bg-brand-soft hover:text-accent-foreground"
     >
       {n}
     </a>

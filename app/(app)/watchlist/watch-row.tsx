@@ -58,7 +58,8 @@ export function WatchRow({ item, role, checked, changes, recentSince }: Props) {
   }
 
   return (
-    <li className="flex gap-4 px-5 py-4">
+    // On phones the tag and remove controls drop to their own line, so the name and details keep the full width.
+    <li className="flex flex-wrap gap-x-4 gap-y-3 px-5 py-4 sm:flex-nowrap">
       <EntityAvatar name={item.name || item.calaId} kind={item.entityType} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
@@ -148,7 +149,7 @@ export function WatchRow({ item, role, checked, changes, recentSince }: Props) {
         )}
       </div>
 
-      <div className="flex shrink-0 items-start gap-2">
+      <div className="flex w-full shrink-0 items-start gap-2 pl-[52px] sm:w-auto sm:pl-0">
         {pending && <Loader2 className="mt-2 size-4 animate-spin text-muted-foreground" />}
         <Select
           value={item.tag ?? NO_TAG}
@@ -158,7 +159,7 @@ export function WatchRow({ item, role, checked, changes, recentSince }: Props) {
             save({ tag }, "Tag updated");
           }}
         >
-          <SelectTrigger size="sm" className="w-40 bg-card" aria-label={`Tag for ${item.name}`}>
+          <SelectTrigger size="sm" className="flex-1 bg-card max-sm:data-[size=sm]:h-9 sm:w-40 sm:flex-none" aria-label={`Tag for ${item.name}`}>
             {/* Explicit label: Radix only fills SelectValue from the items once the menu has mounted. */}
             <SelectValue>{item.tag ? tagLabel(item.tag) : "Saved (no tag)"}</SelectValue>
           </SelectTrigger>

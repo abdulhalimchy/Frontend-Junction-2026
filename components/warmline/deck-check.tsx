@@ -408,8 +408,8 @@ function HistoryList({
               >
                 {founder && <span className="w-7 shrink-0 text-xs font-medium text-muted-foreground tabular">v{version}</span>}
                 <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-2">
-                    <span className="truncate text-[13px] font-medium">{founder ? h.fileName : h.companyName || h.fileName}</span>
+                  <span className="flex items-center gap-2 max-sm:flex-wrap max-sm:gap-x-2 max-sm:gap-y-0.5">
+                    <span className="truncate text-[13px] font-medium max-sm:basis-full">{founder ? h.fileName : h.companyName || h.fileName}</span>
                     {h === items[0] && <Pill tone="brand">Latest</Pill>}
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
@@ -610,7 +610,7 @@ function Results({ result, previous, founder }: { result: DeckCheckResult; previ
                 type="button"
                 aria-pressed={filter === f}
                 onClick={() => setFilter(f)}
-                className={cn("rounded-md px-2.5 py-1 text-xs font-medium", filter === f ? "bg-brand-soft text-accent-foreground" : "text-muted-foreground hover:bg-muted")}
+                className={cn("rounded-md px-2.5 py-2 text-xs font-medium sm:py-1", filter === f ? "bg-brand-soft text-accent-foreground" : "text-muted-foreground hover:bg-muted")}
               >
                 {FILTER_LABEL[f]}
               </button>
@@ -722,7 +722,7 @@ function SlideChip({ active, onClick, label, title, dot, disabled }: { active: b
       aria-label={title}
       aria-pressed={active}
       className={cn(
-        "relative flex h-7 min-w-7 items-center justify-center rounded-md border px-2 text-xs font-medium tabular outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+        "relative flex h-9 min-w-9 items-center sm:h-7 sm:min-w-7 justify-center rounded-md border px-2 text-xs font-medium tabular outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
         active ? "border-primary/50 bg-brand-soft text-accent-foreground" : "bg-card hover:border-primary/30",
         disabled && "border-transparent bg-transparent text-subtle hover:border-transparent",
       )}

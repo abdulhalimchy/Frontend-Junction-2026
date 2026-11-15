@@ -50,7 +50,7 @@ export function RoleSwitch({ role, className }: { role: Role; className?: string
           disabled={busy}
           onClick={() => choose(r)}
           className={cn(
-            "rounded-md px-2 py-1 capitalize transition-colors",
+            "rounded-md px-2 py-2 capitalize transition-colors sm:py-1",
             r === role ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
           )}
         >

@@ -134,7 +134,7 @@ export function InvestorsView({ data, startupName }: { data: InvestorsAnalysis; 
             <table className="w-full min-w-[760px] text-sm">
               <thead>
                 <tr className="border-y bg-muted/40 text-left text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-                  <th className="px-5 py-2 font-medium">Investor</th>
+                  <th className="px-5 py-2 font-medium max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:bg-[color-mix(in_oklab,var(--muted)_40%,var(--card))]">Investor</th>
                   <th className="px-3 py-2 font-medium">Why they fit</th>
                   <th className="px-3 py-2 font-medium">Match</th>
                   <th className="px-3 py-2 text-right font-medium">Rounds led</th>
@@ -176,14 +176,15 @@ function InvestorRow({ i }: { i: InvestorMatch }) {
   const tone = i.match.score >= 60 ? "bg-primary" : i.match.score >= 40 ? "bg-primary/60" : "bg-subtle";
   return (
     <tr className="border-b align-top last:border-0">
-      <td className="px-5 py-3">
+      {/* Pinned and narrower on phones, so the other columns stay in view while scrolling sideways. */}
+      <td className="px-5 py-3 max-sm:bg-card max-sm:pr-3 max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:shadow-[6px_0_8px_-8px_rgb(0_0_0/0.45)]">
         <div className="flex items-center gap-2.5">
           <EntityAvatar name={i.name} kind="investor" size="sm" />
           <div className="min-w-0">
-            <Link href={`/investor/${i.id}`} className="block max-w-52 truncate font-medium hover:text-primary hover:underline" title={i.name}>
+            <Link href={`/investor/${i.id}`} className="block max-w-24 truncate font-medium hover:text-primary hover:underline sm:max-w-52" title={i.name}>
               {i.name}
             </Link>
-            <span className="block max-w-52 truncate text-xs text-muted-foreground">
+            <span className="block max-w-24 truncate text-xs text-muted-foreground sm:max-w-52">
               {[i.country, i.entity_type === "Person" ? "Angel" : i.portfolio_size ? `${i.portfolio_size} portfolio cos.` : null]
                 .filter(Boolean)
                 .join(" · ") || "—"}

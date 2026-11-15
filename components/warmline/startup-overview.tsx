@@ -29,7 +29,7 @@ export function Figure({
   return (
     <div className="flex min-w-0 flex-col rounded-xl border bg-card p-4 shadow-panel transition-colors hover:border-foreground/20">
       <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{label}</span>
-      <span className={cn("mt-2 truncate text-[17px] font-semibold tracking-tight tabular", empty && "text-[15px] font-normal text-subtle italic")}>
+      <span className={cn("mt-2 text-[17px] font-semibold wrap-break-word sm:truncate tracking-tight tabular", empty && "text-[15px] font-normal text-subtle italic")}>
         {empty ? "Not on record" : children}
       </span>
       <span className="mt-auto flex flex-wrap items-end justify-between gap-x-2 gap-y-1 pt-2">

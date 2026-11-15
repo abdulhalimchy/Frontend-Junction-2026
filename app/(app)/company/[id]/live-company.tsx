@@ -204,14 +204,14 @@ function Header({ p, slush, extras }: { p: CompanyProfile; slush?: CompanyPeople
   // Cala lists industries in no particular order, so show a few rather than pretend the first is the main one.
   const industry = p.industries.length ? p.industries.slice(0, 3).map((i) => i.label ?? i.name).join(", ") + (p.industries.length > 3 ? ` +${p.industries.length - 3}` : "") : null;
   return (
-    <div className="mb-6 rounded-2xl border bg-card p-6 shadow-panel">
-      <div className="flex items-start gap-5">
-        <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-primary text-xl font-semibold text-primary-foreground">
+    <div className="mb-6 rounded-2xl border bg-card p-4 shadow-panel sm:p-6">
+      <div className="flex items-start gap-4 sm:gap-5">
+        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary text-lg font-semibold text-primary-foreground sm:size-16 sm:rounded-2xl sm:text-xl">
           {initials(p.name)}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-[26px] font-semibold tracking-tight">{p.name}</h1>
+            <h1 className="text-[22px] font-semibold tracking-tight sm:text-[26px]">{p.name}</h1>
             {slush && (
               <Link href="/events/slush-2026/overview">
                 <SlushTag label="At Slush 2026" />
@@ -244,13 +244,13 @@ function Header({ p, slush, extras }: { p: CompanyProfile; slush?: CompanyPeople
             )}
           </div>
           {p.description && (
-            <p className="mt-3 flex items-start gap-2 text-sm leading-relaxed">
-              <span>{p.description.value}</span>
-              <SourceChip sources={p.description.sources} className="mt-0.5" />
+            // On phones the description runs under the avatar (-ml-16 = avatar + gap) to use the card's full width.
+            <p className="mt-3 text-sm leading-relaxed max-sm:mt-4 max-sm:-ml-16">
+              {p.description.value} <SourceChip sources={p.description.sources} className="ml-1 align-middle" />
             </p>
           )}
           {p.legalName && p.legalName.value !== p.name && (
-            <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground max-sm:-ml-16">
               Legal name: {p.legalName.value} <SourceChip sources={p.legalName.sources} />
             </div>
           )}

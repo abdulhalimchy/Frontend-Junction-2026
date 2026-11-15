@@ -47,19 +47,23 @@ export function DataTable({
 
   if (!rows.length && empty) return <>{empty}</>;
 
+  // On phones the table scrolls sideways with its first column pinned and narrow, so the other columns stay in view.
+  const pinHead = "max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:w-40! max-sm:max-w-40 max-sm:bg-[color-mix(in_oklab,var(--muted)_50%,var(--card))]";
+  const pinCell = "max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:w-40! max-sm:max-w-40 max-sm:overflow-hidden max-sm:bg-card max-sm:shadow-[6px_0_8px_-8px_rgb(0_0_0/0.45)]";
+
   return (
     <div className="overflow-x-auto rounded-lg border">
-      <table className="w-full text-sm">
+      <table className="w-full text-sm max-sm:min-w-[36rem]">
         <thead className="bg-muted/50">
           <tr>
-            {columns.map((c) => {
+            {columns.map((c, i) => {
               const active = sort?.key === c.key;
               const Icon = !active ? ArrowUpDown : sort.dir === "asc" ? ArrowUp : ArrowDown;
               return (
                 <th
                   key={c.key}
                   style={{ width: c.width }}
-                  className={cn("h-9 px-3 text-xs font-medium text-muted-foreground", c.align === "right" ? "text-right" : "text-left")}
+                  className={cn("h-9 px-3 text-xs font-medium text-muted-foreground", c.align === "right" ? "text-right" : "text-left", i === 0 && pinHead)}
                 >
                   {c.sortable === false ? (
                     c.label
@@ -85,8 +89,8 @@ export function DataTable({
               onClick={r.href ? () => router.push(r.href!) : undefined}
               className={cn("bg-card", r.href && "cursor-pointer transition-colors hover:bg-muted/40")}
             >
-              {columns.map((c) => (
-                <td key={c.key} className={cn("px-3 py-2.5 align-middle", c.align === "right" && "text-right tabular")}>
+              {columns.map((c, i) => (
+                <td key={c.key} className={cn("px-3 py-2.5 align-middle", c.align === "right" && "text-right tabular", i === 0 && pinCell)}>
                   {r.cells[c.key]?.display ?? <span className="text-subtle">—</span>}
                 </td>
               ))}

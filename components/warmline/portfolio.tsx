@@ -335,11 +335,12 @@ export function PortfolioTable({ companies, analyses = {} }: { companies: Portfo
 
   return (
     <>
+      {/* Scrolls sideways when narrow; on phones the company column stays pinned so each row keeps its name. */}
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[760px] text-sm">
           <thead>
             <tr className="border-b text-left text-xs text-muted-foreground">
-              <th className="py-2 pr-4 font-medium">Company</th>
+              <th className="py-2 pr-4 font-medium max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:bg-card">Company</th>
               <th className="py-2 pr-4 font-medium">Stage</th>
               <th className="py-2 pr-4 font-medium">Invested</th>
               <th className="py-2 pr-4 font-medium">Entry</th>
@@ -355,7 +356,7 @@ export function PortfolioTable({ companies, analyses = {} }: { companies: Portfo
               const sub = [c.industry, c.headquarters].filter(Boolean).join(" · ");
               return (
                 <tr key={c.id} className="align-top">
-                  <td className="py-3 pr-4">
+                  <td className="py-3 pr-4 max-sm:max-w-44 max-sm:bg-card max-sm:sticky max-sm:left-0 max-sm:z-10 max-sm:shadow-[6px_0_8px_-8px_rgb(0_0_0/0.45)]">
                     <div className="flex items-start gap-3">
                       <EntityAvatar name={c.name} size="sm" />
                       <div className="min-w-0">
@@ -378,19 +379,19 @@ export function PortfolioTable({ companies, analyses = {} }: { companies: Portfo
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 pr-4">
+                  <td className="py-3 pr-4 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1.5">
                       {c.stage || <span className="text-subtle">—</span>}
                       {c.sources.stage && <SourceChip sources={c.sources.stage} />}
                     </span>
                   </td>
-                  <td className="py-3 pr-4 tabular">
+                  <td className="py-3 pr-4 whitespace-nowrap tabular">
                     {c.investedAmount !== null ? formatMoney({ amount: c.investedAmount, currency: c.currency }) : <span className="text-subtle">—</span>}
                   </td>
-                  <td className="py-3 pr-4 text-[13px]">
+                  <td className="py-3 pr-4 text-[13px] whitespace-nowrap">
                     {[c.entryRound, formatFuzzy(c.investedOn)].filter(Boolean).join(" · ") || <span className="text-subtle">—</span>}
                   </td>
-                  <td className="max-w-64 py-3 pr-4">
+                  <td className="max-w-64 min-w-44 py-3 pr-4">
                     <SinceInvested company={c} analysis={analyses[c.id]?.rounds} />
                   </td>
                   <td className="py-3 pr-4 text-right tabular">{c.ownership !== null ? `${c.ownership}%` : <span className="text-subtle">—</span>}</td>

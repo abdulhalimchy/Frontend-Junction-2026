@@ -138,7 +138,7 @@ export function CompaniesTable({ data, currency }: { data: MarketData; currency:
               <EntityAvatar name={c.name} size="sm" />
               <div className="min-w-0">
                 <div className="font-medium">{c.name}</div>
-                <div className="flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
+                <div className="flex items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground max-sm:flex-wrap sm:whitespace-nowrap">
                   {c.founded ? `Founded ${formatFuzzyDate(c.founded.value)}` : "Founded: not on record"}
                   {c.founded && <SourceChip sources={c.founded.sources} />}
                 </div>

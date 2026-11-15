@@ -66,15 +66,16 @@ export async function SideEventsTab({ filters, live }: { filters: SideEventFilte
         <Panel title="Hosted by companies and investors you watch" description="Side events where someone on your watch list is a host, sponsor or speaker.">
           <ul className="divide-y">
             {fromWatchlist.map((e) => (
-              <li key={e.id} className="flex items-center gap-3 py-2.5 text-sm">
-                <span className="w-24 shrink-0 text-xs text-muted-foreground tabular">
+              // On phones: date and host on one line, the full title under them.
+              <li key={e.id} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 py-2.5 text-sm sm:flex-nowrap">
+                <span className="shrink-0 text-xs text-muted-foreground tabular sm:w-24">
                   {formatDay(e.date)}
                   {e.start && ` · ${e.start}`}
                 </span>
-                <a href={`#${e.id}`} className="min-w-0 flex-1 truncate font-medium hover:text-primary">
+                <a href={`#${e.id}`} className="order-last basis-full font-medium hover:text-primary sm:order-none sm:min-w-0 sm:flex-1 sm:basis-auto sm:truncate">
                   {e.title}
                 </a>
-                <span className="shrink-0 text-xs text-muted-foreground">
+                <span className="min-w-0 truncate text-xs text-muted-foreground max-sm:ml-auto sm:shrink-0">
                   {eventOrgs(e)
                     .filter((o) => ctx.watched.has(normaliseName(o.name)))
                     .map((o) => o.name)
@@ -263,7 +264,7 @@ function Chip({ href, active, children }: { href: string; active: boolean; child
       href={href}
       scroll={false}
       className={cn(
-        "inline-flex h-7 items-center gap-1 rounded-full border px-3 text-xs font-medium transition-colors",
+        "inline-flex h-9 items-center gap-1 rounded-full border px-3 text-xs font-medium transition-colors sm:h-7",
         active ? "border-primary bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground",
       )}
     >
