@@ -5,6 +5,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ROLE_HOME } from "@/lib/account";
+import { cn } from "@/lib/utils";
 import { OnboardingCard } from "./onboarding-shell";
 
 type Mode = "sign-in" | "sign-up";
@@ -58,10 +59,21 @@ export function AuthForm({ mode }: { mode: Mode }) {
     }
   }, []);
 
+  // Google draws its button at a fixed pixel width (200–400px). Draw it at the slot's width, and again when
+  // the slot resizes (rotating a phone, resizing a window), so it always fills the card without sticking out.
+  const slot = useRef<HTMLDivElement>(null);
+  const drawnWidth = useRef(0);
+  const initialized = useRef(false);
+
   const render = useCallback(() => {
     const gis = window.google?.accounts.id;
-    if (!gis || !button.current || !CLIENT_ID) return;
-    gis.initialize({ client_id: CLIENT_ID, callback: onCredential, ux_mode: "popup" });
+    if (!gis || !button.current || !slot.current || !CLIENT_ID) return;
+    if (!initialized.current) {
+      gis.initialize({ client_id: CLIENT_ID, callback: onCredential, ux_mode: "popup" });
+      initialized.current = true;
+    }
+    const width = Math.round(Math.min(400, Math.max(200, slot.current.clientWidth || 320)));
+    drawnWidth.current = width;
     gis.renderButton(button.current, {
       type: "standard",
       theme: "outline",
@@ -70,7 +82,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       text: signUp ? "signup_with" : "continue_with",
       logo_alignment: "center",
       locale: "en", // match the app, not the browser's language
-      width: button.current.offsetWidth || 320,
+      width,
     });
     setReady(true);
   }, [onCredential, signUp]);
@@ -80,10 +92,30 @@ export function AuthForm({ mode }: { mode: Mode }) {
     if (window.google?.accounts) render();
   }, [render]);
 
+  useEffect(() => {
+    const el = slot.current;
+    if (!el) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    // Debounced: a window drag fires many resizes; redraw once it settles.
+    const observer = new ResizeObserver(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const width = Math.min(400, Math.max(200, el.clientWidth));
+        if (window.google?.accounts && Math.abs(width - drawnWidth.current) > 2) render();
+      }, 120);
+    });
+    observer.observe(el);
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [render]);
+
   return (
     <div className="flex w-full flex-col items-center pt-8">
-      {CLIENT_ID && <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" onReady={render} />}
+      {CLIENT_ID && <Script src="https://accounts.google.com/gsi/client?hl=en" strategy="afterInteractive" onReady={render} />}
       <OnboardingCard
+        centered
         title={signUp ? "Create your account" : "Sign in to Warmline"}
         description={signUp ? "Sign up with your Google account. Use your work account if you have one." : "Welcome back. Continue with your Google account."}
       >
@@ -93,8 +125,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
               Google sign-in is not configured. Set NEXT_PUBLIC_GOOGLE_CLIENT_ID in .env.local and restart.
             </p>
           ) : (
-            <div className="relative min-h-10">
-              <div ref={button} className={busy ? "pointer-events-none opacity-50" : undefined} />
+            <div ref={slot} className="relative min-h-10">
+              <div ref={button} className={cn("flex justify-center", busy && "pointer-events-none opacity-50")} />
               {(!ready || busy) && (
                 <div className="absolute inset-0 flex items-center justify-center gap-2 rounded-md border bg-card text-sm text-muted-foreground">
                   <Loader2 className="size-4 animate-spin" /> {busy ? "Signing you in…" : "Loading Google sign-in…"}

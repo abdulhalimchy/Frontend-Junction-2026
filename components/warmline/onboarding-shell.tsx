@@ -59,11 +59,24 @@ export function OnboardingShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function OnboardingCard({ title, description, children, wide }: { title: string; description?: string; children: React.ReactNode; wide?: boolean }) {
+export function OnboardingCard({
+  title,
+  description,
+  children,
+  wide,
+  centered,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+  wide?: boolean;
+  /** Centers the title and description, for cards whose content is centered too (sign-in, sign-up). */
+  centered?: boolean;
+}) {
   return (
     <div className={cn("page-enter w-full rounded-2xl border bg-card/90 p-6 shadow-lift backdrop-blur sm:p-8", wide ? "max-w-2xl" : "max-w-md")}>
-      <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-      {description && <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>}
+      <h1 className={cn("text-xl font-semibold tracking-tight", centered && "text-center")}>{title}</h1>
+      {description && <p className={cn("mt-1.5 text-sm text-muted-foreground", centered && "text-center")}>{description}</p>}
       <div className="mt-6">{children}</div>
     </div>
   );
