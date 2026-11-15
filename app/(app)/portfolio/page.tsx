@@ -1,101 +1,86 @@
-import { Eye, Plus } from "lucide-react";
+import { Bell, Briefcase, Coins, Landmark } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Pill } from "@/components/warmline/badges";
-import { PageHeader, Panel, StatCard } from "@/components/warmline/blocks";
-import { SourceChip } from "@/components/warmline/source-chip";
-import { CompanyTable } from "@/components/warmline/tables";
-import { getCompanies, getInvestor, getSimilarCompanies } from "@/lib/cala";
-import { formatFuzzyDate, formatMoney } from "@/lib/format";
+import { EmptyState, PageHeader, Panel, StatCard } from "@/components/warmline/blocks";
+import { AddCompanyButton, PortfolioTable, SuggestionsPanel } from "@/components/warmline/portfolio";
+import { getPortfolioSuggestions, listPortfolio } from "@/lib/backend/portfolio";
+import { formatMoney } from "@/lib/format";
 import { getProfile } from "@/lib/session";
+import type { PortfolioCompany, PortfolioSuggestions } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Portfolio" };
+
+const message = (e: unknown, fallback: string) => (e instanceof Error ? e.message : fallback);
+
+/** "€4.2M", or "€4.2M + $500k" when the investor has written checks in more than one currency. */
+function totalInvested(companies: PortfolioCompany[]) {
+  const by = new Map<string, number>();
+  for (const c of companies) if (c.investedAmount !== null) by.set(c.currency, (by.get(c.currency) ?? 0) + c.investedAmount);
+  if (!by.size) return "—";
+  return [...by.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([currency, amount]) => formatMoney({ amount, currency }))
+    .join(" + ");
+}
 
 export default async function PortfolioPage() {
   const profile = await getProfile();
   if (profile.role !== "investor") redirect("/home");
-  const { investor, check } = (await getInvestor(profile.investorId!))!;
-  const portfolio = await getCompanies(investor.portfolioIds);
 
-  // Competitor monitoring: for each portfolio company, competitors outside the portfolio and their latest round.
-  const monitored = await Promise.all(
-    portfolio.map(async (p) => ({
-      company: p,
-      competitors: (await getSimilarCompanies(p.id)).filter((s) => !investor.portfolioIds.includes(s.id)),
-    })),
-  );
-  const watchCount = monitored.reduce((n, m) => n + m.competitors.length, 0);
+  const [list, suggestions] = await Promise.all([
+    listPortfolio().then(
+      (companies) => ({ companies, error: null as string | null }),
+      (e) => ({ companies: [] as PortfolioCompany[], error: message(e, "Could not load your portfolio.") }),
+    ),
+    getPortfolioSuggestions().then(
+      (data) => ({ data: data as PortfolioSuggestions | null, error: null as string | null }),
+      (e) => ({ data: null, error: message(e, "Could not load suggestions from Cala.") }),
+    ),
+  ]);
+
+  const { companies } = list;
+  const active = companies.filter((c) => c.status === "active");
+  const watched = companies.filter((c) => c.calaCompanyId).length;
 
   return (
     <>
       <PageHeader
         title="Portfolio"
-        description={`Prefilled from Cala: companies with a sourced investment from ${investor.name}. Remove anything that is not yours.`}
-        actions={
-          <Button variant="outline" className="bg-card">
-            <Plus /> Add company
-          </Button>
-        }
+        description="Your portfolio companies and what you invested. Profiles are filled in from Cala and each company's website, with sources; your investment details stay private."
+        actions={<AddCompanyButton />}
       />
-      <div className="mb-6 grid grid-cols-3 gap-4">
-        <StatCard label="Portfolio companies" value={portfolio.length} sources={investor.description.sources} />
-        <StatCard label="Competitors monitored" value={watchCount} icon={Eye} hint="Matched on description" />
-        <StatCard
-          label="Latest investment"
-          value={check.stillActive.value.lastInvestment ? formatFuzzyDate(check.stillActive.value.lastInvestment) : "—"}
-          sources={check.stillActive.sources}
-        />
-      </div>
-      <Panel className="mb-6" title="Companies">
-        <CompanyTable companies={portfolio} />
-      </Panel>
-      <Panel title="Competitor monitoring" description="Competitors of your portfolio companies that you have not backed. New rounds appear in Alerts.">
-        <div className="space-y-4">
-          {monitored
-            .filter((m) => m.competitors.length)
-            .map(({ company, competitors }) => (
-              <div key={company.id} className="rounded-lg border">
-                <div className="flex items-center justify-between border-b bg-muted/40 px-4 py-2.5">
-                  <Link href={`/company/${company.id}`} className="text-sm font-medium hover:text-primary">
-                    {company.name}
+
+      {list.error ? (
+        <EmptyState icon={Briefcase} title="Could not load your portfolio" description={list.error} />
+      ) : (
+        <>
+          <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatCard label="Portfolio companies" value={companies.length} icon={Briefcase} hint={`${active.length} active`} />
+            <StatCard label="Total invested" value={totalInvested(companies)} icon={Coins} hint="From the amounts you entered" />
+            <StatCard label="Board seats" value={companies.filter((c) => c.boardSeat).length} icon={Landmark} />
+            <StatCard
+              label="Watched for alerts"
+              value={watched}
+              icon={Bell}
+              hint={
+                <>
+                  New rounds show up in{" "}
+                  <Link href="/alerts" className="underline-offset-2 hover:underline">
+                    Alerts
                   </Link>
-                  <span className="text-xs text-muted-foreground">{competitors.length} watched</span>
-                </div>
-                <ul className="divide-y">
-                  {competitors.map(({ company: c, reason, overlap }) => {
-                    const last = c.rounds.filter((r) => r.kind === "equity").sort((a, b) => (b.date?.date ?? "").localeCompare(a.date?.date ?? ""))[0];
-                    return (
-                      <li key={c.id} className="flex items-center gap-4 px-4 py-3">
-                        <div className="min-w-0 flex-1">
-                          <Link href={`/company/${c.id}`} className="text-sm font-medium hover:text-primary">
-                            {c.name}
-                          </Link>
-                          <div className="text-xs text-muted-foreground">{reason}</div>
-                        </div>
-                        <Pill tone={overlap === "high" ? "warning" : "neutral"}>{overlap} overlap</Pill>
-                        <div className="w-56 text-right text-[13px]">
-                          {last ? (
-                            <span className="inline-flex items-center gap-2">
-                              <span className="tabular">
-                                {last.stage} · {formatMoney(last.amount)}
-                              </span>
-                              <span className="text-xs text-muted-foreground">{formatFuzzyDate(last.date)}</span>
-                              <SourceChip sources={last.sources} />
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">No funding on record</span>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
-        </div>
-      </Panel>
+                </>
+              }
+            />
+          </div>
+
+          <SuggestionsPanel initial={suggestions.data} error={suggestions.error} />
+
+          <Panel title="Companies" description="Edit a company to update your investment or fix its profile.">
+            <PortfolioTable companies={companies} />
+          </Panel>
+        </>
+      )}
     </>
   );
 }

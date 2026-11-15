@@ -244,6 +244,34 @@ export type Startup = {
 /** One row in the sidebar's startup list. */
 export type StartupSummary = { id: string; name: string; domain: string };
 
+// ---- Investor portfolio ----
+
+export type PortfolioStatus = "active" | "exited" | "written_off";
+
+/** The investor's own deal terms. Private: never looked up, never shown to anyone else. */
+export type PortfolioDeal = {
+  investedAmount: number | null;
+  currency: string;
+  entryRound: string;
+  investedOn: string; // "2023", "2023-05" or "2023-05-12"; "" when unknown
+  ownership: number | null; // percent
+  boardSeat: boolean;
+  status: PortfolioStatus;
+  notes: string;
+};
+
+/** A portfolio company: a profile filled in like a startup's, plus the deal terms. */
+export type PortfolioCompany = Startup & PortfolioDeal & { origin: "manual" | "cala" };
+
+/** A company Cala says the investor's fund invested in, not yet in the portfolio. */
+export type PortfolioSuggestion = { id: string; name: string; firstReported: string | null; sources: Source[] };
+
+export type PortfolioSuggestions = {
+  fund: { id: string; name: string } | null;
+  results: PortfolioSuggestion[];
+  capped?: boolean;
+};
+
 // ---- On-demand analyses for an added startup (Competitors and Find investors tabs) ----
 
 /** A company in the competitors analysis. `self_reported`: the startup's own row, from what the founder entered. */
