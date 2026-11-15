@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { Pill } from "./badges";
 import { EmptyState, EntityAvatar, Panel } from "./blocks";
 import { SourceChip } from "./source-chip";
-import type { AnalysisIndex } from "@/lib/portfolio-insights";
+import { type AnalysisIndex, plainError } from "@/lib/portfolio-insights";
 import { SinceInvested } from "./portfolio-insights";
 import { api, CompanyLookupDialog, StartupForm, valuesOf, type Values } from "./startup-dialogs";
 
@@ -247,7 +247,7 @@ function EditForm({ company, onDone }: { company: PortfolioCompany; onDone: () =
       onDone();
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save.");
+      setError(plainError(err, "Could not save."));
     } finally {
       setBusy(false);
     }
@@ -282,7 +282,7 @@ function RemoveDialog({ company, onOpenChange }: { company: PortfolioCompany | n
       onOpenChange(false);
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not remove.");
+      toast.error(plainError(err, "Could not remove."));
     } finally {
       setBusy(false);
     }
@@ -293,7 +293,7 @@ function RemoveDialog({ company, onOpenChange }: { company: PortfolioCompany | n
         <DialogHeader>
           <DialogTitle>Remove {company?.name}?</DialogTitle>
           <DialogDescription>
-            This removes it from your portfolio with your investment details, and stops tracking changes on it. It cannot be undone. Its record in Cala
+            This removes it from your portfolio with your investment details, and stops tracking changes on it. It cannot be undone. Its verified record
             is not affected.
           </DialogDescription>
         </DialogHeader>
@@ -327,7 +327,7 @@ export function PortfolioTable({ companies, analyses = {} }: { companies: Portfo
       <EmptyState
         icon={Building2}
         title="No portfolio companies yet"
-        description="Add them from the Cala suggestions above, look one up by name or website, or enter the details yourself."
+        description="Add them from the suggestions above, look one up by name or website, or enter the details yourself."
         action={<AddCompanyButton />}
       />
     );
@@ -369,11 +369,11 @@ export function PortfolioTable({ companies, analyses = {} }: { companies: Portfo
                           {c.boardSeat && <Pill tone="teal">Board</Pill>}
                           {busy && (
                             <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                              <Loader2 className="size-3 animate-spin" /> Filling in from Cala
+                              <Loader2 className="size-3 animate-spin" /> Filling in from records
                             </span>
                           )}
                         </div>
-                        <div className="text-xs text-muted-foreground">{sub || c.domain || (c.calaCompanyId ? "In Cala" : "Added by hand")}</div>
+                        <div className="text-xs text-muted-foreground">{sub || c.domain || (c.calaCompanyId ? "Verified record" : "Added by hand")}</div>
                       </div>
                     </div>
                   </td>
@@ -452,10 +452,10 @@ export function SuggestionsPanel({ initial, error }: { initial: PortfolioSuggest
     try {
       await api("/api/portfolio/lookup", { method: "POST", body: JSON.stringify({ calaId: s.id, name: s.name, quick: true }) });
       drop(s.id);
-      if (!quiet) toast.success(`${s.name} added. Filling in its profile from Cala.`);
+      if (!quiet) toast.success(`${s.name} added. Filling in its profile from verified records.`);
       return true;
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : `Could not add ${s.name}.`);
+      toast.error(plainError(err, `Could not add ${s.name}.`));
       return false;
     } finally {
       mark(s.id, false);
@@ -466,7 +466,7 @@ export function SuggestionsPanel({ initial, error }: { initial: PortfolioSuggest
     const list = data?.results ?? [];
     let n = 0;
     for (const s of list) if (await add(s, true)) n++;
-    if (n) toast.success(`${n} ${n === 1 ? "company" : "companies"} added. Filling in their profiles from Cala.`);
+    if (n) toast.success(`${n} ${n === 1 ? "company" : "companies"} added. Filling in their profiles from verified records.`);
     router.refresh();
   }
 
@@ -476,7 +476,7 @@ export function SuggestionsPanel({ initial, error }: { initial: PortfolioSuggest
       await api("/api/portfolio/dismiss", { method: "POST", body: JSON.stringify({ calaId: s.id, name: s.name }) });
       drop(s.id);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not dismiss.");
+      toast.error(plainError(err, "Could not dismiss."));
     } finally {
       mark(s.id, false);
     }
@@ -486,8 +486,8 @@ export function SuggestionsPanel({ initial, error }: { initial: PortfolioSuggest
     return (
       <Panel
         className="mb-6"
-        title="Suggested from Cala"
-        description="Link your fund and we list the companies Cala has sourced investments from it in. Confirm the ones that are yours."
+        title="Suggested from records"
+        description="Link your fund and we list the companies with a sourced investment from it on record. Confirm the ones that are yours."
       >
         {error && <p className="mb-3 text-[13px] text-destructive">{error}</p>}
         <FundPicker
@@ -502,10 +502,10 @@ export function SuggestionsPanel({ initial, error }: { initial: PortfolioSuggest
   return (
     <Panel
       className="mb-6"
-      title="Suggested from Cala"
+      title="Suggested from records"
       description={
         <>
-          Companies Cala says <span className="font-medium text-foreground">{data.fund.name}</span> invested in. Add the ones that are yours; dismiss the
+          Companies the records say <span className="font-medium text-foreground">{data.fund.name}</span> invested in. Add the ones that are yours; dismiss the
           rest.
         </>
       }
@@ -566,7 +566,7 @@ export function SuggestionsPanel({ initial, error }: { initial: PortfolioSuggest
         </ul>
       ) : (
         <p className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
-          All caught up: every company Cala links to {data.fund.name} is in your portfolio or dismissed.
+          All caught up: every company on record for {data.fund.name} is in your portfolio or dismissed.
         </p>
       )}
       {!linking && data.results.length > SHOWN && (
@@ -574,7 +574,7 @@ export function SuggestionsPanel({ initial, error }: { initial: PortfolioSuggest
           {showAll ? "Show fewer" : `Show all ${data.results.length}`}
         </button>
       )}
-      {data.capped && <p className="mt-2 text-xs text-subtle">Showing the first 100 companies Cala links to this fund.</p>}
+      {data.capped && <p className="mt-2 text-xs text-subtle">Showing the first 100 companies on record for this fund.</p>}
       <AddCompanyDialog
         open={!!reviewing}
         initial={reviewing}
@@ -599,7 +599,7 @@ function FundPicker({ onLinked, onCancel }: { onLinked: (s: PortfolioSuggestions
       const { results } = await api<{ results: CalaCandidate[] }>(`/api/startups/search?${new URLSearchParams({ q: q.trim() })}`);
       setResults(results);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not search Cala.");
+      setError(plainError(err, "Could not search the records."));
     } finally {
       setBusy(null);
     }
@@ -612,7 +612,7 @@ function FundPicker({ onLinked, onCancel }: { onLinked: (s: PortfolioSuggestions
       onLinked(await api<PortfolioSuggestions>("/api/portfolio/fund", { method: "PUT", body: JSON.stringify({ calaId: c.id }) }));
       toast.success(`Linked ${c.name}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not link the fund.");
+      setError(plainError(err, "Could not link the fund."));
     } finally {
       setBusy(null);
     }
@@ -626,7 +626,7 @@ function FundPicker({ onLinked, onCancel }: { onLinked: (s: PortfolioSuggestions
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Your fund's name, e.g. Lifeline Ventures" className="pl-8" aria-label="Fund name" />
         </div>
         <Button type="submit" variant="outline" className="bg-card" disabled={q.trim().length < 2 || !!busy}>
-          {busy === "search" ? <Loader2 className="animate-spin" /> : <Sparkles />} Find in Cala
+          {busy === "search" ? <Loader2 className="animate-spin" /> : <Sparkles />} Find fund
         </Button>
         {onCancel && (
           <Button type="button" variant="ghost" onClick={onCancel}>
@@ -662,7 +662,7 @@ function FundPicker({ onLinked, onCancel }: { onLinked: (s: PortfolioSuggestions
             ))}
           </ul>
         ) : (
-          <p className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">Nothing in Cala is named “{q}”. Try another spelling.</p>
+          <p className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">No company on record is named “{q}”. Try another spelling.</p>
         ))}
     </div>
   );

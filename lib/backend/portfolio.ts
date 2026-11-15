@@ -195,3 +195,9 @@ export async function refreshPortfolioAnalyses(body: { companyId?: string; kinds
   });
   return (await json<ApiAnalysis[]>(res)).map(toAnalysis);
 }
+
+/** Cheap to poll: runs still in progress and a version that changes when one finishes. Also marks runs that
+ * died (server restart) as failed, so nothing waits on them forever. */
+export async function getPortfolioAnalysesStatus(): Promise<{ loading: number; enriching: number; version: string | null }> {
+  return json(await backendFetch("/portfolio/analyses/status/"));
+}

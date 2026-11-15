@@ -5,6 +5,6 @@ export async function GET() {
   try {
     return Response.json(await getPortfolioSuggestions());
   } catch (e) {
-    return fail(e, "Could not load suggestions from Cala.");
+    return fail(e, "Could not load suggestions.");
   }
 }

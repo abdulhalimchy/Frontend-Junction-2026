@@ -5,9 +5,9 @@ import { EmptyState, PageHeader, Panel, StatCard } from "@/components/warmline/b
 import { AddCompanyButton, PortfolioTable, SuggestionsPanel } from "@/components/warmline/portfolio";
 import { CompetitorPanel, InsightsPoller, RefreshFundingButton, SlushPanel } from "@/components/warmline/portfolio-insights";
 import { listAlerts } from "@/lib/backend/alerts";
-import { getPortfolioSuggestions, listPortfolio, listPortfolioAnalyses } from "@/lib/backend/portfolio";
+import { getPortfolioAnalysesStatus, getPortfolioSuggestions, listPortfolio, listPortfolioAnalyses } from "@/lib/backend/portfolio";
 import { normaliseName } from "@/lib/cala/market";
-import { indexAnalyses } from "@/lib/portfolio-insights";
+import { indexAnalyses, plainError } from "@/lib/portfolio-insights";
 import { slushAttendeeIndex } from "@/lib/cala/slush";
 import { formatMoney } from "@/lib/format";
 import { getProfile } from "@/lib/session";
@@ -15,7 +15,7 @@ import type { Alert, InvestorsAnalysis, PortfolioAnalysis, PortfolioCompany, Por
 
 export const metadata: Metadata = { title: "Portfolio" };
 
-const message = (e: unknown, fallback: string) => (e instanceof Error ? e.message : fallback);
+const message = plainError;
 
 /** "€4.2M", or "€4.2M + $500k" when the investor has written checks in more than one currency. */
 function totalInvested(companies: PortfolioCompany[]) {
@@ -42,16 +42,17 @@ export default async function PortfolioPage() {
   const profile = await getProfile();
   if (profile.role !== "investor") redirect("/home");
 
-  const [list, suggestions, analyses, alerts, slush] = await Promise.all([
+  const [list, suggestions, analyses, status, alerts, slush] = await Promise.all([
     listPortfolio().then(
       (companies) => ({ companies, error: null as string | null }),
       (e) => ({ companies: [] as PortfolioCompany[], error: message(e, "Could not load your portfolio.") }),
     ),
     getPortfolioSuggestions().then(
       (data) => ({ data: data as PortfolioSuggestions | null, error: null as string | null }),
-      (e) => ({ data: null, error: message(e, "Could not load suggestions from Cala.") }),
+      (e) => ({ data: null, error: message(e, "Could not load suggestions.") }),
     ),
     listPortfolioAnalyses().catch(() => [] as PortfolioAnalysis[]),
+    getPortfolioAnalysesStatus().catch(() => null),
     listAlerts().catch(() => [] as Alert[]),
     slushAttendeeIndex().then(
       (index) => ({ index, error: null as string | null }),
@@ -72,16 +73,18 @@ export default async function PortfolioPage() {
     .filter((i) => attends(i.id, i.name))
     .map((i) => i.id);
 
-  const busy =
-    analyses.some((a) => a.status === "loading") || companies.some((c) => c.enrichment.status === "pending" || c.enrichment.status === "processing");
+  // From the status endpoint, which also expires runs that died, so a dead run never keeps the page polling.
+  const busy = status
+    ? status.loading + status.enriching > 0
+    : analyses.some((a) => a.status === "loading") || companies.some((c) => c.enrichment.status === "pending" || c.enrichment.status === "processing");
   const inCala = companies.filter((c) => c.calaCompanyId).length;
 
   return (
     <>
-      <InsightsPoller active={busy} />
+      <InsightsPoller active={busy} version={status?.version ?? null} />
       <PageHeader
         title="Portfolio"
-        description="Your portfolio companies and what you invested. Profiles are filled in from Cala and each company's website, with sources; your investment details stay private."
+        description="Your portfolio companies and what you invested. Profiles are filled in from verified records and each company's website, with sources; your investment details stay private."
         actions={
           <>
             <RefreshFundingButton count={inCala} />
@@ -102,13 +105,13 @@ export default async function PortfolioPage() {
               label="Raised since you invested"
               value={raisedSinceEntry(companies, analyses)}
               icon={TrendingUp}
-              hint="Companies with a new equity round on record in Cala"
+              hint="Companies with a new equity round on record"
             />
           </div>
 
           <SuggestionsPanel initial={suggestions.data} error={suggestions.error} />
 
-          <Panel className="mb-6" title="Companies" description="Edit a company to update your investment or fix its profile. Funding comes from Cala, with sources.">
+          <Panel className="mb-6" title="Companies" description="Edit a company to update your investment or fix its profile. Funding comes from verified records, with sources.">
             <PortfolioTable companies={companies} analyses={index} />
           </Panel>
 
