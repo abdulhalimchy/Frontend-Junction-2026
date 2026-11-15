@@ -79,7 +79,7 @@ export function InvestorsView({ data, startupName }: { data: InvestorsAnalysis; 
               onClick={() => toggle(f.key)}
               className={cn(
                 "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[13px] transition-colors disabled:opacity-40",
-                on ? "border-primary/40 bg-teal-soft font-medium text-accent-foreground" : "bg-card hover:bg-muted",
+                on ? "border-primary/40 bg-brand-soft font-medium text-accent-foreground" : "bg-card hover:bg-muted",
               )}
             >
               {on && <Check className="size-3.5" />}

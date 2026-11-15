@@ -22,8 +22,8 @@ type Status = "direct" | Kind | "common" | "cold";
 
 const STATUS: Record<Status, { label: string; color: string; dot: string; pill: string }> = {
   direct: { label: "Already connected", color: "var(--success)", dot: "bg-success", pill: "bg-success-soft text-success" },
-  investor: { label: "Intro via investor", color: "var(--primary)", dot: "bg-primary", pill: "bg-teal-soft text-accent-foreground" },
-  company: { label: "Founder referral", color: "#5b67b8", dot: "bg-[#5b67b8]", pill: "bg-[#eef0fa] text-[#454f96]" },
+  investor: { label: "Intro via investor", color: "var(--primary)", dot: "bg-primary", pill: "bg-brand-soft text-accent-foreground" },
+  company: { label: "Founder referral", color: "#8792e8", dot: "bg-[#8792e8]", pill: "bg-[#1b1e36] text-[#aab3f2]" },
   event: { label: "Meet at an event", color: "var(--slush)", dot: "bg-slush", pill: "bg-slush-soft text-slush-foreground" },
   common: { label: "Common ground", color: "var(--subtle)", dot: "bg-subtle", pill: "bg-muted text-muted-foreground" },
   cold: { label: "Reach out directly", color: "var(--subtle)", dot: "bg-border", pill: "bg-muted text-muted-foreground" },
@@ -134,7 +134,7 @@ function Marker({ kind, className }: { kind: Kind; className?: string }) {
       className={cn(
         "inline-block size-2 shrink-0",
         kind === "investor" && "rounded-full bg-primary",
-        kind === "company" && "rounded-[2px] bg-[#5b67b8]",
+        kind === "company" && "rounded-[2px] bg-[#8792e8]",
         kind === "event" && "rotate-45 rounded-[1px] bg-slush",
         className,
       )}
@@ -321,7 +321,7 @@ function CompactMap({ graph, routes, focus, setFocus }: { graph: Graph; routes: 
             <button
               type="button"
               onClick={() => setFocus(on ? null : r.investor.id)}
-              className={cn("w-full px-3 py-2.5 text-left transition-colors", on && "bg-teal-soft/50")}
+              className={cn("w-full px-3 py-2.5 text-left transition-colors", on && "bg-brand-soft/50")}
             >
               <span className="flex items-center gap-2">
                 <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{r.investor.name}</span>

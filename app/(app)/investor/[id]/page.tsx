@@ -80,7 +80,7 @@ async function InvestorPageContent({ params, searchParams }: PageProps<"/investo
 
       {profile.role === "founder" && (
         <Panel className="mb-6" title="Investor check" description={`Before you pitch ${i.name}: three things to know, each with its sources.`}>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <CheckTile
               tone={a.active ? "good" : "warn"}
               label="Still active?"
@@ -110,8 +110,8 @@ async function InvestorPageContent({ params, searchParams }: PageProps<"/investo
         </Panel>
       )}
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="col-span-2 space-y-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-6">
           <Panel title="About">
             <p className="flex items-start gap-2 text-sm leading-relaxed">
               <span>{i.description.value}</span>

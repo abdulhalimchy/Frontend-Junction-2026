@@ -20,7 +20,7 @@ export function MarketView({ data, title, note }: { data: MarketData; title: str
 
   return (
     <>
-      <div className="mb-6 grid grid-cols-4 gap-4">
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="Companies analysed"
           value={s.companyCount}
@@ -50,9 +50,9 @@ export function MarketView({ data, title, note }: { data: MarketData; title: str
         />
       </div>
 
-      <div className="mb-6 grid grid-cols-3 gap-6">
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Panel
-          className="col-span-2"
+          className="lg:col-span-2"
           title="Funding by year"
           description={s.currency ? `Equity and grants as separate series, in ${cur} millions.` : "No rounds with an amount on record."}
           action={<SourceChip sources={s.yearSources} />}
@@ -224,7 +224,7 @@ function InvestorsTable({ s }: { s: MarketSummary }) {
       count: {
         display: (
           <span className="inline-flex items-center gap-2">
-            {i.companies.length > 1 && <Pill tone="teal">Repeat</Pill>}
+            {i.companies.length > 1 && <Pill tone="brand">Repeat</Pill>}
             <span className="tabular">{i.companies.length}</span>
           </span>
         ),
@@ -274,7 +274,7 @@ export function ResultsLoading() {
         <Loader2 className="size-4 animate-spin text-primary" />
         Loading companies and funding rounds. The first load of a market can take up to a minute; repeat views are cached.
       </div>
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="h-24 rounded-xl" />
         ))}

@@ -216,13 +216,13 @@ export function DeckCheck({
         className={cn(
           "relative overflow-hidden rounded-xl border bg-card transition-colors",
           empty && "border-dashed",
-          dragging && "border-primary bg-teal-soft/50",
+          dragging && "border-primary bg-brand-soft/50",
         )}
       >
         <input ref={input} type="file" accept="application/pdf" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
         {empty ? (
           <div className="flex flex-col items-center px-6 py-12 text-center">
-            <div className="flex size-12 items-center justify-center rounded-full bg-teal-soft">
+            <div className="flex size-12 items-center justify-center rounded-full bg-brand-soft">
               <Upload className="size-5 text-primary" />
             </div>
             <p className="mt-4 text-[15px] font-semibold">{founder ? "Drop your pitch deck (PDF)" : "Drop a pitch deck (PDF)"}</p>
@@ -244,7 +244,7 @@ export function DeckCheck({
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-3 p-4 sm:p-5">
-            <div className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg", failed ? "bg-destructive/10 text-destructive" : "bg-teal-soft text-primary")}>
+            <div className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg", failed ? "bg-destructive/10 text-destructive" : "bg-brand-soft text-primary")}>
               <FileText className="size-5" />
             </div>
             <div className="min-w-0 flex-1 basis-48">
@@ -285,7 +285,7 @@ export function DeckCheck({
           </div>
         )}
         {busy && (
-          <div className="h-0.5 w-full overflow-hidden bg-teal-soft" role="progressbar" aria-label="Checking the deck">
+          <div className="h-0.5 w-full overflow-hidden bg-brand-soft" role="progressbar" aria-label="Checking the deck">
             <div className="h-full w-1/3 animate-pulse rounded-full bg-primary" />
           </div>
         )}
@@ -397,7 +397,7 @@ function HistoryList({
           const active = h.id === viewing;
           const version = items.length - items.indexOf(h);
           return (
-            <li key={h.id} className={cn("group relative flex items-center border-b last:border-0", active ? "bg-teal-soft/60" : "hover:bg-muted/50")}>
+            <li key={h.id} className={cn("group relative flex items-center border-b last:border-0", active ? "bg-brand-soft/60" : "hover:bg-muted/50")}>
               {active && <span className="absolute inset-y-0 left-0 w-0.5 bg-primary" />}
               <button
                 type="button"
@@ -409,7 +409,7 @@ function HistoryList({
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2">
                     <span className="truncate text-[13px] font-medium">{founder ? h.fileName : h.companyName || h.fileName}</span>
-                    {h === items[0] && <Pill tone="teal">Latest</Pill>}
+                    {h === items[0] && <Pill tone="brand">Latest</Pill>}
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
                     {!founder && h.companyName && `${h.fileName} · `}
@@ -544,7 +544,7 @@ function Results({ result, previous, founder }: { result: DeckCheckResult; previ
                 title={active ? "Show all claims" : `Show only ${t.label.toLowerCase()} claims`}
                 className={cn(
                   "rounded-lg border p-3 text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                  active ? "border-primary/40 bg-teal-soft/50" : "hover:border-primary/30 hover:bg-muted/40",
+                  active ? "border-primary/40 bg-brand-soft/50" : "hover:border-primary/30 hover:bg-muted/40",
                 )}
               >
                 <span className="flex items-center gap-1.5 text-xs font-medium">
@@ -564,7 +564,7 @@ function Results({ result, previous, founder }: { result: DeckCheckResult; previ
 
       {founder && total > 0 && (
         <div className={cn("flex flex-wrap items-start gap-4 rounded-xl border p-5", counts.differs ? "border-warning/30 bg-warning-soft/50" : "bg-card")}>
-          <div className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg", counts.differs ? "bg-card text-warning" : "bg-teal-soft text-primary")}>
+          <div className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg", counts.differs ? "bg-card text-warning" : "bg-brand-soft text-primary")}>
             {counts.differs ? <CircleAlert className="size-5" /> : <CircleCheck className="size-5" />}
           </div>
           <div className="min-w-0 flex-1 basis-64">
@@ -609,7 +609,7 @@ function Results({ result, previous, founder }: { result: DeckCheckResult; previ
                 type="button"
                 aria-pressed={filter === f}
                 onClick={() => setFilter(f)}
-                className={cn("rounded-md px-2.5 py-1 text-xs font-medium", filter === f ? "bg-teal-soft text-accent-foreground" : "text-muted-foreground hover:bg-muted")}
+                className={cn("rounded-md px-2.5 py-1 text-xs font-medium", filter === f ? "bg-brand-soft text-accent-foreground" : "text-muted-foreground hover:bg-muted")}
               >
                 {FILTER_LABEL[f]}
               </button>
@@ -722,7 +722,7 @@ function SlideChip({ active, onClick, label, title, dot, disabled }: { active: b
       aria-pressed={active}
       className={cn(
         "relative flex h-7 min-w-7 items-center justify-center rounded-md border px-2 text-xs font-medium tabular outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-        active ? "border-primary/50 bg-teal-soft text-accent-foreground" : "bg-card hover:border-primary/30",
+        active ? "border-primary/50 bg-brand-soft text-accent-foreground" : "bg-card hover:border-primary/30",
         disabled && "border-transparent bg-transparent text-subtle hover:border-transparent",
       )}
     >

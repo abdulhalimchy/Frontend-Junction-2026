@@ -83,7 +83,7 @@ export function WatchToggle({ entityType, calaId, name, role, initial, unavailab
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size={size} className={cn("border-primary/40 bg-teal-soft text-accent-foreground hover:bg-teal-soft/70", className)} disabled={pending}>
+        <Button variant="outline" size={size} className={cn("border-primary/40 bg-brand-soft text-accent-foreground hover:bg-brand-soft/70", className)} disabled={pending}>
           {pending ? <Loader2 className="animate-spin" /> : <BookmarkCheck />}
           Watching{item.tag && <span className="font-normal text-accent-foreground/75">· {tagLabel(item.tag)}</span>}
           <ChevronDown className="opacity-60" />

@@ -39,7 +39,7 @@ export function ReportControls({ a, chips }: { a: MarketAnalysis; chips: React.R
       </div>
       {loading && <Progress a={a} />}
       {!loading && a.runs > 1 && a.changes.length > 0 && (
-        <div className="mb-6 rounded-xl border border-primary/25 bg-teal-soft/40 px-4 py-3 text-sm">
+        <div className="mb-6 rounded-xl border border-primary/25 bg-brand-soft/40 px-4 py-3 text-sm">
           <span className="font-medium">Since the last update: </span>
           <span className="text-muted-foreground">{a.changes.join(" ")}</span>
         </div>
@@ -119,7 +119,7 @@ export function DataNote() {
 }
 
 export const INSIGHT = {
-  trend: { label: "Trend", tone: "teal" },
+  trend: { label: "Trend", tone: "brand" },
   opportunity: { label: "Opportunity", tone: "success" },
   risk: { label: "Risk", tone: "warning" },
 } as const;

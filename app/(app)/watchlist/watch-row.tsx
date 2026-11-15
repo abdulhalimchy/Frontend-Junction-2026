@@ -69,7 +69,7 @@ export function WatchRow({ item, role, checked, changes, recentSince }: Props) {
           ) : (
             <span className="text-sm font-medium">{item.name || item.calaId}</span>
           )}
-          {item.origin === "suggested" && <Pill tone="teal">Suggested</Pill>}
+          {item.origin === "suggested" && <Pill tone="brand">Suggested</Pill>}
         </div>
         <div className="mt-0.5 flex flex-wrap items-center gap-x-1 text-xs text-subtle">
           <span>
@@ -209,7 +209,7 @@ function Change({ change: c, recent }: { change: Alert; recent: boolean }) {
           <Link href={c.href} className={cn("leading-snug hover:text-primary", recent ? "font-medium" : "text-muted-foreground")}>
             {c.title}
           </Link>
-          {recent && <Pill tone="teal">New</Pill>}
+          {recent && <Pill tone="brand">New</Pill>}
           {c.slush && <SlushTag label="Slush" />}
           <span className="text-xs text-subtle">{formatDay(c.date)}</span>
           <SourceChip sources={c.sources} />

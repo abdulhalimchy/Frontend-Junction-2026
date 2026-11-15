@@ -84,7 +84,7 @@ function StandingTable({ rows }: { rows: StandingRow[] }) {
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.id || "you"} className={cn("border-b last:border-0", r.you && "bg-teal-soft/50")}>
+            <tr key={r.id || "you"} className={cn("border-b last:border-0", r.you && "bg-brand-soft/50")}>
               <td className="px-5 py-3">
                 <span className="flex items-center gap-2 whitespace-nowrap">
                   {r.you && <span className="h-5 w-1 shrink-0 rounded-full bg-primary" />}
@@ -166,7 +166,7 @@ function RaisedChart({ data }: { data: CompetitorsAnalysis }) {
       description={`Equity rounds on record, summed per company; where none are on record, the reported total. ${cur ? `Compared in ${cur} only.` : ""}`}
       action={
         data.rank ? (
-          <span className="rounded-full bg-teal-soft px-2 py-0.5 text-xs font-medium text-accent-foreground">
+          <span className="rounded-full bg-brand-soft px-2 py-0.5 text-xs font-medium text-accent-foreground">
             You rank {data.rank} of {data.compared}
           </span>
         ) : undefined
@@ -175,7 +175,7 @@ function RaisedChart({ data }: { data: CompetitorsAnalysis }) {
       {compared.length ? (
         <ul className="space-y-3">
           {compared.map((r) => (
-            <li key={r.id || "you"} className={cn("rounded-lg", r.you && "-mx-2 bg-teal-soft/50 px-2 py-1.5")}>
+            <li key={r.id || "you"} className={cn("rounded-lg", r.you && "-mx-2 bg-brand-soft/50 px-2 py-1.5")}>
               <div className="mb-1 flex items-center justify-between gap-3 text-[13px]">
                 <span className={cn("truncate", r.you && "font-medium text-accent-foreground")}>
                   {r.name} {r.you && <span className="ml-1 rounded bg-card px-1 text-[10px] font-medium">You</span>}

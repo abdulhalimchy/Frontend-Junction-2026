@@ -64,7 +64,7 @@ export function StartupNav({
       <div
         className={cn(
           "group flex h-8 items-center rounded-lg pr-1 text-[13px] font-medium transition-colors",
-          onStartup ? "bg-teal-soft text-accent-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+          onStartup ? "bg-brand-soft text-accent-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
         )}
       >
         <Link href={startupHref(activeId)} className="flex h-full flex-1 items-center gap-2.5 px-2">

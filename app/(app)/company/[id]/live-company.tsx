@@ -93,8 +93,8 @@ function CompanyBody({ id, p, people, extras }: { id: string; p: CompanyProfile;
   };
 
   return (
-    <div className="grid grid-cols-3 gap-6">
-      <div className="col-span-2 space-y-6">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="lg:col-span-2 space-y-6">
         <Suspense fallback={<CompanyKeyFactsSkeleton />}>
           <CompanyKeyFacts p={p} listing={listing} />
         </Suspense>
@@ -204,7 +204,7 @@ function Header({ p, slush, extras }: { p: CompanyProfile; slush?: CompanyPeople
   // Cala lists industries in no particular order, so show a few rather than pretend the first is the main one.
   const industry = p.industries.length ? p.industries.slice(0, 3).map((i) => i.label ?? i.name).join(", ") + (p.industries.length > 3 ? ` +${p.industries.length - 3}` : "") : null;
   return (
-    <div className="mb-6 rounded-2xl border bg-card p-6 shadow-[0_1px_2px_rgba(22,24,26,0.04)]">
+    <div className="mb-6 rounded-2xl border bg-card p-6 shadow-panel">
       <div className="flex items-start gap-5">
         <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-primary text-xl font-semibold text-primary-foreground">
           {initials(p.name)}
@@ -277,7 +277,7 @@ async function Timeline({ rounds }: { rounds: FundingRound[] }) {
 function RoundCard({ r, d, latest }: { r: FundingRound; d: RoundDetail | null; latest: boolean }) {
   const grant = r.kind === "grant";
   return (
-    <div className={cn("w-60 shrink-0 rounded-xl border p-4", latest ? "border-primary/30 bg-teal-soft/40" : "bg-background/60")}>
+    <div className={cn("w-60 shrink-0 rounded-xl border p-4", latest ? "border-primary/30 bg-brand-soft/40" : "bg-background/60")}>
       <div className="flex items-center gap-2">
         <span className={cn("size-2.5 rounded-full", latest ? "bg-primary" : "bg-muted-foreground/40")} />
         <span className="text-sm font-semibold">{r.stage}</span>
@@ -285,7 +285,7 @@ function RoundCard({ r, d, latest }: { r: FundingRound; d: RoundDetail | null; l
       </div>
       <div className="mt-3 flex items-center justify-between">
         <span className="text-xl font-semibold tabular">{formatMoney(r.amount)}</span>
-        {latest ? <Pill tone="teal">Latest</Pill> : grant ? <Pill tone="success">Grant</Pill> : null}
+        {latest ? <Pill tone="brand">Latest</Pill> : grant ? <Pill tone="success">Grant</Pill> : null}
       </div>
       <div className="mt-3 space-y-1 text-[13px]">
         {d && d.leads.length > 0 && (

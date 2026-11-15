@@ -26,7 +26,7 @@ export function FundingTimeline({ rounds, investors }: { rounds: FundingRound[];
   return (
     <div>
       <div className="mb-4 grid grid-cols-2 gap-3">
-        <div className="rounded-lg bg-teal-soft/60 px-3 py-2">
+        <div className="rounded-lg bg-brand-soft/60 px-3 py-2">
           <div className="text-xs text-muted-foreground">Equity raised</div>
           <div className="text-sm font-semibold tabular">{formatTotals(equity)}</div>
         </div>

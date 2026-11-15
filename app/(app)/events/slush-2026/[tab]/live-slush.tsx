@@ -72,7 +72,7 @@ export async function LiveSlush({ tab, q, page, filters }: { tab: LiveTab; q: st
 
       {tab === "overview" && (
         <div className="space-y-6">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <StatCard label="Companies on the attendee list" value={attendees.length.toLocaleString("en")} icon={Building2} sources={e.listSources} tone="slush" />
             <StatCard
               label="Added in the last 7 days"
@@ -279,7 +279,7 @@ function citation(href: string | undefined, sources: CitedSource[]) {
       rel="noreferrer"
       title={`${n}. ${s.name}`}
       aria-label={`Source ${n}: ${s.name}`}
-      className="relative -top-px ml-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded bg-muted px-1 align-middle font-mono text-[11px] leading-none font-medium text-muted-foreground no-underline transition-colors hover:bg-teal-soft hover:text-accent-foreground"
+      className="relative -top-px ml-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded bg-muted px-1 align-middle font-mono text-[11px] leading-none font-medium text-muted-foreground no-underline transition-colors hover:bg-brand-soft hover:text-accent-foreground"
     >
       {n}
     </a>

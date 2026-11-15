@@ -51,12 +51,24 @@ export default function LandingPage() {
 
 const WRAP = "mx-auto w-full max-w-[1120px] px-5 sm:px-8";
 
+/** Hero grid cells that light up: [column, row, delay in seconds], in 72px cells. */
+const HERO_CELLS = [
+  [1, 2, 0],
+  [4, 5, 2.5],
+  [7, 1, 4],
+  [10, 4, 1.5],
+  [13, 2, 5],
+  [16, 6, 3],
+  [3, 7, 6],
+  [18, 1, 0.8],
+] as const;
+
 /* ------------------------------------------------------------------ Nav */
 
 function Nav() {
   return (
-    <header className="sticky top-0 z-30 border-b border-transparent bg-background/85 backdrop-blur [border-image:linear-gradient(to_right,transparent,var(--border),transparent)_1]">
-      <div className={cn(WRAP, "flex h-16 items-center gap-8")}>
+    <header className="sticky top-0 z-30 border-b border-transparent bg-background/70 backdrop-blur-xl [border-image:linear-gradient(to_right,transparent,var(--border),transparent)_1]">
+      <div className={cn(WRAP, "flex h-16 items-center gap-4 sm:gap-8")}>
         <Logo href="/" />
         <nav className="hidden items-center gap-6 text-[13px] font-medium text-muted-foreground md:flex">
           <a href="#founders" className="transition-colors hover:text-foreground">
@@ -90,12 +102,18 @@ function Nav() {
 function Hero() {
   return (
     <section className="relative overflow-hidden">
-      <div aria-hidden className="pointer-events-none absolute -top-40 right-[-10%] size-[520px] rounded-full bg-teal/10 blur-3xl" />
+      {/* The backdrop: a grid with a few cells that breathe, and a warm glow behind the record. */}
+      <div aria-hidden className="hero-grid pointer-events-none absolute inset-0">
+        {HERO_CELLS.map(([col, row, delay]) => (
+          <span key={`${col}-${row}`} className="hero-cell" style={{ left: col * 72, top: row * 72, animationDelay: `${delay}s` }} />
+        ))}
+      </div>
+      <div aria-hidden className="pointer-events-none absolute -top-40 right-[-10%] size-[520px] rounded-full bg-brand/15 blur-3xl" />
       <div className={cn(WRAP, "relative grid grid-cols-[minmax(0,1fr)] items-center gap-12 pt-14 pb-20 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-10 lg:pt-20 lg:pb-28")}>
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-700">
           <SlushTag label="Slush 2026 event space is open · Helsinki, 18–19 Nov" />
-          <h1 className="mt-5 max-w-[15ch] text-[40px] leading-[1.05] font-semibold tracking-[-0.03em] text-balance sm:text-[56px]">
-            Company data that shows its sources.
+          <h1 className="mt-5 max-w-[15ch] text-[40px] leading-[1.05] font-bold tracking-[-0.035em] text-balance sm:text-[56px] lg:text-[64px]">
+            Company data that shows its <span className="text-gradient">sources.</span>
           </h1>
           <p className="mt-5 max-w-[54ch] text-[17px] leading-relaxed text-muted-foreground">
             Warmline is where founders and investors look each other up before they meet: funding history, competitors,
@@ -103,12 +121,12 @@ function Hero() {
             from.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-2.5">
-            <Button className="h-11 px-5 text-[15px]" asChild>
+            <Button variant="cta" className="group h-11 px-5 text-[15px]" asChild>
               <Link href="/sign-up">
-                Create your account <ArrowRight />
+                Create your account <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
               </Link>
             </Button>
-            <Button variant="outline" className="h-11 bg-card px-5 text-[15px]" asChild>
+            <Button variant="outline" className="h-11 px-5 text-[15px]" asChild>
               <Link href="/sign-in">Sign in</Link>
             </Button>
           </div>
@@ -145,7 +163,7 @@ function RecordCard() {
   ];
   return (
     <div className="animate-in fade-in slide-in-from-bottom-3 mx-auto w-full max-w-[480px] delay-150 duration-700 fill-mode-both lg:mr-0">
-      <div className="rounded-2xl border bg-card p-5 shadow-[0_12px_40px_rgba(22,24,26,0.07)] sm:p-6">
+      <div className="rounded-2xl border bg-card/90 p-5 shadow-lift backdrop-blur sm:p-6">
         <div className="flex items-center gap-3">
           <div className="flex size-11 items-center justify-center rounded-lg bg-muted text-sm font-semibold">NR</div>
           <div className="min-w-0">
@@ -172,7 +190,7 @@ function RecordCard() {
         </dl>
       </div>
       {/* The opened chip's popover, hanging off the last row. */}
-      <div className="relative z-10 -mt-4 ml-auto w-[min(20rem,calc(100%-1.25rem))] rounded-xl border bg-card shadow-[0_16px_40px_rgba(22,24,26,0.12)]">
+      <div className="relative z-10 -mt-4 ml-auto w-[min(20rem,calc(100%-1.25rem))] rounded-xl border border-primary/25 bg-popover shadow-lift">
         <div className="border-b px-3 py-2 text-xs font-medium text-muted-foreground">Sources, most authoritative first</div>
         <ul className="divide-y">
           {[
@@ -218,7 +236,7 @@ const INVESTOR: Feature[] = [
 function Audiences() {
   return (
     <section className={cn(WRAP, "pb-24")}>
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="reveal grid gap-5 lg:grid-cols-2">
         <AudienceCard
           id="founders"
           icon={Rocket}
@@ -259,17 +277,17 @@ function AudienceCard({
   dark?: boolean;
 }) {
   return (
-    <article id={id} className={cn("flex scroll-mt-24 flex-col rounded-2xl border p-6 sm:p-8", dark ? "border-foreground bg-foreground text-background" : "bg-card")}>
-      <div className={cn("flex items-center gap-2 text-[13px] font-medium", dark ? "text-background/70" : "text-primary")}>
+    <article id={id} className={cn("hover-lift flex scroll-mt-24 flex-col rounded-2xl border p-6 shadow-panel sm:p-8", dark ? "border-primary/25 bg-linear-to-b from-brand-soft to-card" : "bg-card")}>
+      <div className={cn("flex items-center gap-2 text-[13px] font-medium", dark ? "text-brand-2" : "text-primary")}>
         <Icon className="size-4" /> {kicker}
       </div>
       <h2 className="mt-3 max-w-[22ch] text-[26px] leading-tight font-semibold tracking-tight text-balance">{title}</h2>
       <ul className="mt-7 grid gap-x-6 gap-y-6 sm:grid-cols-2">
         {features.map((f) => (
           <li key={f.title}>
-            <f.icon className={cn("size-4", dark ? "text-background/60" : "text-muted-foreground")} />
+            <f.icon className={cn("size-4", dark ? "text-brand-2/80" : "text-primary/80")} />
             <div className="mt-2 text-sm font-semibold">{f.title}</div>
-            <p className={cn("mt-1 text-[13px] leading-relaxed", dark ? "text-background/65" : "text-muted-foreground")}>{f.text}</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{f.text}</p>
           </li>
         ))}
       </ul>
@@ -278,7 +296,7 @@ function AudienceCard({
         href="/sign-up"
         className={cn(
           "group inline-flex items-center gap-1.5 self-start text-sm font-medium underline-offset-4 hover:underline",
-          dark ? "text-background" : "text-primary",
+          dark ? "text-brand-2" : "text-primary",
         )}
       >
         {cta} <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
@@ -332,10 +350,12 @@ function DataRules() {
     },
   ];
   return (
-    <section id="data" className="scroll-mt-16 border-y bg-card/60">
+    <section id="data" className="scroll-mt-16 border-y bg-card/50 backdrop-blur-sm">
       <div className={cn(WRAP, "py-20 lg:py-24")}>
-        <div className="max-w-2xl">
-          <h2 className="text-[32px] leading-tight font-semibold tracking-tight text-balance sm:text-[38px]">Six rules we hold the data to.</h2>
+        <div className="reveal max-w-2xl">
+          <h2 className="text-[32px] leading-tight font-semibold tracking-tight text-balance sm:text-[38px]">
+            Six rules we hold the <span className="text-gradient">data</span> to.
+          </h2>
           <p className="mt-3 text-base leading-relaxed text-muted-foreground">
             The data comes from Cala&apos;s knowledge graph of company filings, registers and press. These rules decide
             how it reaches your screen.
@@ -343,7 +363,7 @@ function DataRules() {
         </div>
         <ul className="mt-12 grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
           {rules.map((r) => (
-            <li key={r.title} className="border-t pt-5">
+            <li key={r.title} className="reveal group border-t pt-5 transition-colors hover:border-primary/50">
               <div className="flex h-6 items-center">{r.example}</div>
               <h3 className="mt-4 text-[15px] font-semibold">{r.title}</h3>
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{r.text}</p>
@@ -377,11 +397,11 @@ function Tools() {
   ];
   return (
     <section className={cn(WRAP, "py-20 lg:py-24")}>
-      <h2 className="max-w-xl text-[32px] leading-tight font-semibold tracking-tight text-balance sm:text-[38px]">Whichever side you are on.</h2>
+      <h2 className="reveal max-w-xl text-[32px] leading-tight font-semibold tracking-tight text-balance sm:text-[38px]">Whichever side you are on.</h2>
       <ul className="mt-10 grid gap-5 md:grid-cols-3">
         {tools.map((t) => (
-          <li key={t.title} className="rounded-2xl border bg-card p-6">
-            <span className="flex size-9 items-center justify-center rounded-lg bg-teal-soft text-accent-foreground">
+          <li key={t.title} className="reveal hover-lift group rounded-2xl border bg-card p-6 shadow-panel">
+            <span className="flex size-9 items-center justify-center rounded-lg bg-brand-soft text-accent-foreground ring-1 ring-primary/20 transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
               <t.icon className="size-4" />
             </span>
             <h3 className="mt-5 text-base font-semibold">{t.title}</h3>
@@ -403,7 +423,7 @@ function DeckCheck() {
   ];
   return (
     <section className={cn(WRAP, "pb-24")}>
-      <div className="grid items-center gap-10 rounded-2xl border bg-card p-6 sm:p-10 lg:grid-cols-[1fr_1.1fr]">
+      <div className="reveal grid items-center gap-10 rounded-2xl border bg-card p-6 shadow-panel sm:p-10 lg:grid-cols-[1fr_1.1fr]">
         <div>
           <div className="flex items-center gap-2 text-[13px] font-medium text-primary">
             <FileSearch className="size-4" /> Deck check
@@ -440,8 +460,9 @@ function Slush() {
     { title: "Side events", text: "The evenings around Slush in one list. Mark the ones you are going to." },
   ];
   return (
-    <section id="slush" className="scroll-mt-16 border-y border-slush/40 bg-slush-soft/60">
-      <div className={cn(WRAP, "grid gap-10 py-16 lg:grid-cols-[1fr_1.4fr] lg:items-center lg:py-20")}>
+    <section id="slush" className="relative scroll-mt-16 overflow-hidden border-y border-slush/25 bg-slush-soft/50">
+      <div aria-hidden className="pointer-events-none absolute -top-32 left-[-5%] size-96 rounded-full bg-slush/15 blur-3xl" />
+      <div className={cn(WRAP, "reveal relative grid gap-10 py-16 lg:grid-cols-[1fr_1.4fr] lg:items-center lg:py-20")}>
         <div>
           <div className="flex items-center gap-2 text-[13px] font-medium text-slush-foreground">
             <CalendarDays className="size-4" /> Helsinki · 18–19 November
@@ -461,7 +482,7 @@ function Slush() {
         </div>
         <ul className="grid gap-4 sm:grid-cols-3">
           {points.map((p) => (
-            <li key={p.title} className="rounded-xl border border-slush/40 bg-card/80 p-5">
+            <li key={p.title} className="rounded-xl border border-slush/25 bg-card/80 p-5 backdrop-blur-sm transition-colors hover:border-slush/60">
               <h3 className="text-sm font-semibold">{p.title}</h3>
               <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">{p.text}</p>
             </li>
@@ -476,12 +497,13 @@ function Slush() {
 
 function Closing() {
   return (
-    <section className={cn(WRAP, "py-24 text-center")}>
-      <h2 className="mx-auto max-w-[18ch] text-[36px] leading-[1.1] font-semibold tracking-[-0.02em] text-balance sm:text-[44px]">
-        Look them up before you meet them.
+    <section className={cn(WRAP, "reveal relative py-24 text-center")}>
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-1/2 mx-auto h-56 max-w-xl -translate-y-1/2 rounded-full bg-brand/15 blur-3xl" />
+      <h2 className="relative mx-auto max-w-[18ch] text-[36px] leading-[1.1] font-bold tracking-[-0.03em] text-balance sm:text-[48px]">
+        Look them up <span className="text-gradient">before</span> you meet them.
       </h2>
-      <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5">
-        <Button className="h-11 px-5 text-[15px]" asChild>
+      <div className="relative mt-8 flex flex-wrap items-center justify-center gap-2.5">
+        <Button variant="cta" className="h-11 px-5 text-[15px]" asChild>
           <Link href="/sign-up">
             Create your account <ArrowRight />
           </Link>

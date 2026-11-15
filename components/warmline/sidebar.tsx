@@ -82,7 +82,7 @@ export function Sidebar(
     <aside
       className={cn(
         "flex shrink-0 flex-col px-3 py-4",
-        props.inMenu ? "h-full w-full overflow-y-auto" : "sticky top-0 hidden h-screen w-60 border-r bg-card/60 md:flex",
+        props.inMenu ? "h-full w-full overflow-y-auto" : "sticky top-0 hidden h-screen w-60 border-r bg-background/60 backdrop-blur-xl md:flex",
       )}
     >
       <Logo className="px-2" />
@@ -98,11 +98,13 @@ export function Sidebar(
               key={it.href}
               href={it.href}
               className={cn(
-                "group flex h-8 items-center gap-2.5 rounded-lg px-2 text-[13px] font-medium transition-colors",
-                active ? "bg-teal-soft text-accent-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                "group relative flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13px] font-medium transition-colors md:h-8",
+                active
+                  ? "bg-brand-soft text-accent-foreground before:absolute before:inset-y-2 before:-left-3 before:w-0.5 before:rounded-full before:bg-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
-              <it.icon className="size-4" />
+              <it.icon className="size-4 transition-transform group-hover:scale-110" />
               <span className="flex-1">{it.label}</span>
               {it.slush && <span className="size-1.5 rounded-full bg-slush" title="Slush 2026" />}
             </Link>
@@ -126,7 +128,7 @@ export function Sidebar(
             <RoleSwitch role={props.role} />
           </div>
           <div className="flex items-center gap-2 px-1 py-1">
-            <span className="flex size-7 items-center justify-center rounded-full bg-teal-soft text-[11px] font-semibold text-accent-foreground">
+            <span className="flex size-7 items-center justify-center rounded-full bg-brand-soft text-[11px] font-semibold text-accent-foreground">
               {props.user.name
                 .split(" ")
                 .map((p) => p[0])

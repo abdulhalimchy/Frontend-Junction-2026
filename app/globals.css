@@ -2,7 +2,9 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Warmline design tokens. Light mode only; these are the source of truth for colour and type. */
+/* Warmline design tokens. Dark only (html carries .dark); these are the source of truth for colour and type. */
+
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
@@ -32,8 +34,9 @@
   --color-chart-5: var(--chart-5);
 
   /* Warmline-specific */
-  --color-teal: var(--teal);
-  --color-teal-soft: var(--teal-soft);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-2: var(--brand-2);
   --color-slush: var(--slush);
   --color-slush-soft: var(--slush-soft);
   --color-slush-foreground: var(--slush-foreground);
@@ -42,6 +45,10 @@
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
   --color-subtle: var(--subtle);
+
+  --shadow-panel: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-lift: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 18px 50px -12px rgb(0 0 0 / 0.7);
+  --shadow-glow: 0 0 0 1px rgb(242 155 110 / 0.25), 0 12px 40px -12px rgb(242 155 110 / 0.35);
 
   --radius-sm: calc(var(--radius) * 0.5);
   --radius-md: calc(var(--radius) * 0.75);
@@ -53,62 +60,227 @@
 :root {
   --radius: 0.75rem; /* 12px cards; xl = 16px */
 
-  --background: #faf7f2;
-  --foreground: #16181a;
-  --card: #ffffff;
-  --card-foreground: #16181a;
-  --popover: #ffffff;
-  --popover-foreground: #16181a;
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --card: #111111;
+  --card-foreground: #fafafa;
+  --popover: #151515;
+  --popover-foreground: #fafafa;
 
-  --primary: #0f6e6e;
-  --primary-foreground: #ffffff;
-  --secondary: #f3efe8;
-  --secondary-foreground: #16181a;
-  --muted: #f3efe8;
-  --muted-foreground: #6b6862;
-  --subtle: #9a968e;
-  --accent: #e8f1f0;
-  --accent-foreground: #0b5555;
-  --destructive: #b42318;
-  --border: #e9e3d9;
-  --input: #e2dbcf;
-  --ring: #0f6e6e;
+  /* Brand: a warm coral that runs to amber in gradients. Solid buttons are white, like the ink. */
+  --primary: #f29b6e;
+  --primary-foreground: #1c0f07;
+  --secondary: #1c1c1c;
+  --secondary-foreground: #fafafa;
+  --muted: #1a1a1a;
+  --muted-foreground: #a3a3a3;
+  --subtle: #7d7d7d;
+  --accent: #2a1a11;
+  --accent-foreground: #f7b592;
+  --destructive: #f2706b;
+  --border: #262626;
+  --input: #303030;
+  --ring: #f29b6e;
 
-  --teal: #0f6e6e;
-  --teal-soft: #e8f1f0;
-  --slush: #f2b33d;
-  --slush-soft: #fdf3df;
-  --slush-foreground: #7a5200;
-  --success: #1f7a4d;
-  --success-soft: #e7f4ec;
-  --warning: #9a5b00;
-  --warning-soft: #fbf0dc;
+  --brand: #f29b6e;
+  --brand-2: #fcc771;
+  --brand-soft: #2a1a11;
+  /* Yellow-gold is reserved for Slush. */
+  --slush: #f5c451;
+  --slush-soft: #2a2210;
+  --slush-foreground: #f7d584;
+  --success: #5fd08d;
+  --success-soft: #0f2a1b;
+  --warning: #f0b354;
+  --warning-soft: #2b2010;
 
-  /* Charts: teal family for equity, warm grey for grants. Never mix them in one series. */
-  --chart-1: #0f6e6e;
-  --chart-2: #5fa3a3;
-  --chart-3: #b7d3d1;
-  --chart-4: #a89f91;
-  --chart-5: #d8d1c5;
+  /* Charts: coral family for equity, cool slate for grants. Never mix them in one series. */
+  --chart-1: #f29b6e;
+  --chart-2: #c47a55;
+  --chart-3: #7a4f3a;
+  --chart-4: #7fa8c9;
+  --chart-5: #46586a;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    @apply font-sans;
+    color-scheme: dark;
+    scrollbar-color: #333 transparent;
+  }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "cv11", "ss01";
+  }
+  /* The page backdrop: a faint grid that fades out down the page, under a warm glow. Fixed, so it costs nothing on scroll. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(60rem 28rem at 50% -12rem, rgb(242 155 110 / 0.1), transparent 70%),
+      linear-gradient(to right, rgb(255 255 255 / 0.035) 1px, transparent 1px) 0 0 / 56px 56px,
+      linear-gradient(to bottom, rgb(255 255 255 / 0.035) 1px, transparent 1px) 0 0 / 56px 56px;
+    mask-image: linear-gradient(to bottom, #000, transparent 85%);
+  }
+  ::selection {
+    background: rgb(242 155 110 / 0.3);
+    color: #fff;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
-  html {
-    @apply font-sans;
+  h1,
+  h2 {
+    letter-spacing: -0.02em;
   }
 }
 
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ Effects */
+
+@property --sweep-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes sweep {
+  to {
+    --sweep-angle: 360deg;
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes gradient-pan {
+  to {
+    background-position: 200% 50%;
+  }
+}
+@keyframes cell-glow {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Coral-to-amber ink for the one word a headline turns on. */
+@utility text-gradient {
+  background: linear-gradient(100deg, var(--brand), var(--brand-2), var(--brand)) 0 50% / 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradient-pan 6s linear infinite;
+}
+
+/* The main call to action: a dark button whose border is a light travelling round it. */
+@utility btn-sweep {
+  position: relative;
+  color: #fff;
+  background-color: #0d0d0d;
+  box-shadow: 0 8px 32px -10px rgb(242 155 110 / 0.5);
+  transition:
+    box-shadow 0.25s,
+    transform 0.25s,
+    background-color 0.25s;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    padding: 1px;
+    border-radius: inherit;
+    pointer-events: none;
+    background: conic-gradient(from var(--sweep-angle), #333 0%, var(--brand) 12%, var(--brand-2) 20%, var(--brand) 28%, #333 40%);
+    mask:
+      linear-gradient(#000 0 0) content-box exclude,
+      linear-gradient(#000 0 0);
+    animation: sweep 4s linear infinite;
+  }
+  &:hover {
+    background-color: #181818;
+    box-shadow: 0 10px 40px -8px rgb(242 155 110 / 0.7);
+    transform: translateY(-1px);
+  }
+}
+
+/* A surface that answers the pointer: the border warms and the card lifts a pixel. */
+@utility hover-lift {
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    transform 0.2s,
+    background-color 0.2s;
+  &:hover {
+    border-color: rgb(242 155 110 / 0.4);
+    box-shadow: var(--shadow-glow);
+    transform: translateY(-2px);
+  }
+}
+
+/* Each page fades up as it arrives (app/(app)/template.tsx). No fill mode: nothing stays transformed. */
+@utility page-enter {
+  animation: rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* Landing sections rise as they scroll into view, where the browser can tie an animation to scroll. */
+@utility reveal {
+  @supports (animation-timeline: view()) {
+    animation: rise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 35%;
+  }
+}
+
+/* The landing hero's own grid: stronger lines and a few cells that breathe. */
+@utility hero-grid {
+  background:
+    linear-gradient(to right, rgb(255 255 255 / 0.06) 1px, transparent 1px) 0 0 / 72px 72px,
+    linear-gradient(to bottom, rgb(255 255 255 / 0.06) 1px, transparent 1px) 0 0 / 72px 72px;
+  mask-image: radial-gradient(ellipse 80% 75% at 50% 35%, #000 30%, transparent 75%);
+}
+@utility hero-cell {
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  background: rgb(255 255 255 / 0.05);
+  opacity: 0;
+  animation: cell-glow 7s ease-in-out infinite;
+}
+
+[data-slot="skeleton"] {
+  background: linear-gradient(90deg, var(--muted) 25%, #262626 50%, var(--muted) 75%) 0 0 / 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-timeline: auto !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

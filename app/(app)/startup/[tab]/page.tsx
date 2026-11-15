@@ -120,8 +120,8 @@ async function AddedStartup({ id, tab, check }: { id: string; tab: Tab; check?: 
         </AddedStartupOverview>
       )}
       {tab === "competitors" && (
-        <div className="grid grid-cols-3 gap-6">
-          <div className="col-span-2 min-w-0">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 min-w-0">
             <AnalysisTab key={`${id}-competitors`} startupId={startup.id} startupName={startup.name} kind="competitors" initial={competitorsRun} />
           </div>
           <div>

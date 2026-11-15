@@ -20,7 +20,7 @@ export function Panel({
   bodyClassName?: string;
 }) {
   return (
-    <section className={cn("rounded-xl border bg-card shadow-[0_1px_2px_rgba(22,24,26,0.04)]", className)}>
+    <section className={cn("rounded-xl border bg-card shadow-panel", className)}>
       {(title || action) && (
         <header className="flex items-start justify-between gap-4 px-5 pt-4">
           <div>
@@ -79,7 +79,7 @@ export function StatCard({
   tone?: "default" | "slush";
 }) {
   return (
-    <div className={cn("rounded-xl border bg-card p-4", tone === "slush" && "border-slush/40 bg-slush-soft/40")}>
+    <div className={cn("rounded-xl border bg-card p-4 shadow-panel transition-colors hover:border-foreground/20", tone === "slush" && "border-slush/30 bg-slush-soft/40 hover:border-slush/50")}>
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
           {Icon && <Icon className="size-3.5" />}
@@ -98,7 +98,7 @@ export type Fact = { label: string; value: React.ReactNode; sources?: Source[]; 
 /** Label / value grid where every value carries its source chip. */
 export function FactGrid({ facts, columns = 2 }: { facts: Fact[]; columns?: 2 | 3 }) {
   return (
-    <dl className={cn("grid gap-x-8 gap-y-4", columns === 3 ? "grid-cols-3" : "grid-cols-2")}>
+    <dl className={cn("grid grid-cols-1 gap-x-8 gap-y-4", columns === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
       {facts.map((f) => (
         <div key={f.label} className="min-w-0 border-b border-dashed pb-3 last:border-0">
           <dt className="text-xs text-muted-foreground">{f.label}</dt>
@@ -127,7 +127,7 @@ export function EmptyState({
   compact?: boolean;
 }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center rounded-lg border border-dashed bg-background/60 text-center", compact ? "px-4 py-6" : "px-6 py-12")}>
+    <div className={cn("flex flex-col items-center justify-center rounded-lg border border-dashed bg-background/40 text-center", compact ? "px-4 py-6" : "px-6 py-12")}>
       {Icon && (
         <div className="mb-3 flex size-9 items-center justify-center rounded-full bg-muted">
           <Icon className="size-4 text-muted-foreground" />
@@ -173,7 +173,7 @@ export function EntityAvatar({ name, kind = "company", size = "md" }: { name: st
       className={cn(
         "flex shrink-0 items-center justify-center font-semibold",
         kind === "person" ? "rounded-full" : "rounded-lg",
-        kind === "investor" ? "bg-foreground text-background" : kind === "person" ? "bg-teal-soft text-accent-foreground" : "bg-muted text-foreground",
+        kind === "investor" ? "bg-linear-to-br from-brand to-brand-2 text-primary-foreground" : kind === "person" ? "bg-brand-soft text-accent-foreground" : "bg-muted text-foreground",
         sizes[size],
       )}
     >

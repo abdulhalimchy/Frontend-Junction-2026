@@ -30,7 +30,7 @@ export function IntroForm({ from, to, mine = [] }: { from: Picked; to: Picked; m
   }
 
   return (
-    <div className="grid grid-cols-[1fr_auto_1fr_auto] items-end gap-3">
+    <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_auto_1fr_auto]">
       <Picker
         label="You (your company or fund)"
         value={f}
@@ -38,7 +38,7 @@ export function IntroForm({ from, to, mine = [] }: { from: Picked; to: Picked; m
         placeholder={mine.length ? "Pick one of yours, or search" : "e.g. Personio"}
         mine={mine}
       />
-      <ArrowRight className="mb-3 size-4 text-muted-foreground" />
+      <ArrowRight className="mb-3 hidden size-4 text-muted-foreground md:block" />
       <Picker label="Who you want to meet" value={t} onChange={(v) => { setT(v); submit(f, v); }} placeholder="e.g. Creandum" />
       <Button className="h-10" disabled={!f || !t} onClick={() => submit(f, t)}>
         Find intros

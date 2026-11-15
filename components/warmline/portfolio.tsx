@@ -367,7 +367,7 @@ export function PortfolioTable({ companies, analyses = {} }: { companies: Portfo
                           ) : (
                             <span className="font-medium">{c.name}</span>
                           )}
-                          {c.boardSeat && <Pill tone="teal">Board</Pill>}
+                          {c.boardSeat && <Pill tone="brand">Board</Pill>}
                           {busy && (
                             <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
                               <Loader2 className="size-3 animate-spin" /> Filling in from records

@@ -20,7 +20,8 @@ export function FundingChart({ data, currency }: { data: Datum[]; currency: stri
           />
           <Tooltip
             cursor={{ fill: "var(--muted)", opacity: 0.6 }}
-            contentStyle={{ borderRadius: 10, border: "1px solid var(--border)", fontSize: 12, boxShadow: "0 4px 16px rgba(0,0,0,0.06)" }}
+            contentStyle={{ borderRadius: 10, border: "1px solid var(--border)", fontSize: 12, background: "var(--popover)", color: "var(--foreground)", boxShadow: "0 12px 32px rgba(0,0,0,0.6)" }}
+            itemStyle={{ color: "var(--foreground)" }}
             formatter={(v, name) => [`${currency} ${v}M`, name === "equity" ? "Equity" : "Grants"]}
           />
           <Legend

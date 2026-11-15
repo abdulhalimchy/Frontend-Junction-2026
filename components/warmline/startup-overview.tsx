@@ -7,7 +7,7 @@ import { SourceChip } from "./source-chip";
 // Pieces of the My startup Overview: the key-figure tiles and the side cards summarising the other tabs.
 
 export function FigureGrid({ children }: { children: React.ReactNode }) {
-  return <div className="grid grid-cols-3 gap-3">{children}</div>;
+  return <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">{children}</div>;
 }
 
 /** One key figure. A missing value says so rather than showing a blank or a guess. */
@@ -27,12 +27,12 @@ export function Figure({
 }) {
   const empty = children === null || children === undefined;
   return (
-    <div className="flex min-w-0 flex-col rounded-xl border bg-card p-4">
+    <div className="flex min-w-0 flex-col rounded-xl border bg-card p-4 shadow-panel transition-colors hover:border-foreground/20">
       <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{label}</span>
       <span className={cn("mt-2 truncate text-[17px] font-semibold tracking-tight tabular", empty && "text-[15px] font-normal text-subtle italic")}>
         {empty ? "Not on record" : children}
       </span>
-      <span className="mt-auto flex items-end justify-between gap-2 pt-2">
+      <span className="mt-auto flex flex-wrap items-end justify-between gap-x-2 gap-y-1 pt-2">
         <span className="text-xs text-muted-foreground">{hint}</span>
         {!empty && sources?.length ? <SourceChip sources={sources} /> : !empty && self ? <span className="shrink-0 text-[10px] text-subtle">your entry</span> : null}
       </span>
@@ -42,7 +42,7 @@ export function Figure({
 
 function SideCard({ icon: Icon, title, href, linkLabel, children }: { icon: typeof Info; title: string; href: string; linkLabel: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border bg-card p-4 shadow-[0_1px_2px_rgba(22,24,26,0.04)]">
+    <section className="rounded-xl border bg-card p-4 shadow-panel">
       <header className="flex items-center justify-between">
         <h2 className="text-[14px] font-semibold">{title}</h2>
         <Icon className="size-4 text-muted-foreground" />

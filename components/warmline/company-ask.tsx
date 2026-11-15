@@ -51,7 +51,7 @@ export function CompanyAsk({ companyId, companyName }: { companyId: string; comp
 
   return (
     <>
-      <div className="rounded-2xl border bg-card p-5 shadow-[0_1px_2px_rgba(22,24,26,0.04)]">
+      <div className="rounded-2xl border bg-card p-5 shadow-panel">
         <div className="mb-3 flex items-center gap-2">
           <span className="text-[15px] font-semibold">Ask about {companyName}</span>
           <AiTag />
@@ -71,7 +71,7 @@ export function CompanyAsk({ companyId, companyName }: { companyId: string; comp
               type="button"
               disabled={busy}
               onClick={() => ask(q)}
-              className="h-6 rounded-full bg-muted px-2.5 text-xs text-muted-foreground transition-colors hover:bg-teal-soft hover:text-accent-foreground disabled:opacity-50"
+              className="h-6 rounded-full bg-muted px-2.5 text-xs text-muted-foreground transition-colors hover:bg-brand-soft hover:text-accent-foreground disabled:opacity-50"
             >
               {q}
             </button>
@@ -183,7 +183,7 @@ function citation(href: string | undefined, sources: AskSource[]) {
       rel="noreferrer"
       title={`${n}. ${s.name}`}
       aria-label={`Source ${n}: ${s.name}`}
-      className="relative -top-px ml-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded bg-muted px-1 align-middle font-mono text-[11px] leading-none font-medium text-muted-foreground no-underline transition-colors hover:bg-teal-soft hover:text-accent-foreground"
+      className="relative -top-px ml-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded bg-muted px-1 align-middle font-mono text-[11px] leading-none font-medium text-muted-foreground no-underline transition-colors hover:bg-brand-soft hover:text-accent-foreground"
     >
       {n}
     </a>
@@ -244,5 +244,5 @@ function AskInput({
 }
 
 function AiTag() {
-  return <span className="inline-flex h-6 items-center rounded-full bg-teal-soft px-2.5 font-mono text-xs font-semibold text-accent-foreground">Warmline AI</span>;
+  return <span className="inline-flex h-6 items-center rounded-full bg-brand-soft px-2.5 font-mono text-xs font-semibold text-accent-foreground">Warmline AI</span>;
 }

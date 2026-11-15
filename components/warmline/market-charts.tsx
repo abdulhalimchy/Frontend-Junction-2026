@@ -4,14 +4,14 @@ import Link from "next/link";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { BarDatum, YearDatum } from "@/lib/market-report";
 
-// Charts for the market report. Colors validated (dataviz validator, light surface): equity / main series
-// #00968f, grants #c0782f; forecast is a lighter step of the main hue. Values in tooltips use text ink.
+// Charts for the market report, on the dark surface: equity / main series coral, grants cool slate (the same
+// pair as --chart-1 and --chart-4); forecast is a dimmer step of the main hue. Values in tooltips use text ink.
 
-const MAIN = "#00968f";
-const SECOND = "#c0782f";
-const FORECAST = "#8fd0cb";
+const MAIN = "#f29b6e";
+const SECOND = "#7fa8c9";
+const FORECAST = "#7a4f3a";
 const AXIS = { fontSize: 12, fill: "var(--muted-foreground)" };
-const TOOLTIP = { borderRadius: 10, border: "1px solid var(--border)", fontSize: 12, boxShadow: "0 4px 16px rgba(0,0,0,0.06)", color: "var(--foreground)" };
+const TOOLTIP = { borderRadius: 10, border: "1px solid var(--border)", fontSize: 12, background: "var(--popover)", boxShadow: "0 12px 32px rgba(0,0,0,0.6)", color: "var(--foreground)" };
 
 function compact(n: number) {
   const a = Math.abs(n);
@@ -65,6 +65,7 @@ export function FundingByYearChart({ data, currency }: { data: YearDatum[]; curr
           <Tooltip
             cursor={{ fill: "var(--muted)", opacity: 0.6 }}
             contentStyle={TOOLTIP}
+            itemStyle={{ color: "var(--foreground)" }}
             formatter={(v, name) => [`${currency} ${compact(Number(v))}`, name === "equity" ? "Equity raised" : "Grants"]}
             labelFormatter={(y, p) => `${y} · ${p?.[0]?.payload?.rounds ?? 0} rounds with an amount`}
           />
@@ -89,6 +90,7 @@ export function MarketSizeChart({ data, currency }: { data: { year: number; valu
           <Tooltip
             cursor={{ fill: "var(--muted)", opacity: 0.6 }}
             contentStyle={TOOLTIP}
+            itemStyle={{ color: "var(--foreground)" }}
             formatter={(v, _n, p) => [`${currency} ${compact(Number(v))}`, p?.payload?.forecast ? "Forecast" : "Reported"]}
           />
           <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={44} label={{ position: "top", fontSize: 11, fill: "var(--muted-foreground)", formatter: (v: unknown) => compact(Number(v)) }}>
