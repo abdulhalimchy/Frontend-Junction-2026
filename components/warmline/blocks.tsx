@@ -173,7 +173,7 @@ export function EntityAvatar({ name, kind = "company", size = "md" }: { name: st
       className={cn(
         "flex shrink-0 items-center justify-center font-semibold",
         kind === "person" ? "rounded-full" : "rounded-lg",
-        kind === "investor" ? "bg-linear-to-br from-brand to-brand-2 text-primary-foreground" : kind === "person" ? "bg-brand-soft text-accent-foreground" : "bg-muted text-foreground",
+        kind === "investor" ? "bg-linear-to-br from-brand to-brand-2 text-brand-ink" : kind === "person" ? "bg-brand-soft text-accent-foreground" : "bg-muted text-foreground",
         sizes[size],
       )}
     >

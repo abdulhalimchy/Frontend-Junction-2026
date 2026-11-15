@@ -23,7 +23,7 @@ type Status = "direct" | Kind | "common" | "cold";
 const STATUS: Record<Status, { label: string; color: string; dot: string; pill: string }> = {
   direct: { label: "Already connected", color: "var(--success)", dot: "bg-success", pill: "bg-success-soft text-success" },
   investor: { label: "Intro via investor", color: "var(--primary)", dot: "bg-primary", pill: "bg-brand-soft text-accent-foreground" },
-  company: { label: "Founder referral", color: "#8792e8", dot: "bg-[#8792e8]", pill: "bg-[#1b1e36] text-[#aab3f2]" },
+  company: { label: "Founder referral", color: "var(--referral)", dot: "bg-referral", pill: "bg-referral-soft text-referral-foreground" },
   event: { label: "Meet at an event", color: "var(--slush)", dot: "bg-slush", pill: "bg-slush-soft text-slush-foreground" },
   common: { label: "Common ground", color: "var(--subtle)", dot: "bg-subtle", pill: "bg-muted text-muted-foreground" },
   cold: { label: "Reach out directly", color: "var(--subtle)", dot: "bg-border", pill: "bg-muted text-muted-foreground" },
@@ -185,7 +185,7 @@ function Marker({ kind, className }: { kind: Kind; className?: string }) {
       className={cn(
         "inline-block size-2 shrink-0",
         kind === "investor" && "rounded-full bg-primary",
-        kind === "company" && "rounded-[2px] bg-[#8792e8]",
+        kind === "company" && "rounded-[2px] bg-referral",
         kind === "event" && "rotate-45 rounded-[1px] bg-slush",
         className,
       )}

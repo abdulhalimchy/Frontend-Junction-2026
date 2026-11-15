@@ -4,14 +4,14 @@ import Link from "next/link";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { BarDatum, YearDatum } from "@/lib/market-report";
 
-// Charts for the market report, on the dark surface: equity / main series coral, grants cool slate (the same
-// pair as --chart-1 and --chart-4); forecast is a dimmer step of the main hue. Values in tooltips use text ink.
+// Charts for the market report: equity / main series orange, grants cool slate (--chart-1 and --chart-4, set
+// per theme); forecast is a quieter step of the main hue. Values in tooltips use text ink.
 
-const MAIN = "#f29b6e";
-const SECOND = "#7fa8c9";
-const FORECAST = "#7a4f3a";
+const MAIN = "var(--chart-1)";
+const SECOND = "var(--chart-4)";
+const FORECAST = "var(--chart-forecast)";
 const AXIS = { fontSize: 12, fill: "var(--muted-foreground)" };
-const TOOLTIP = { borderRadius: 10, border: "1px solid var(--border)", fontSize: 12, background: "var(--popover)", boxShadow: "0 12px 32px rgba(0,0,0,0.6)", color: "var(--foreground)" };
+const TOOLTIP = { borderRadius: 10, border: "1px solid var(--border)", fontSize: 12, background: "var(--popover)", boxShadow: "var(--lift-shadow)", color: "var(--foreground)" };
 
 function compact(n: number) {
   const a = Math.abs(n);

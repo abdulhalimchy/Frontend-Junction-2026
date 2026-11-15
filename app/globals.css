@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Warmline design tokens. Dark only (html carries .dark); these are the source of truth for colour and type. */
+/* Warmline design tokens. Light in :root, dark under .dark (next-themes sets the class on html); these are the source of truth for colour and type. */
 
 @custom-variant dark (&:is(.dark *));
 
@@ -37,6 +37,10 @@
   --color-brand: var(--brand);
   --color-brand-soft: var(--brand-soft);
   --color-brand-2: var(--brand-2);
+  --color-brand-ink: var(--brand-ink);
+  --color-referral: var(--referral);
+  --color-referral-soft: var(--referral-soft);
+  --color-referral-foreground: var(--referral-foreground);
   --color-slush: var(--slush);
   --color-slush-soft: var(--slush-soft);
   --color-slush-foreground: var(--slush-foreground);
@@ -46,9 +50,9 @@
   --color-warning-soft: var(--warning-soft);
   --color-subtle: var(--subtle);
 
-  --shadow-panel: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-lift: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 18px 50px -12px rgb(0 0 0 / 0.7);
-  --shadow-glow: 0 0 0 1px rgb(242 155 110 / 0.25), 0 12px 40px -12px rgb(242 155 110 / 0.35);
+  --shadow-panel: var(--panel-shadow);
+  --shadow-lift: var(--lift-shadow);
+  --shadow-glow: 0 0 0 1px color-mix(in srgb, var(--brand) 25%, transparent), 0 12px 40px -12px color-mix(in srgb, var(--brand) 35%, transparent);
 
   --radius-sm: calc(var(--radius) * 0.5);
   --radius-md: calc(var(--radius) * 0.75);
@@ -59,6 +63,69 @@
 
 :root {
   --radius: 0.75rem; /* 12px cards; xl = 16px */
+  color-scheme: light;
+  scrollbar-color: #c9c6c0 transparent;
+
+  --background: #faf9f7;
+  --foreground: #0c0c0c;
+  --card: #ffffff;
+  --card-foreground: #0c0c0c;
+  --popover: #ffffff;
+  --popover-foreground: #0c0c0c;
+
+  /* Brand: a burnt orange deep enough to read as text on paper. Solid buttons are ink. */
+  --primary: #bd4f1a;
+  --primary-foreground: #ffffff;
+  --secondary: #f2f0ed;
+  --secondary-foreground: #0c0c0c;
+  --muted: #f3f1ee;
+  --muted-foreground: #5f5c57;
+  --subtle: #7d7a74;
+  --accent: #fdeee5;
+  --accent-foreground: #9a3c10;
+  --destructive: #c62f27;
+  --border: #e6e3de;
+  --input: #d8d4ce;
+  --ring: #bd4f1a;
+
+  /* The gradient pair, and the ink that sits on it (logo mark, investor avatars). */
+  --brand: #dd5a22;
+  --brand-2: #f0902a;
+  --brand-soft: #fdeee5;
+  --brand-ink: #1c0f07;
+  /* Yellow-gold is reserved for Slush. */
+  --slush: #e0a100;
+  --slush-soft: #fdf3d7;
+  --slush-foreground: #7a5200;
+  --success: #1f7a4d;
+  --success-soft: #e7f4ec;
+  --warning: #9a5b00;
+  --warning-soft: #fbf0dc;
+  /* Founder referrals in the network map. */
+  --referral: #5b67b8;
+  --referral-soft: #eef0fa;
+  --referral-foreground: #454f96;
+
+  /* Charts: orange family for equity, cool slate for grants. Never mix them in one series. */
+  --chart-1: #d9622b;
+  --chart-2: #e99a72;
+  --chart-3: #f3c9b3;
+  --chart-4: #5b7f9e;
+  --chart-5: #b9c8d6;
+  --chart-forecast: #f0b99d;
+
+  /* Effects */
+  --grid-line: rgb(0 0 0 / 0.04);
+  --hero-grid-line: rgb(0 0 0 / 0.06);
+  --hero-cell: rgb(0 0 0 / 0.035);
+  --skeleton-shine: #e8e5e0;
+  --panel-shadow: 0 1px 2px rgb(22 24 26 / 0.05);
+  --lift-shadow: 0 1px 2px rgb(22 24 26 / 0.04), 0 18px 44px -14px rgb(22 24 26 / 0.18);
+}
+
+.dark {
+  color-scheme: dark;
+  scrollbar-color: #333 transparent;
 
   --background: #0a0a0a;
   --foreground: #fafafa;
@@ -85,7 +152,6 @@
   --brand: #f29b6e;
   --brand-2: #fcc771;
   --brand-soft: #2a1a11;
-  /* Yellow-gold is reserved for Slush. */
   --slush: #f5c451;
   --slush-soft: #2a2210;
   --slush-foreground: #f7d584;
@@ -93,13 +159,23 @@
   --success-soft: #0f2a1b;
   --warning: #f0b354;
   --warning-soft: #2b2010;
+  --referral: #8792e8;
+  --referral-soft: #1b1e36;
+  --referral-foreground: #aab3f2;
 
-  /* Charts: coral family for equity, cool slate for grants. Never mix them in one series. */
   --chart-1: #f29b6e;
   --chart-2: #c47a55;
   --chart-3: #7a4f3a;
   --chart-4: #7fa8c9;
   --chart-5: #46586a;
+  --chart-forecast: #7a4f3a;
+
+  --grid-line: rgb(255 255 255 / 0.035);
+  --hero-grid-line: rgb(255 255 255 / 0.06);
+  --hero-cell: rgb(255 255 255 / 0.05);
+  --skeleton-shine: #262626;
+  --panel-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 1px 2px rgb(0 0 0 / 0.4);
+  --lift-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 18px 50px -12px rgb(0 0 0 / 0.7);
 }
 
 @layer base {
@@ -108,8 +184,6 @@
   }
   html {
     @apply font-sans;
-    color-scheme: dark;
-    scrollbar-color: #333 transparent;
   }
   body {
     @apply bg-background text-foreground;
@@ -123,14 +197,13 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(60rem 28rem at 50% -12rem, rgb(242 155 110 / 0.1), transparent 70%),
-      linear-gradient(to right, rgb(255 255 255 / 0.035) 1px, transparent 1px) 0 0 / 56px 56px,
-      linear-gradient(to bottom, rgb(255 255 255 / 0.035) 1px, transparent 1px) 0 0 / 56px 56px;
+      radial-gradient(60rem 28rem at 50% -12rem, color-mix(in srgb, var(--brand) 10%, transparent), transparent 70%),
+      linear-gradient(to right, var(--grid-line) 1px, transparent 1px) 0 0 / 56px 56px,
+      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px) 0 0 / 56px 56px;
     mask-image: linear-gradient(to bottom, #000, transparent 85%);
   }
   ::selection {
-    background: rgb(242 155 110 / 0.3);
-    color: #fff;
+    background: color-mix(in srgb, var(--brand) 30%, transparent);
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
@@ -199,7 +272,7 @@
   position: relative;
   color: #fff;
   background-color: #0d0d0d;
-  box-shadow: 0 8px 32px -10px rgb(242 155 110 / 0.5);
+  box-shadow: 0 8px 32px -10px color-mix(in srgb, var(--brand) 50%, transparent);
   transition:
     box-shadow 0.25s,
     transform 0.25s,
@@ -219,7 +292,7 @@
   }
   &:hover {
     background-color: #181818;
-    box-shadow: 0 10px 40px -8px rgb(242 155 110 / 0.7);
+    box-shadow: 0 10px 40px -8px color-mix(in srgb, var(--brand) 70%, transparent);
     transform: translateY(-1px);
   }
 }
@@ -232,7 +305,7 @@
     transform 0.2s,
     background-color 0.2s;
   &:hover {
-    border-color: rgb(242 155 110 / 0.4);
+    border-color: color-mix(in srgb, var(--primary) 40%, transparent);
     box-shadow: var(--shadow-glow);
     transform: translateY(-2px);
   }
@@ -255,21 +328,21 @@
 /* The landing hero's own grid: stronger lines and a few cells that breathe. */
 @utility hero-grid {
   background:
-    linear-gradient(to right, rgb(255 255 255 / 0.06) 1px, transparent 1px) 0 0 / 72px 72px,
-    linear-gradient(to bottom, rgb(255 255 255 / 0.06) 1px, transparent 1px) 0 0 / 72px 72px;
+    linear-gradient(to right, var(--hero-grid-line) 1px, transparent 1px) 0 0 / 72px 72px,
+    linear-gradient(to bottom, var(--hero-grid-line) 1px, transparent 1px) 0 0 / 72px 72px;
   mask-image: radial-gradient(ellipse 80% 75% at 50% 35%, #000 30%, transparent 75%);
 }
 @utility hero-cell {
   position: absolute;
   width: 72px;
   height: 72px;
-  background: rgb(255 255 255 / 0.05);
+  background: var(--hero-cell);
   opacity: 0;
   animation: cell-glow 7s ease-in-out infinite;
 }
 
 [data-slot="skeleton"] {
-  background: linear-gradient(90deg, var(--muted) 25%, #262626 50%, var(--muted) 75%) 0 0 / 200% 100%;
+  background: linear-gradient(90deg, var(--muted) 25%, var(--skeleton-shine) 50%, var(--muted) 75%) 0 0 / 200% 100%;
   animation: shimmer 1.6s linear infinite;
 }
 

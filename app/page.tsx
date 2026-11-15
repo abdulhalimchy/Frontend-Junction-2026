@@ -21,6 +21,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ClaimBadge, SlushTag } from "@/components/warmline/badges";
 import { Logo } from "@/components/warmline/logo";
+import { ThemeToggle } from "@/components/warmline/theme-toggle";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -68,7 +69,7 @@ const HERO_CELLS = [
 function Nav() {
   return (
     <header className="sticky top-0 z-30 border-b border-transparent bg-background/70 backdrop-blur-xl [border-image:linear-gradient(to_right,transparent,var(--border),transparent)_1]">
-      <div className={cn(WRAP, "flex h-16 items-center gap-4 sm:gap-8")}>
+      <div className={cn(WRAP, "flex h-16 items-center gap-2 sm:gap-8")}>
         <Logo href="/" />
         <nav className="hidden items-center gap-6 text-[13px] font-medium text-muted-foreground md:flex">
           <a href="#founders" className="transition-colors hover:text-foreground">
@@ -85,7 +86,8 @@ function Nav() {
           </a>
         </nav>
         <div className="ml-auto flex items-center gap-1.5">
-          <Button variant="ghost" className="h-9 px-3" asChild>
+          <ThemeToggle className="size-8 border-transparent bg-transparent sm:size-9" />
+          <Button variant="ghost" className="hidden h-9 px-2.5 min-[360px]:inline-flex" asChild>
             <Link href="/sign-in">Sign in</Link>
           </Button>
           <Button className="h-9 px-3.5" asChild>
@@ -278,14 +280,14 @@ function AudienceCard({
 }) {
   return (
     <article id={id} className={cn("hover-lift flex scroll-mt-24 flex-col rounded-2xl border p-6 shadow-panel sm:p-8", dark ? "border-primary/25 bg-linear-to-b from-brand-soft to-card" : "bg-card")}>
-      <div className={cn("flex items-center gap-2 text-[13px] font-medium", dark ? "text-brand-2" : "text-primary")}>
+      <div className={cn("flex items-center gap-2 text-[13px] font-medium", dark ? "text-primary dark:text-brand-2" : "text-primary")}>
         <Icon className="size-4" /> {kicker}
       </div>
       <h2 className="mt-3 max-w-[22ch] text-[26px] leading-tight font-semibold tracking-tight text-balance">{title}</h2>
       <ul className="mt-7 grid gap-x-6 gap-y-6 sm:grid-cols-2">
         {features.map((f) => (
           <li key={f.title}>
-            <f.icon className={cn("size-4", dark ? "text-brand-2/80" : "text-primary/80")} />
+            <f.icon className={cn("size-4", dark ? "text-primary/80 dark:text-brand-2/80" : "text-primary/80")} />
             <div className="mt-2 text-sm font-semibold">{f.title}</div>
             <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{f.text}</p>
           </li>
@@ -296,7 +298,7 @@ function AudienceCard({
         href="/sign-up"
         className={cn(
           "group inline-flex items-center gap-1.5 self-start text-sm font-medium underline-offset-4 hover:underline",
-          dark ? "text-brand-2" : "text-primary",
+          dark ? "text-primary dark:text-brand-2" : "text-primary",
         )}
       >
         {cta} <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />

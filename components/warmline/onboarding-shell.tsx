@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
+import { ThemeToggle } from "./theme-toggle";
 
 const STEPS = [
   { label: "Role", match: ["/onboarding/role"] },
@@ -48,7 +49,10 @@ export function OnboardingShell({ children }: { children: React.ReactNode }) {
             })}
           </ol>
         )}
-        <span className="w-24 text-right text-xs text-subtle">{current >= 0 ? `Step ${current + 1} of ${STEPS.length}` : ""}</span>
+        <span className="flex items-center justify-end gap-3 text-xs text-subtle">
+          {current >= 0 ? `Step ${current + 1} of ${STEPS.length}` : ""}
+          <ThemeToggle />
+        </span>
       </header>
       <main className="flex flex-1 items-start justify-center px-4 pb-16 pt-6 sm:px-6 sm:pt-10">{children}</main>
     </div>
