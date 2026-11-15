@@ -17,6 +17,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
       { type: "page", label: "Slush 2026", hint: "Event space", href: "/events/slush-2026/overview" },
       { type: "page", label: "Connect", hint: "Who can introduce you", href: "/intros" },
       { type: "page", label: "Watch list", hint: "What you follow, and what changed", href: "/watchlist" },
+      { type: "page", label: "Data by Cala", hint: "Where the data comes from", href: "/cala" },
     ];
     return (
       <div className="flex min-h-screen">
@@ -51,6 +52,8 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
     { type: "page", label: "Market or company analysis", hint: "Page", href: "/market" },
     { type: "page", label: "Connect", hint: "Who can introduce you", href: "/intros" },
     { type: "page", label: "Watch list", hint: "What you follow, and what changed", href: "/watchlist" },
+    { type: "page", label: "Data by Cala", hint: "Where the data comes from", href: "/cala" },
+    { type: "page", label: "Account settings", hint: "Privacy, role, delete account", href: "/me" },
     ...(profile.role === "founder"
       ? [{ type: "page" as const, label: "My startup", hint: "Page", href: startupHref(activeId) }]
       : [

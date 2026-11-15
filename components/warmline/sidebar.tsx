@@ -4,10 +4,12 @@ import {
   Bookmark,
   BriefcaseBusiness,
   CalendarDays,
+  Database,
   FileSearch,
   House,
   LineChart,
   Route,
+  Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -20,6 +22,9 @@ import { SignOutButton } from "./sign-out-button";
 import { StartupNav } from "./startup-nav";
 
 type Item = { href: string; match: string; label: string; icon: typeof House; slush?: boolean; startups?: boolean };
+
+/** The page that explains the data source. Shown in both modes. */
+const CALA_ITEM: Item = { href: "/cala", match: "/cala", label: "Data by Cala", icon: Database };
 
 function navFor(role: Role): Item[] {
   const top: Item[] = [
@@ -37,6 +42,7 @@ function navFor(role: Role): Item[] {
   const rest: Item[] = [
     { href: "/watchlist", match: "/watchlist", label: "Watch list", icon: Bookmark },
     { href: "/events/slush-2026/overview", match: "/events", label: "Events", icon: CalendarDays, slush: true },
+    CALA_ITEM,
   ];
   return [...top, ...roleItems, ...rest];
 }
@@ -47,6 +53,7 @@ const LIVE_ITEMS: Item[] = [
   { href: "/deck-check", match: "/deck-check", label: "Deck check", icon: FileSearch },
   { href: "/watchlist", match: "/watchlist", label: "Watch list", icon: Bookmark },
   { href: "/events/slush-2026/overview", match: "/events", label: "Slush 2026", icon: CalendarDays, slush: true },
+  CALA_ITEM,
 ];
 
 type StartupsProp = { items: StartupSummary[]; activeId: string; error: string | null };
@@ -115,7 +122,10 @@ export function Sidebar(
       {props.live ? (
         <div className="mt-auto rounded-lg border bg-card p-3 text-[11px] text-muted-foreground">
           <div className="font-semibold text-foreground">Live data</div>
-          Verified, cited data from the Cala encyclopedia. Demo data is off.
+          Verified, cited data from the Cala encyclopedia. Demo data is off.{" "}
+          <Link href="/cala" className="font-medium text-primary underline-offset-2 hover:underline">
+            How it works
+          </Link>
         </div>
       ) : (
         <div className="mt-auto space-y-3">
@@ -127,18 +137,30 @@ export function Sidebar(
             <div className="mb-1.5 text-[11px] font-medium text-subtle">View as (demo)</div>
             <RoleSwitch role={props.role} />
           </div>
-          <div className="flex items-center gap-2 px-1 py-1">
-            <span className="flex size-7 items-center justify-center rounded-full bg-brand-soft text-[11px] font-semibold text-accent-foreground">
-              {props.user.name
-                .split(" ")
-                .map((p) => p[0])
-                .slice(0, 2)
-                .join("")}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-medium">{props.user.name}</span>
-              <span className="block truncate text-[11px] text-muted-foreground">{org}</span>
-            </span>
+          <div className="flex items-center gap-1 px-1 py-1">
+            {/* Name and org open the account settings (privacy, role, delete account). */}
+            <Link
+              href="/me"
+              title="Account settings"
+              aria-label="Account settings"
+              className={cn(
+                "group -m-1 flex min-w-0 flex-1 items-center gap-2 rounded-lg p-1 transition-colors hover:bg-muted",
+                pathname.startsWith("/me") && "bg-brand-soft",
+              )}
+            >
+              <span className="flex size-7 items-center justify-center rounded-full bg-brand-soft text-[11px] font-semibold text-accent-foreground">
+                {props.user.name
+                  .split(" ")
+                  .map((p) => p[0])
+                  .slice(0, 2)
+                  .join("")}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] font-medium">{props.user.name}</span>
+                <span className="block truncate text-[11px] text-muted-foreground">{org}</span>
+              </span>
+              <Settings className="size-3.5 shrink-0 text-muted-foreground transition-transform group-hover:rotate-45 group-hover:text-foreground" />
+            </Link>
             <SignOutButton compact />
           </div>
         </div>

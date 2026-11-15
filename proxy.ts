@@ -30,6 +30,7 @@ export const config = {
     "/company/:path*",
     "/investor/:path*",
     "/me/:path*",
+    "/cala/:path*",
     "/onboarding/:path*",
   ],
 };

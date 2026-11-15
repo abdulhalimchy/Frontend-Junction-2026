@@ -97,6 +97,19 @@ export function AuthForm({ mode }: { mode: Mode }) {
             <Button type="button" variant="outline" className="h-10 w-full bg-card" onClick={() => finish(GOOGLE_DEMO)}>
               <GoogleIcon /> Continue with Google
             </Button>
+            {signUp && (
+              <p className="text-center text-xs leading-relaxed text-subtle">
+                By creating an account you agree to the{" "}
+                <Link href="/terms" className="underline underline-offset-2 hover:text-foreground">
+                  Terms
+                </Link>{" "}
+                and{" "}
+                <Link href="/privacy" className="underline underline-offset-2 hover:text-foreground">
+                  Privacy
+                </Link>
+                .
+              </p>
+            )}
             <p className="pt-1 text-center text-[13px] text-muted-foreground">
               {signUp ? "Already have an account? " : "New to Warmline? "}
               <Link href={signUp ? "/sign-in" : "/sign-up"} className="font-medium text-primary hover:underline">

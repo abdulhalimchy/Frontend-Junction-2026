@@ -11,6 +11,7 @@ import {
   LineChart,
   Rocket,
   Route,
+  Sparkles,
   Swords,
   Target,
   TrendingUp,
@@ -21,13 +22,14 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ClaimBadge, SlushTag } from "@/components/warmline/badges";
 import { Logo } from "@/components/warmline/logo";
+import { SourceLinks } from "@/components/warmline/source-links";
 import { ThemeToggle } from "@/components/warmline/theme-toggle";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: { absolute: "Warmline: company data that shows its sources" },
+  title: { absolute: "Warmline: sourced company data for founders and investors" },
   description:
-    "Sourced company data for founders and investors: funding, competitors, investors and warm intros. Every fact links to where it was published.",
+    "Built for founders and investors, powered by Cala: funding, competitors, investors and warm intros. Every fact links to where it was published.",
 };
 
 // The landing page. Static: it reads no cookie, so signed-in visitors see it too and use "Sign in" to get back.
@@ -113,14 +115,18 @@ function Hero() {
       <div aria-hidden className="pointer-events-none absolute -top-40 right-[-10%] size-[520px] rounded-full bg-brand/15 blur-3xl" />
       <div className={cn(WRAP, "relative grid grid-cols-[minmax(0,1fr)] items-center gap-12 pt-14 pb-20 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-10 lg:pt-20 lg:pb-28")}>
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-700">
-          <SlushTag label="Slush 2026 event space is open · Helsinki, 18–19 Nov" />
+          <div className="flex flex-wrap items-center gap-2">
+            <PoweredByCala />
+            <SlushTag label="Slush 2026 event space is open · Helsinki, 18–19 Nov" />
+          </div>
           <h1 className="mt-5 max-w-[15ch] text-[40px] leading-[1.05] font-bold tracking-[-0.035em] text-balance sm:text-[56px] lg:text-[64px]">
             Company data that shows its <span className="text-gradient">sources.</span>
           </h1>
           <p className="mt-5 max-w-[54ch] text-[17px] leading-relaxed text-muted-foreground">
-            Warmline is where founders and investors look each other up before they meet: funding history, competitors,
-            investors that fit and who can introduce you. Every fact links to the filing, register or article it came
-            from.
+            Built for <strong className="font-semibold text-foreground">founders</strong> and{" "}
+            <strong className="font-semibold text-foreground">investors</strong>. Warmline is where you look each other
+            up before you meet: funding history, competitors, investors that fit and who can introduce you. Every fact
+            links to the filing, register or article it came from.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-2.5">
             <Button variant="cta" className="group h-11 px-5 text-[15px]" asChild>
@@ -137,6 +143,23 @@ function Hero() {
         <RecordCard />
       </div>
     </section>
+  );
+}
+
+/** The "Powered by Cala" pill: Cala's knowledge graph is where every record in the product comes from. */
+function PoweredByCala({ className }: { className?: string }) {
+  return (
+    <a
+      href="https://www.cala.ai/"
+      target="_blank"
+      rel="noreferrer"
+      className={cn(
+        "inline-flex h-5 items-center gap-1 rounded-full border border-primary/30 bg-brand-soft px-2 text-[11px] font-medium text-primary transition-colors hover:border-primary/60 dark:text-brand-2",
+        className,
+      )}
+    >
+      <Sparkles className="size-3" /> Powered by Cala
+    </a>
   );
 }
 
@@ -238,6 +261,15 @@ const INVESTOR: Feature[] = [
 function Audiences() {
   return (
     <section className={cn(WRAP, "pb-24")}>
+      <div className="reveal mb-10 max-w-2xl">
+        <h2 className="text-[32px] leading-tight font-semibold tracking-tight text-balance sm:text-[38px]">
+          One tool for <span className="text-gradient">founders</span> and <span className="text-gradient">investors.</span>
+        </h2>
+        <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+          Both sides of the table work from the same sourced record, so the conversation starts from facts instead of
+          guesses.
+        </p>
+      </div>
       <div className="reveal grid gap-5 lg:grid-cols-2">
         <AudienceCard
           id="founders"
@@ -501,9 +533,14 @@ function Closing() {
   return (
     <section className={cn(WRAP, "reveal relative py-24 text-center")}>
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-1/2 mx-auto h-56 max-w-xl -translate-y-1/2 rounded-full bg-brand/15 blur-3xl" />
-      <h2 className="relative mx-auto max-w-[18ch] text-[36px] leading-[1.1] font-bold tracking-[-0.03em] text-balance sm:text-[48px]">
-        Look them up <span className="text-gradient">before</span> you meet them.
+      <PoweredByCala className="relative" />
+      <h2 className="relative mx-auto mt-5 max-w-[18ch] text-[36px] leading-[1.1] font-bold tracking-[-0.03em] text-balance sm:text-[48px]">
+        Every <span className="text-gradient">unicorn</span> starts somewhere.
       </h2>
+      <p className="relative mx-auto mt-5 max-w-[52ch] text-[17px] leading-relaxed text-muted-foreground">
+        Whether you are raising your first round or backing the next one, we at Warmline help you navigate the way
+        there, with Cala&apos;s sourced data on companies, funding rounds and investors behind every step.
+      </p>
       <div className="relative mt-8 flex flex-wrap items-center justify-center gap-2.5">
         <Button variant="cta" className="h-11 px-5 text-[15px]" asChild>
           <Link href="/sign-up">
@@ -514,6 +551,7 @@ function Closing() {
           <Link href="/sign-in">I already have one</Link>
         </Button>
       </div>
+      <p className="relative mt-8 text-sm text-subtle">We wish you all the best on your journey. The Warmline team</p>
     </section>
   );
 }
@@ -523,7 +561,22 @@ function Footer() {
     <footer className="border-t">
       <div className={cn(WRAP, "flex flex-wrap items-center justify-between gap-4 py-6 text-[13px] text-muted-foreground")}>
         <Logo href="/" />
-        <span>Built for Junction 2026 on Cala&apos;s knowledge graph.</span>
+        <span>
+          Powered by{" "}
+          <a href="https://www.cala.ai/" target="_blank" rel="noreferrer" className="font-medium text-foreground underline-offset-4 hover:underline">
+            Cala
+          </a>
+          . Built at Junction 2026 for Cala&apos;s Make Unicorns Real challenge.
+        </span>
+        <SourceLinks />
+        <nav className="flex items-center gap-4">
+          <Link href="/privacy" className="hover:text-foreground">
+            Privacy
+          </Link>
+          <Link href="/terms" className="hover:text-foreground">
+            Terms
+          </Link>
+        </nav>
       </div>
     </footer>
   );

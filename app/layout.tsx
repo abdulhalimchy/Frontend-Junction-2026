@@ -15,7 +15,8 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
-      <body className="min-h-full">
+      {/* Browser extensions add attributes to <body> before React loads; don't report those as hydration mismatches. */}
+      <body className="min-h-full" suppressHydrationWarning>
         <ThemeProvider>
           <TooltipProvider>{children}</TooltipProvider>
           <Toaster position="bottom-right" />
