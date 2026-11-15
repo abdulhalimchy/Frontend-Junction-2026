@@ -11,7 +11,7 @@ export const profiles: Record<Role, Profile> = {
     personId: "anna-virtanen",
     companyId: "northlight-robotics",
     goals: ["Raise a seed round", "Meet maritime investors at Slush", "Track competitors"],
-    privacy: { showInEventDirectory: true, allowAlertsEmail: true },
+    privacy: { showInEventDirectory: true },
   },
   investor: {
     name: "Jonas Berg",
@@ -20,7 +20,7 @@ export const profiles: Record<Role, Profile> = {
     personId: "jonas-berg",
     investorId: "fjord-ventures",
     goals: ["Source seed deals", "Monitor portfolio competitors", "Meet founders at Slush"],
-    privacy: { showInEventDirectory: true, allowAlertsEmail: false },
+    privacy: { showInEventDirectory: true },
   },
 };
 

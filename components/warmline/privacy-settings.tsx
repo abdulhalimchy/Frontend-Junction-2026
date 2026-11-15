@@ -7,7 +7,6 @@ import type { Profile } from "@/lib/types";
 
 const ITEMS: { key: keyof Profile["privacy"]; label: string; hint: string }[] = [
   { key: "showInEventDirectory", label: "Show me in event attendee lists", hint: "Other attendees can find you in the Slush 2026 space." },
-  { key: "allowAlertsEmail", label: "Email me alerts", hint: "A daily digest of new alerts." },
 ];
 
 // Phase 2 persists these to Supabase.

@@ -1,6 +1,7 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { scanForChanges } from "@/lib/backend/alerts";
 import { addWatchItem, removeWatchItem, updateWatchItem } from "@/lib/backend/watchlist";
 import type { WatchEntityType, WatchItem, WatchTag } from "@/lib/watchlist";
 
@@ -32,4 +33,15 @@ export async function unwatchAction(id: string) {
 
 export async function updateWatchAction(id: string, patch: { tag?: WatchTag | null; note?: string }) {
   return run(() => updateWatchItem(id, patch));
+}
+
+/** Checks every watched entity in Cala now, instead of waiting for the nightly scan. */
+export async function scanAction() {
+  try {
+    const result = await scanForChanges();
+    refresh();
+    return { ok: true as const, result };
+  } catch (e) {
+    return { ok: false as const, error: e instanceof Error ? e.message : "Something went wrong." };
+  }
 }

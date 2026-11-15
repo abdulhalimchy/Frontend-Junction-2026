@@ -7,7 +7,7 @@ export const metadata = { title: "Your goals" };
 export default async function GoalsPage() {
   const profile = await getProfile();
   return (
-    <OnboardingCard title="What do you want from Warmline?" description="Pick a few. We use these to order your home page and alerts." wide>
+    <OnboardingCard title="What do you want from Warmline?" description="Pick a few. We use these to order your home page." wide>
       <GoalsForm role={profile.role} initial={profile.goals} />
     </OnboardingCard>
   );

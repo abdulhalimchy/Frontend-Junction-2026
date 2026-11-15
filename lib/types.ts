@@ -112,12 +112,9 @@ export type Alert = {
   /** Why this user sees it, e.g. "One of your competitors". */
   reason?: string;
   date: string;
-  read: boolean;
   href: string;
   /** The watched company or investor this is about (Cala id); empty for older alerts. */
   calaId?: string;
-  /** Mock fixtures only: which demo persona sees it. */
-  roles?: Role[];
   slush?: boolean;
   sources: Source[];
 };
@@ -211,7 +208,6 @@ export type Profile = {
   goals: string[];
   privacy: {
     showInEventDirectory: boolean;
-    allowAlertsEmail: boolean;
   };
 };
 
@@ -270,6 +266,24 @@ export type PortfolioSuggestions = {
   fund: { id: string; name: string } | null;
   results: PortfolioSuggestion[];
   capped?: boolean;
+};
+
+/** A funding round as the analyses report it (the company's own rounds, newest first). */
+export type AnalysisRound = NonNullable<StandingRow["last_round"]>;
+
+/** A portfolio company's recent rounds and money raised, from Cala. */
+export type PortfolioRounds = { rounds: AnalysisRound[]; raised: StandingRow["raised"]; capped: boolean };
+
+export type PortfolioAnalysisKind = "rounds" | "competitors" | "investors";
+
+/** A stored analysis for one portfolio company. While "loading" (a refresh), `data` still holds the last result. */
+export type PortfolioAnalysis = {
+  company: string;
+  kind: PortfolioAnalysisKind;
+  status: "loading" | "ready" | "failed";
+  data: Record<string, unknown>;
+  error: string;
+  finishedAt: string | null;
 };
 
 // ---- On-demand analyses for an added startup (Competitors and Find investors tabs) ----

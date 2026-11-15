@@ -1,6 +1,6 @@
 import { companies } from "@/lib/mocks/companies";
 import { investors, people } from "@/lib/mocks/investors";
-import { getActiveStartupId, getProfile, getStartups, getUnread } from "@/lib/session";
+import { getActiveStartupId, getProfile, getStartups } from "@/lib/session";
 import { startupHref } from "@/lib/startup-cookie";
 import { getCompany, getInvestor } from "@/lib/cala";
 import { demoDataEnabled } from "@/lib/demo";
@@ -15,14 +15,13 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
       { type: "page", label: "Analyse a company", hint: "Company analysis", href: "/market?mode=company" },
       { type: "page", label: "Slush 2026", hint: "Event space", href: "/events/slush-2026/overview" },
       { type: "page", label: "Warm intros", hint: "Who can introduce you", href: "/intros" },
-      { type: "page", label: "Alerts", hint: "Page", href: "/alerts" },
+      { type: "page", label: "Watch list", hint: "What you follow, and what changed", href: "/watchlist" },
     ];
-    const unread = await getUnread();
     return (
       <div className="flex min-h-screen">
-        <Sidebar live unread={unread} />
+        <Sidebar live />
         <div className="flex min-w-0 flex-1 flex-col">
-          <TopBar items={palette} unread={unread} live />
+          <TopBar items={palette} />
           <main className="mx-auto w-full max-w-[1160px] flex-1 px-8 py-8">{children}</main>
         </div>
       </div>
@@ -30,7 +29,6 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const profile = await getProfile();
-  const unread = await getUnread();
   const startups = profile.role === "founder" ? await getStartups() : null;
   const activeId = startups ? await getActiveStartupId(startups.items) : null;
   const org = startups
@@ -44,7 +42,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
     { type: "page", label: "Slush 2026", hint: "Event space", href: "/events/slush-2026/overview" },
     { type: "page", label: "Market or company analysis", hint: "Page", href: "/market" },
     { type: "page", label: "Warm intros", hint: "Who can introduce you", href: "/intros" },
-    { type: "page", label: "Alerts", hint: "Page", href: "/alerts" },
+    { type: "page", label: "Watch list", hint: "What you follow, and what changed", href: "/watchlist" },
     ...(profile.role === "founder"
       ? [{ type: "page" as const, label: "My startup", hint: "Page", href: startupHref(activeId) }]
       : [
@@ -65,12 +63,11 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen">
       <Sidebar
         role={profile.role}
-        unread={unread}
         user={{ name: profile.name, org: org ?? "" }}
         startups={startups ? { ...startups, activeId: activeId ?? "" } : undefined}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar items={palette} unread={unread} />
+        <TopBar items={palette} />
         <main className="mx-auto w-full max-w-[1160px] flex-1 px-8 py-8">{children}</main>
       </div>
     </div>

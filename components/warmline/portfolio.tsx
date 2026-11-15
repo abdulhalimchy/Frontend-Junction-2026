@@ -291,7 +291,7 @@ function RemoveDialog({ company, onOpenChange }: { company: PortfolioCompany | n
         <DialogHeader>
           <DialogTitle>Remove {company?.name}?</DialogTitle>
           <DialogDescription>
-            This removes it from your portfolio with your investment details, and stops portfolio alerts for it. It cannot be undone. Its record in Cala
+            This removes it from your portfolio with your investment details, and stops tracking changes on it. It cannot be undone. Its record in Cala
             is not affected.
           </DialogDescription>
         </DialogHeader>

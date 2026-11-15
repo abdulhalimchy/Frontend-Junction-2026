@@ -60,14 +60,14 @@ export default async function PortfolioPage() {
             <StatCard label="Total invested" value={totalInvested(companies)} icon={Coins} hint="From the amounts you entered" />
             <StatCard label="Board seats" value={companies.filter((c) => c.boardSeat).length} icon={Landmark} />
             <StatCard
-              label="Watched for alerts"
+              label="On your watch list"
               value={watched}
               icon={Bell}
               hint={
                 <>
-                  New rounds show up in{" "}
-                  <Link href="/alerts" className="underline-offset-2 hover:underline">
-                    Alerts
+                  New rounds show up on the{" "}
+                  <Link href="/watchlist" className="underline-offset-2 hover:underline">
+                    watch list
                   </Link>
                 </>
               }

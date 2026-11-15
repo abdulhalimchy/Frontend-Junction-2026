@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Bookmark, BookmarkCheck, ChevronDown, ListChecks, Loader2, X } from "lucide-react";
+import { Bookmark, BookmarkCheck, ChevronDown, ListChecks, Loader2, X } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Role } from "@/lib/types";
-import { WATCH_TAGS, alertsHref, tagLabel, type WatchEntityType, type WatchItem, type WatchTag } from "@/lib/watchlist";
+import { WATCH_TAGS, tagLabel, type WatchEntityType, type WatchItem, type WatchTag } from "@/lib/watchlist";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -71,7 +71,7 @@ export function WatchToggle({ entityType, calaId, name, role, initial, unavailab
         onClick={() =>
           mutate(
             () => watchAction({ entityType, calaId, name }),
-            (next) => (next?.inCala === false ? `Watching ${name}` : `Watching ${name}. Cala checks it now and every night; changes show up in Alerts.`),
+            (next) => (next?.inCala === false ? `Watching ${name}` : `Watching ${name}. Cala checks it now and every night; changes show up on your watch list.`),
           )
         }
       >
@@ -106,13 +106,6 @@ export function WatchToggle({ entityType, calaId, name, role, initial, unavailab
           ))}
         </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
-        {item.inCala && (
-          <DropdownMenuItem asChild>
-            <Link href={alertsHref(item)}>
-              <Bell /> Alerts{item.unreadAlerts > 0 && <span className="ml-auto text-xs font-semibold text-primary">{item.unreadAlerts} new</span>}
-            </Link>
-          </DropdownMenuItem>
-        )}
         <DropdownMenuItem asChild>
           <Link href="/watchlist">
             <ListChecks /> Open watch list
