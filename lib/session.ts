@@ -1,7 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
 import type { Role, StartupSummary } from "@/lib/types";
-import { getUnreadCount, listAlerts } from "@/lib/backend/alerts";
+import { listAlerts } from "@/lib/backend/alerts";
 import { listStartups } from "@/lib/backend/startups";
 import { STARTUP_COOKIE } from "@/lib/startup-cookie";
 import { getLatestDeckCheck } from "@/lib/backend/deck-checks";
@@ -21,18 +21,13 @@ export async function getProfile() {
   return profiles[await getRole()];
 }
 
-/** The user's alerts from the backend (created by its alert scan), or a readable error. */
-export async function getAlerts() {
+/** Changes on the watched entities, newest first (created by the backend's nightly scan), or a readable error. */
+export async function getChanges() {
   try {
-    return { alerts: await listAlerts(), error: null };
+    return { changes: await listAlerts(), error: null };
   } catch (e) {
-    return { alerts: [], error: e instanceof Error ? e.message : "Could not load alerts." };
+    return { changes: [], error: e instanceof Error ? e.message : "Could not load changes." };
   }
-}
-
-/** For the sidebar badge. 0 when the backend is unavailable, so the shell never fails over a badge. */
-export async function getUnread() {
-  return getUnreadCount().catch(() => 0);
 }
 
 /**

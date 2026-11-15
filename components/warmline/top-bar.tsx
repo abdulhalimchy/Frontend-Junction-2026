@@ -1,7 +1,6 @@
 "use client";
 
-import { Bell, Building2, Landmark, Search, UserRound } from "lucide-react";
-import Link from "next/link";
+import { Building2, Landmark, Search, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -52,7 +51,7 @@ function useCalaSuggestions(q: string): PaletteItem[] {
 
 const ICONS = { company: Building2, investor: Landmark, person: UserRound, page: Search };
 
-export function TopBar({ items, unread, live }: { items: PaletteItem[]; unread: number; live?: boolean }) {
+export function TopBar({ items }: { items: PaletteItem[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -92,14 +91,6 @@ export function TopBar({ items, unread, live }: { items: PaletteItem[]; unread: 
         <span className="flex-1">Search companies, investors, people…</span>
         <kbd className="rounded border bg-muted px-1.5 font-sans text-[11px] text-muted-foreground">⌘K</kbd>
       </button>
-      <div className="ml-auto flex items-center gap-2">
-{!live && (
-        <Link href="/alerts" className="relative flex size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground">
-          <Bell className="size-4" />
-          {unread > 0 && <span className="absolute right-2 top-2 size-2 rounded-full bg-primary ring-2 ring-background" />}
-        </Link>
-        )}
-      </div>
 
       <CommandDialog open={open} onOpenChange={setOpen} title="Search Warmline" description="Search companies, investors and people">
         <Command>

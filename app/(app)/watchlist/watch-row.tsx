@@ -1,26 +1,49 @@
 "use client";
 
-import { Bell, Loader2, StickyNote, X } from "lucide-react";
+import { Banknote, CalendarDays, ChevronDown, Eye, Landmark, Loader2, StickyNote, UserRound, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Pill } from "@/components/warmline/badges";
+import { Pill, SlushTag } from "@/components/warmline/badges";
 import { EntityAvatar } from "@/components/warmline/blocks";
+import { SourceChip } from "@/components/warmline/source-chip";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDay } from "@/lib/format";
-import type { Role } from "@/lib/types";
-import { WATCH_TAGS, alertsHref, tagLabel, watchHref, type WatchItem, type WatchTag } from "@/lib/watchlist";
+import type { Alert, AlertKind, Role } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { WATCH_TAGS, tagLabel, watchHref, type WatchItem, type WatchTag } from "@/lib/watchlist";
 import { unwatchAction, updateWatchAction } from "./actions";
 
 const NO_TAG = "none";
 const TYPE_LABEL = { company: "Company", investor: "Investor", person: "Person" } as const;
+const KIND_ICON: Record<AlertKind, typeof Banknote> = {
+  competitor_round: Banknote,
+  funding_round: Banknote,
+  portfolio_competitor: Eye,
+  investor_activity: Landmark,
+  slush_attendee: CalendarDays,
+  team_change: Users,
+  profile: UserRound,
+};
 
-/** `checked`: when the alert scan last checked this entity, formatted on the server ("today 02:00"). */
-export function WatchRow({ item, role, checked }: { item: WatchItem; role: Role; checked: string | null }) {
+type Props = {
+  item: WatchItem;
+  role: Role;
+  /** When the nightly scan last checked this entity, formatted on the server ("today 02:00"). */
+  checked: string | null;
+  /** Changes Cala has on record for it, newest first. */
+  changes: Alert[];
+  /** ISO day: changes on or after it are marked New. */
+  recentSince: string;
+};
+
+export function WatchRow({ item, role, checked, changes, recentSince }: Props) {
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [latest, ...earlier] = changes;
   const [note, setNote] = useState(item.note);
   const href = watchHref(item);
   const ownTags = WATCH_TAGS.filter((t) => t.roles.includes(role));
@@ -47,15 +70,6 @@ export function WatchRow({ item, role, checked }: { item: WatchItem; role: Role;
             <span className="text-sm font-medium">{item.name || item.calaId}</span>
           )}
           {item.origin === "suggested" && <Pill tone="teal">Suggested</Pill>}
-          {item.unreadAlerts > 0 && (
-            <Link
-              href={alertsHref(item)}
-              className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90"
-            >
-              <Bell className="size-3" />
-              {item.unreadAlerts} new {item.unreadAlerts === 1 ? "alert" : "alerts"}
-            </Link>
-          )}
         </div>
         <div className="mt-0.5 flex flex-wrap items-center gap-x-1 text-xs text-subtle">
           <span>
@@ -63,19 +77,31 @@ export function WatchRow({ item, role, checked }: { item: WatchItem; role: Role;
           </span>
           <span>·</span>
           {!item.inCala ? (
-            <span title="Demo entries have no verified record, so the nightly check skips them.">Demo entry, no alerts</span>
+            <span title="Demo entries have no verified record, so the nightly check skips them.">Demo entry, not checked</span>
           ) : checked ? (
-            <>
-              <span>Checked {checked}</span>
-              <span>·</span>
-              <Link href={alertsHref(item)} className="hover:text-primary">
-                Alerts
-              </Link>
-            </>
+            <span>Checked {checked}</span>
           ) : (
             <span>First check in progress</span>
           )}
         </div>
+
+        {latest && (
+          <ul className="mt-2 space-y-1.5">
+            <Change change={latest} recent={latest.date >= recentSince} />
+            {expanded && earlier.map((c) => <Change key={c.id} change={c} recent={c.date >= recentSince} />)}
+          </ul>
+        )}
+        {earlier.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setExpanded((e) => !e)}
+            aria-expanded={expanded}
+            className="mt-1 flex items-center gap-1 text-xs text-subtle hover:text-foreground"
+          >
+            <ChevronDown className={cn("size-3 transition-transform", expanded && "rotate-180")} />
+            {expanded ? "Show less" : `${earlier.length} earlier ${earlier.length === 1 ? "change" : "changes"}`}
+          </button>
+        )}
 
         {editing ? (
           <form
@@ -167,6 +193,27 @@ export function WatchRow({ item, role, checked }: { item: WatchItem; role: Role;
         >
           <X />
         </Button>
+      </div>
+    </li>
+  );
+}
+
+/** One change Cala has on record: what happened, when, and its sources. */
+function Change({ change: c, recent }: { change: Alert; recent: boolean }) {
+  const Icon = KIND_ICON[c.kind] ?? Banknote;
+  return (
+    <li className="flex items-start gap-2 text-[13px]">
+      <Icon className={cn("mt-0.5 size-3.5 shrink-0", recent ? "text-primary" : "text-subtle")} />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <Link href={c.href} className={cn("leading-snug hover:text-primary", recent ? "font-medium" : "text-muted-foreground")}>
+            {c.title}
+          </Link>
+          {recent && <Pill tone="teal">New</Pill>}
+          {c.slush && <SlushTag label="Slush" />}
+          <span className="text-xs text-subtle">{formatDay(c.date)}</span>
+          <SourceChip sources={c.sources} />
+        </div>
       </div>
     </li>
   );

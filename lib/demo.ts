@@ -5,7 +5,7 @@ export function demoDataEnabled() {
   return process.env.DEMO_DATA !== "off";
 }
 
-/** Pages that only exist on mock data; with demo data off they redirect to Market. Deck check and Alerts are live (backend). */
+/** Pages that only exist on mock data; with demo data off they redirect to Market. Deck check and Watch list are live (backend). */
 export const MOCK_ONLY_PATHS = [
   "/home", "/startup", "/portfolio", "/events", "/me", "/sign-in", "/onboarding",
 ];

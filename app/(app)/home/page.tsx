@@ -16,13 +16,13 @@ import { getAnalysis, getStartup } from "@/lib/backend/startups";
 import { startupHref } from "@/lib/startup-cookie";
 import { formatDay, formatMoney } from "@/lib/format";
 import { SLUSH_EVENT_ID } from "@/lib/mocks/misc";
-import { getActiveStartupId, getAlerts, getProfile, getStartups } from "@/lib/session";
+import { getActiveStartupId, getChanges, getProfile, getStartups } from "@/lib/session";
 import type { CompetitorsAnalysis, InvestorsAnalysis } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Home" };
 
-// Profile and alerts are per request (cookie, backend), so they are read inside Suspense: navigation shows the
-// shell at once, and the alerts panel streams in on its own so a slow backend does not hold up the page.
+// Profile and changes are per request (cookie, backend), so they are read inside Suspense: navigation shows the
+// shell at once, and the changes panel streams in on its own so a slow backend does not hold up the page.
 export default function HomePage() {
   return (
     <Suspense fallback={<Loading />}>
@@ -95,7 +95,7 @@ async function FounderHome({ startup, competitors, investors, slushIndex, slush 
     <div className="space-y-6">
       <SlushPanel slush={slush} />
       <Suspense fallback={<Skeleton className="h-56 rounded-xl" />}>
-        <AlertsPanel />
+        <ChangesPanel />
       </Suspense>
     </div>
   );
@@ -263,7 +263,7 @@ async function InvestorHome({ investorId, slush }: { investorId: string; slush: 
       <div className="space-y-6">
         <SlushPanel slush={slush} />
         <Suspense fallback={<Skeleton className="h-56 rounded-xl" />}>
-          <AlertsPanel />
+          <ChangesPanel />
         </Suspense>
       </div>
     </div>
@@ -298,21 +298,22 @@ function SlushPanel({ slush }: { slush: Slush }) {
   );
 }
 
-async function AlertsPanel() {
-  const { alerts } = await getAlerts();
+/** The newest changes across the watch list. */
+async function ChangesPanel() {
+  const { changes } = await getChanges();
   return (
     <Panel
-      title="Latest alerts"
+      title="Latest changes"
       action={
-        <Link href="/alerts" className="text-xs text-primary hover:underline">
-          View all
+        <Link href="/watchlist" className="text-xs text-primary hover:underline">
+          Watch list
         </Link>
       }
     >
       <ul className="space-y-3">
-        {alerts.slice(0, 4).map((a) => (
+        {changes.slice(0, 4).map((a) => (
           <li key={a.id} className="flex gap-2.5">
-            <span className={a.read ? "mt-1.5 size-1.5 shrink-0 rounded-full bg-transparent" : "mt-1.5 size-1.5 shrink-0 rounded-full bg-primary"} />
+            <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
             <div className="min-w-0">
               <Link href={a.href} className="text-[13px] font-medium leading-snug hover:text-primary">
                 {a.title}
@@ -324,7 +325,7 @@ async function AlertsPanel() {
             </div>
           </li>
         ))}
-        {!alerts.length && (
+        {!changes.length && (
           <li className="flex items-center gap-2 text-sm text-muted-foreground">
             <Bell className="size-4" /> Nothing new.
           </li>
