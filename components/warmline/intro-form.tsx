@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, Building2, X } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -14,13 +15,19 @@ export type Picked = { id: string; name: string } | null;
 
 export const FROM_COOKIE = "wl_intro_from";
 
-/** One of the user's own companies. `id` is its Cala id, or "" when it is not matched to a record yet. */
-export type MyCompany = { id: string; name: string; hint: string; group: string };
+/**
+ * One of the user's own companies. `id` is its Cala id, or "" when it is not matched to a record yet;
+ * `fixHref` is then where it can be matched.
+ */
+export type MyCompany = { id: string; name: string; hint: string; group: string; fixHref?: string };
 
 export function IntroForm({ from, to, mine = [] }: { from: Picked; to: Picked; mine?: MyCompany[] }) {
   const router = useRouter();
   const [f, setF] = useState<Picked>(from);
   const [t, setT] = useState<Picked>(to);
+  // One of the user's companies picked without a record cannot be used: say why while they search.
+  const [unmatched, setUnmatched] = useState<MyCompany | null>(null);
+  const note = f ? null : unmatched;
 
   function submit(nextF: Picked, nextT: Picked) {
     if (nextF) document.cookie = `${FROM_COOKIE}=${encodeURIComponent(JSON.stringify(nextF))}; path=/; max-age=31536000; samesite=lax`;
@@ -30,19 +37,37 @@ export function IntroForm({ from, to, mine = [] }: { from: Picked; to: Picked; m
   }
 
   return (
-    <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_auto_1fr_auto]">
-      <Picker
-        label="You (your company or fund)"
-        value={f}
-        onChange={(v) => { setF(v); submit(v, t); }}
-        placeholder={mine.length ? "Pick one of yours, or search" : "e.g. Personio"}
-        mine={mine}
-      />
-      <ArrowRight className="mb-3 hidden size-4 text-muted-foreground md:block" />
-      <Picker label="Who you want to meet" value={t} onChange={(v) => { setT(v); submit(f, v); }} placeholder="e.g. Creandum" />
-      <Button className="h-10" disabled={!f || !t} onClick={() => submit(f, t)}>
-        Find intros
-      </Button>
+    <div>
+      <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_auto_1fr_auto]">
+        <Picker
+          label="You (your company or fund)"
+          value={f}
+          onChange={(v) => { setF(v); submit(v, t); }}
+          onUnmatched={setUnmatched}
+          placeholder={mine.length ? "Pick one of yours, or search" : "e.g. Personio"}
+          mine={mine}
+        />
+        <ArrowRight className="mb-3 hidden size-4 text-muted-foreground md:block" />
+        <Picker label="Who you want to meet" value={t} onChange={(v) => { setT(v); submit(f, v); }} placeholder="e.g. Creandum" />
+        <Button className="h-10" disabled={!f || !t} onClick={() => submit(f, t)}>
+          Find intros
+        </Button>
+      </div>
+      {note && (
+        <p role="status" className="mt-3 text-[13px] text-muted-foreground">
+          {note.name} is not matched to a verified company record yet, so there are no intro paths to trace from it. Pick its record from the
+          search results if it is listed
+          {note.fixHref && (
+            <>
+              , or{" "}
+              <Link href={note.fixHref} className="font-medium text-primary hover:underline">
+                match it with Edit details
+              </Link>
+            </>
+          )}
+          .
+        </p>
+      )}
     </div>
   );
 }
@@ -53,12 +78,15 @@ function Picker({
   label,
   value,
   onChange,
+  onUnmatched,
   placeholder,
   mine = [],
 }: {
   label: string;
   value: Picked;
   onChange: (v: Picked) => void;
+  /** One of `mine` without a record was picked; null once the box is edited or a record is picked. */
+  onUnmatched?: (m: MyCompany | null) => void;
   placeholder: string;
   mine?: MyCompany[];
 }) {
@@ -93,7 +121,10 @@ function Picker({
       ) : (
         <SuggestInput
           value={q}
-          onValueChange={setQ}
+          onValueChange={(v) => {
+            setQ(v);
+            onUnmatched?.(null);
+          }}
           options={options}
           showOnFocus
           dropdown={mine.length ? "My companies" : undefined}
@@ -103,9 +134,11 @@ function Picker({
             // One of the user's companies without a record: search the records for its name instead.
             if (s.key.startsWith(UNMATCHED)) {
               setQ(s.label);
+              onUnmatched?.(mine.find((m) => !m.id && m.name === s.label) ?? null);
               return false;
             }
             setQ("");
+            onUnmatched?.(null);
             onChange({ id: s.key, name: s.label });
           }}
           autoFocus={cleared}

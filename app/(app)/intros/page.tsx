@@ -28,12 +28,12 @@ async function myCompanies(): Promise<MyCompany[]> {
   try {
     if ((await getRole()) === "founder") {
       for (const s of await listStartups())
-        if (!s.isDraft) list.push({ id: s.calaCompanyId, name: s.name, hint: s.domain || s.industry || "Startup", group: "My startups" });
+        if (!s.isDraft) list.push({ id: s.calaCompanyId, name: s.name, hint: s.domain || s.industry || "Startup", group: "My startups", fixHref: `/startup/overview?s=${s.id}` });
     } else {
       const [fund, portfolio] = await Promise.all([getPortfolioSuggestions().then((s) => s.fund, () => null), listPortfolio().catch(() => [])]);
       if (fund) list.push({ id: fund.id, name: fund.name, hint: "Your fund", group: "My fund" });
       for (const c of portfolio)
-        if (!c.isDraft) list.push({ id: c.calaCompanyId, name: c.name, hint: c.domain || c.industry || "Portfolio company", group: "My portfolio" });
+        if (!c.isDraft) list.push({ id: c.calaCompanyId, name: c.name, hint: c.domain || c.industry || "Portfolio company", group: "My portfolio", fixHref: "/portfolio" });
     }
   } catch {
     // backend unavailable
