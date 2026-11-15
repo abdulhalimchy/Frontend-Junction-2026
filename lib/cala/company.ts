@@ -75,16 +75,25 @@ const DEAL_EVENTS: Record<string, string> = {
 
 /** Acquisitions and similar deals from the corporate events already in the company request (no extra call). */
 function corporateDeals(e: GetEntityResponse): CompanyProfile["deals"] {
-  return (e.relationships.outgoing.PARTICIPATES_IN_CORPORATE_EVENT ?? [])
-    .filter((r) => r.entity_type === "CorporateEvent" && DEAL_EVENTS[r.name])
-    .map((r) => ({
-      id: r.id,
-      kind: DEAL_EVENTS[r.name],
-      role: typeof r.properties.role === "string" ? labelise(r.properties.role) : null,
-      date: typeof r.properties.event_date === "string" ? r.properties.event_date.slice(0, 10) : null,
-      sources: toSources(r.properties.sources),
-    }))
-    .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
+  // Cala can link the same event more than once (one edge per source or role): keep one deal per event, with
+  // every edge's sources and the first role and date on record.
+  const byId = new Map<string, CompanyProfile["deals"][number]>();
+  for (const r of e.relationships.outgoing.PARTICIPATES_IN_CORPORATE_EVENT ?? []) {
+    if (r.entity_type !== "CorporateEvent" || !DEAL_EVENTS[r.name]) continue;
+    const role = typeof r.properties.role === "string" ? labelise(r.properties.role) : null;
+    const date = typeof r.properties.event_date === "string" ? r.properties.event_date.slice(0, 10) : null;
+    const sources = toSources(r.properties.sources);
+    const seen = byId.get(r.id);
+    if (!seen) {
+      byId.set(r.id, { id: r.id, kind: DEAL_EVENTS[r.name], role, date, sources });
+      continue;
+    }
+    seen.role ??= role;
+    seen.date ??= date;
+    const known = new Set(seen.sources.map((s) => `${s.document}|${s.name}|${s.date}`));
+    seen.sources.push(...sources.filter((s) => !known.has(`${s.document}|${s.name}|${s.date}`)));
+  }
+  return [...byId.values()].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
 }
 
 export type PersonLink = { id: string; name: string; role: string; since: string | null; until: string | null; sources: Source[] };
@@ -138,7 +147,8 @@ export async function fetchCompanyPeople(id: string): Promise<CompanyPeople> {
     leadership,
     board: (inc.IS_BOARD_MEMBER_OF ?? []).map((r) => person(r, "Board member")),
     team: (inc.WORKS_AT ?? []).map((r) => person(r, "Team member")).filter((p) => !shown.has(`${p.id}|${p.role}`)),
-    events: (e.relationships.outgoing.PARTICIPATES_IN_EVENT ?? []).map((r) => ({
+    // One row per event: Cala can link the same event more than once.
+    events: (e.relationships.outgoing.PARTICIPATES_IN_EVENT ?? []).filter((r, i, all) => all.findIndex((o) => o.id === r.id) === i).map((r) => ({
       id: r.id,
       name: r.name,
       role: typeof r.properties.role === "string" ? labelise(r.properties.role) : null,

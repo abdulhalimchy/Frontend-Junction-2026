@@ -315,7 +315,8 @@ export function CompanyLookupDialog({
 
   return (
     <Dialog open={open} onOpenChange={change}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      {/* minmax(0,1fr): long lines (a full street address) truncate instead of widening the dialog past its edge. */}
+      <DialogContent className="max-h-[90vh] grid-cols-[minmax(0,1fr)] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>

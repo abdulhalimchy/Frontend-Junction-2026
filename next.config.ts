@@ -14,6 +14,11 @@ const nextConfig: NextConfig = {
     ];
   },
   partialPrefetching: true,
+  experimental: {
+    // Keep a visited page in the browser for 30s, so switching back to a tab or page shows it at once instead of
+    // asking the server again (and flashing its loading skeleton). Saves call router.refresh(), which clears it.
+    staleTimes: { dynamic: 30 },
+  },
   turbopack: {
     rules: {
       "*.css": {

@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/warmline/blocks";
 import { DeckCheck } from "@/components/warmline/deck-check";
 import { getDeckChecks, getRole } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Deck check" };
+export const metadata: Metadata = { title: "Pitch deck" };
 
 export default async function DeckCheckPage({ searchParams }: PageProps<"/deck-check">) {
   // Founders check their own deck under My startup; this page is the investor's.
@@ -14,7 +14,7 @@ export default async function DeckCheckPage({ searchParams }: PageProps<"/deck-c
   return (
     <>
       <PageHeader
-        title="Deck check"
+        title="Pitch deck"
         description="Upload a founder's deck. Every factual claim is checked against verified sources: confirmed, differs from the record, or can't verify."
       />
       <DeckCheck initial={result} history={history} loadError={error} />

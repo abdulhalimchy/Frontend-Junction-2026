@@ -461,7 +461,7 @@ function DeckCheck() {
       <div className="reveal grid items-center gap-10 rounded-2xl border bg-card p-6 shadow-panel sm:p-10 lg:grid-cols-[1fr_1.1fr]">
         <div>
           <div className="flex items-center gap-2 text-[13px] font-medium text-primary">
-            <FileSearch className="size-4" /> Deck check
+            <FileSearch className="size-4" /> Pitch deck
           </div>
           <h2 className="mt-3 text-[28px] leading-tight font-semibold tracking-tight text-balance">A pitch deck, read against the record.</h2>
           <p className="mt-3 max-w-[46ch] text-[15px] leading-relaxed text-muted-foreground">

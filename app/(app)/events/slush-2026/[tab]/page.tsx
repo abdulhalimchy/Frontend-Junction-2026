@@ -11,7 +11,7 @@ import { mocksEnabled } from "@/lib/cala/client";
 import { formatDay } from "@/lib/format";
 import { SLUSH_EVENT_ID } from "@/lib/mocks/misc";
 import { getProfile } from "@/lib/session";
-import { LIVE_TABS, LiveSlush, type LiveTab } from "./live-slush";
+import { LIVE_TABS, LiveSlush, LiveSlushLoading, type LiveTab } from "./live-slush";
 import { SideEventsTab } from "./side-events";
 import { SIDE_EVENTS, type SideEventFilters } from "@/lib/slush/side-events";
 
@@ -120,7 +120,7 @@ async function SlushPageContent({ params, searchParams }: PageProps<"/events/slu
 // URL data is read inside Suspense so navigation can show the shell instantly.
 export default function SlushPage(props: PageProps<"/events/slush-2026/[tab]">) {
   return (
-    <Suspense fallback={<Loading />}>
+    <Suspense fallback={mocksEnabled() ? <Loading /> : <LiveSlushLoading />}>
       <SlushPageContent {...props} />
     </Suspense>
   );

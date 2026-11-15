@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import Loading from "@/app/(app)/loading";
 import { CircleAlert, ExternalLink, Network, Rocket } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { EmptyState, PageHeader, TabNav } from "@/components/warmline/blocks";
+import { PathTabNav } from "@/components/warmline/path-tab-nav";
 import { EditStartupButton } from "@/components/warmline/edit-startup-button";
 import { AddedStartupOverview } from "@/components/warmline/added-startup-overview";
 import { AddStartupButton } from "@/components/warmline/add-startup-button";
@@ -102,7 +102,7 @@ async function AddedStartup({ id, tab, check }: { id: string; tab: Tab; check?: 
           { key: "competitors", label: "Competitors", href: startupHref(id, "competitors"), count: comp?.companies.length },
           { key: "investors", label: "Find investors", href: startupHref(id, "investors"), count: inv?.investors.length },
           { key: "connect", label: "Connect", href: startupHref(id, "connect") },
-          { key: "deck", label: "Deck check", href: startupHref(id, "deck") },
+          { key: "deck", label: "Pitch deck", href: startupHref(id, "deck") },
         ]}
       />
       {tab === "overview" && (
@@ -207,10 +207,35 @@ async function DeckTab({ companyName, startupId, check }: { companyName: string;
   );
 }
 
+const STARTUP_TAB_LINKS = [
+  { key: "overview", label: "Overview", href: "/startup/overview" },
+  { key: "competitors", label: "Competitors", href: "/startup/competitors" },
+  { key: "investors", label: "Find investors", href: "/startup/investors" },
+  { key: "connect", label: "Connect", href: "/startup/connect" },
+  { key: "deck", label: "Pitch deck", href: "/startup/deck" },
+];
+
+/** While a tab loads: the tab bar stays in place (the startup's name is data, so it is a placeholder). */
+function StartupLoading() {
+  return (
+    <>
+      <div className="mb-6">
+        <Skeleton className="h-8 w-56" />
+        <Skeleton className="mt-2 h-4 w-96 max-w-full" />
+      </div>
+      <PathTabNav tabs={STARTUP_TAB_LINKS} />
+      <div className="loading-delay space-y-4">
+        <Skeleton className="h-24 rounded-xl" />
+        <Skeleton className="h-80 rounded-xl" />
+      </div>
+    </>
+  );
+}
+
 // URL data is read inside Suspense so navigation can show the shell instantly.
 export default function StartupPage(props: PageProps<"/startup/[tab]">) {
   return (
-    <Suspense fallback={<Loading />}>
+    <Suspense fallback={<StartupLoading />}>
       <StartupPageContent {...props} />
     </Suspense>
   );

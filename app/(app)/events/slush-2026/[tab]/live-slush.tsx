@@ -3,6 +3,7 @@ import { Building2, CalendarDays, Landmark, MapPin, Search as SearchIcon, Sparkl
 import Link from "next/link";
 import { SuggestInput } from "@/components/warmline/suggest-input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PathTabNav } from "@/components/warmline/path-tab-nav";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SlushTag } from "@/components/warmline/badges";
 import { EmptyState, EntityAvatar, FactGrid, PageHeader, Panel, StatCard, TabNav } from "@/components/warmline/blocks";
@@ -23,6 +24,45 @@ export const LIVE_TABS = ["overview", "attendees", "investors", "side-events"] a
 export type LiveTab = (typeof LIVE_TABS)[number];
 
 const PER_PAGE = 25;
+
+const LIVE_TAB_LINKS = [
+  { key: "overview", label: "Overview", href: "/events/slush-2026/overview" },
+  { key: "attendees", label: "Attendees", href: "/events/slush-2026/attendees" },
+  { key: "investors", label: "Investors", href: "/events/slush-2026/investors" },
+  { key: "side-events", label: "Side events", href: "/events/slush-2026/side-events" },
+];
+
+/**
+ * What a Slush tab shows while it loads: the same header card and tab bar (they don't depend on the data), with
+ * placeholders only where the data goes. Switching tabs then keeps the title and tabs in place.
+ */
+export function LiveSlushLoading() {
+  return (
+    <>
+      <div className="mb-6 overflow-hidden rounded-2xl border border-slush/40 bg-card">
+        <div className="h-1.5 bg-slush" />
+        <div className="p-6">
+          <PageHeader
+            eyebrow={<SlushTag label="Event space" />}
+            title="Slush 2026"
+            description="Attendees come from the verified event records and refresh daily. Use this to plan who to meet."
+          >
+            <Skeleton className="mt-4 h-5 w-72 max-w-full" />
+          </PageHeader>
+        </div>
+      </div>
+      <PathTabNav tabs={LIVE_TAB_LINKS} />
+      <div className="loading-delay space-y-4">
+        <div className="grid gap-4 sm:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
+          ))}
+        </div>
+        <Skeleton className="h-80 rounded-xl" />
+      </div>
+    </>
+  );
+}
 
 export async function LiveSlush({ tab, q, page, filters }: { tab: LiveTab; q: string; page: number; filters: SideEventFilters }) {
   let e: Awaited<ReturnType<typeof fetchSlush>>;

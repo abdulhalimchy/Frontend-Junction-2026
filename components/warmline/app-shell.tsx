@@ -26,7 +26,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
       ? [{ type: "page" as const, label: "My startup", hint: "Your startup as investors see it", href: startupHref(activeId) }]
       : [
           { type: "page" as const, label: "Portfolio", hint: "Your fund's companies", href: "/portfolio" },
-          { type: "page" as const, label: "Deck check", hint: "Check a founder's deck", href: "/deck-check" },
+          { type: "page" as const, label: "Pitch deck", hint: "Check a founder's pitch deck", href: "/deck-check" },
         ]),
     ...SHARED,
   ];

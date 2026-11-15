@@ -56,7 +56,7 @@ saved too.
 | Onboarding | `/onboarding/role`, `/onboarding/company`, `/onboarding/goals` | New accounts |
 | My startup | `/startup/{overview,competitors,investors,connect,deck}` | Founders |
 | Portfolio | `/portfolio` | Investors |
-| Deck check | `/deck-check` | Investors (founders check their deck under My startup) |
+| Pitch deck | `/deck-check` | Investors (founders check their deck under My startup) |
 | Market and company analysis | `/market`, `/market/report`, `/market/company`, `/market/history` | Everyone |
 | Connect (who can introduce you) | `/intros` | Everyone |
 | Watch list | `/watchlist` | Everyone |

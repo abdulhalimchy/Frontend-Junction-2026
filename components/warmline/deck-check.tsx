@@ -303,7 +303,8 @@ export function DeckCheck({
         </div>
       )}
 
-      {history.length > 1 && (
+      {/* From the first check on, so even a single check can be deleted. */}
+      {history.length > 0 && (
         <HistoryList items={history} viewing={result?.id ?? null} opening={opening} founder={founder} onOpen={open} onDelete={setToDelete} />
       )}
 
@@ -381,7 +382,7 @@ function HistoryList({
   const shown = all || at >= HISTORY_PREVIEW ? items : items.slice(0, HISTORY_PREVIEW);
 
   return (
-    <section aria-label={founder ? "Deck versions" : "Deck check history"} className="rounded-xl border bg-card">
+    <section aria-label={founder ? "Deck versions" : "Pitch deck history"} className="rounded-xl border bg-card">
       <div className="flex items-center justify-between gap-3 px-5 py-3">
         <h2 className="flex items-center gap-2 text-[15px] font-semibold">
           <History className="size-4 text-muted-foreground" />
@@ -490,7 +491,7 @@ function Results({ result, previous, founder }: { result: DeckCheckResult; previ
 
   // The claims that need a conversation, as plain text for an email or a notes doc.
   async function copyFollowUps() {
-    const lines = [`Deck check: ${result.fileName}${result.companyName ? ` (${result.companyName})` : ""}, checked ${formatDay(result.checkedAt)}`];
+    const lines = [`Pitch deck check: ${result.fileName}${result.companyName ? ` (${result.companyName})` : ""}, checked ${formatDay(result.checkedAt)}`];
     for (const st of ["differs", "cant_verify"] as const) {
       const list = result.claims.filter((c) => c.status === st).sort((a, b) => a.slide - b.slide);
       if (!list.length) continue;

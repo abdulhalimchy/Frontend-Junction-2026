@@ -122,14 +122,14 @@ export function InvestorsCard({ data, atSlush = 0, href }: { data: InvestorsAnal
 export function DeckCard({ deck, href }: { deck: DeckCheckResult | null; href: string }) {
   if (!deck || deck.status !== "completed")
     return (
-      <SideCard icon={FileCheck2} title="Deck check" href={href} linkLabel={deck ? "See progress" : "Check your deck"}>
+      <SideCard icon={FileCheck2} title="Pitch deck" href={href} linkLabel={deck ? "See progress" : "Check your deck"}>
         {deck ? "Your deck is being checked." : "No deck checked yet. See which claims the sources back up before investors do."}
       </SideCard>
     );
   const count = (s: string) => deck.claims.filter((c) => c.status === s).length;
   const differs = count("differs");
   return (
-    <SideCard icon={FileCheck2} title="Deck check" href={href} linkLabel={differs ? `Review ${differs} ${differs === 1 ? "difference" : "differences"}` : "See claims"}>
+    <SideCard icon={FileCheck2} title="Pitch deck" href={href} linkLabel={differs ? `Review ${differs} ${differs === 1 ? "difference" : "differences"}` : "See claims"}>
       <div className="flex flex-wrap gap-1.5">
         <span className="rounded-md bg-success/10 px-2 py-0.5 text-xs font-medium text-success">{count("confirmed")} confirmed</span>
         <span className="rounded-md bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">{differs} differ</span>

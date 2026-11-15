@@ -20,7 +20,7 @@ function navFor(role: Role): Item[] {
       ? [{ href: "/startup/overview", match: "/startup", label: "My startup", icon: Rocket, startups: true }]
       : [
           { href: "/portfolio", match: "/portfolio", label: "Portfolio", icon: BriefcaseBusiness },
-          { href: "/deck-check", match: "/deck-check", label: "Deck check", icon: FileSearch },
+          { href: "/deck-check", match: "/deck-check", label: "Pitch deck", icon: FileSearch },
         ];
   return [
     ...roleItems,
