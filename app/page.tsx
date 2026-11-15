@@ -120,8 +120,8 @@ function Hero() {
             <PoweredByCala />
             <SlushTag label="Slush 2026 event space is open · Helsinki, 18–19 Nov" />
           </div>
-          <h1 className="mt-5 max-w-[15ch] text-[40px] leading-[1.05] font-bold tracking-[-0.035em] text-balance sm:text-[56px] lg:text-[64px]">
-            Company data that shows its <span className="text-gradient">sources.</span>
+          <h1 className="mt-5 max-w-[22ch] text-[32px] leading-[1.08] font-bold tracking-[-0.035em] text-balance sm:text-[44px] lg:text-[46px] xl:text-[50px]">
+            Deep, <span className="text-gradient">sourced research</span>, built to make founders and investors successful
           </h1>
           <p className="mt-5 max-w-[54ch] text-[17px] leading-relaxed text-muted-foreground">
             Built for <strong className="font-semibold text-foreground">founders</strong> and{" "}
